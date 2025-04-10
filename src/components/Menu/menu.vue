@@ -1,0 +1,146 @@
+<template>
+    <div class="menu">
+        <ul class="thumbnail-list">
+            <!-- 示例缩略图1 -->
+            <li class="thumbnail-item" v-for="i in dataList" :key="i.index" :name="i.name">
+                <img :src="i.img" :alt="i.name" draggable="true" class="thumbnail draggable">
+                <span class="thumbnail-caption">{{ i.name }}</span>
+            </li>
+        </ul>
+    </div>
+</template>
+
+<script setup>
+import { onMounted,ref } from 'vue';
+import * as THREE from 'three';
+import {addPoint,addPoint2,addLand,addModels} from "/src/commonjs/basicGeometries.js"
+
+
+let raycaster, mouse;
+let draggedValue = null;
+
+let dataList = ref([
+    {name:'摄像头',img:'http://116.196.110.130:5353/wz.png'},
+    {name:'自行车',img:'http://116.196.110.130:5353/wz.png'},
+    {name:'汽车',img:'http://116.196.110.130:5353/wz.png'},
+    {name:'机房',img:'http://116.196.110.130:5353/wz.png'},
+    {name:'人物',img:'http://116.196.110.130:5353/wz.png'},
+    {name:'平板',img:'http://116.196.110.130:5353/wz.png'},
+])
+
+// 光线投射器
+raycaster = new THREE.Raycaster();
+mouse = new THREE.Vector2();
+onMounted(() => {
+    document.querySelectorAll('.draggable').forEach(item => {
+        item.addEventListener('dragstart', (event) => {
+            draggedValue = event.target.alt;
+            event.dataTransfer.effectAllowed = 'move';
+        });
+    });
+}) 
+
+
+// const canvas = document.getElementById('three-container');
+window.addEventListener('dragover', (event) => {
+    event.preventDefault();
+});
+window.addEventListener('drop', (event) => {
+
+    // 将鼠标坐标转换到 NDC（归一化设备坐标）
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    // 使用射线投射器
+    raycaster.params.Line.threshold = 0.1//调整精度
+    raycaster.setFromCamera(mouse, camera);
+
+    // 计算射线与场景中的物体的交点
+    const intersects = raycaster.intersectObjects(scene.children);
+    console.log(intersects);
+    
+    // 如果有交点
+    let leftPosition
+    if (intersects.length > 0) {
+        const intersectPoint = intersects[0].point; // 获取交点坐标
+        console.log('Clicked at:', intersects); // 输出交点坐标
+        leftPosition = intersects[0].point
+
+    } else {
+        leftPosition = new THREE.Vector3(0,0,0)
+    }
+
+    switch (draggedValue) {
+        case '摄像头':
+            addPoint2(leftPosition)
+            break;
+
+        case '自行车':
+            addPoint(leftPosition)
+            break;
+        case '平板':
+            addLand(leftPosition)
+            break;
+        case '人物':
+            addModels('assets/Jackie.glb',leftPosition)
+            break;
+        case '机房':
+            addModels('assets/jifang.glb',leftPosition)
+            break;
+    }
+});
+
+
+</script>
+
+<style scoped>
+.menu {
+    width: 180px;
+    height: 100%;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.thumbnail-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 10px;
+    padding: 0;
+    list-style: none;
+}
+
+.thumbnail-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.thumbnail {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    transition: transform 0.2s;
+}
+
+.thumbnail:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+}
+
+.thumbnail-caption {
+    margin-top: 5px;
+    font-size: 12px;
+    text-align: center;
+    max-width: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+</style>
