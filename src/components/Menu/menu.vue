@@ -11,22 +11,29 @@
 </template>
 
 <script setup>
-import { onMounted,ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import * as THREE from 'three';
-import {addPoint,addPoint2,addLand,addModels} from "/src/commonjs/basicGeometries.js"
+import { addPoint, addCone, addLand, addModels } from "/src/commonjs/basicGeometries.js"
 
 
 let raycaster, mouse;
 let draggedValue = null;
 
 let dataList = ref([
-    {name:'摄像头',img:'http://116.196.110.130:5353/wz.png'},
-    {name:'自行车',img:'http://116.196.110.130:5353/wz.png'},
-    {name:'汽车',img:'http://116.196.110.130:5353/wz.png'},
-    {name:'机房',img:'http://116.196.110.130:5353/wz.png'},
-    {name:'人物',img:'http://116.196.110.130:5353/wz.png'},
-    {name:'平板',img:'http://116.196.110.130:5353/wz.png'},
+    { name: '摄像头', img: 'http://116.196.110.130:5353/wz.png' },
+    { name: '自行车', img: 'http://116.196.110.130:5353/wz.png' },
+    { name: '汽车', img: 'http://116.196.110.130:5353/wz.png' },
+    { name: '机房', img: 'http://116.196.110.130:5353/wz.png' },
+    { name: '人物', img: 'http://116.196.110.130:5353/wz.png' },
+    { name: '平板', img: 'http://116.196.110.130:5353/wz.png' },
 ])
+let sceneData = ref({
+    object: [],
+    environment: {
+        hdr: "environments/sky.hdr",
+        intensity: 1.0
+    }
+})
 
 // 光线投射器
 raycaster = new THREE.Raycaster();
@@ -38,7 +45,7 @@ onMounted(() => {
             event.dataTransfer.effectAllowed = 'move';
         });
     });
-}) 
+})
 
 
 // const canvas = document.getElementById('three-container');
@@ -57,37 +64,59 @@ window.addEventListener('drop', (event) => {
 
     // 计算射线与场景中的物体的交点
     const intersects = raycaster.intersectObjects(scene.children);
-    console.log(intersects);
-    
+
     // 如果有交点
     let leftPosition
     if (intersects.length > 0) {
         const intersectPoint = intersects[0].point; // 获取交点坐标
-        console.log('Clicked at:', intersects); // 输出交点坐标
+        console.log('落点:', intersects); // 输出交点坐标
         leftPosition = intersects[0].point
 
     } else {
-        leftPosition = new THREE.Vector3(0,0,0)
+        leftPosition = new THREE.Vector3(0, 0, 0)
     }
 
     switch (draggedValue) {
         case '摄像头':
-            addPoint2(leftPosition)
+            addCone(leftPosition)
+            sceneData.value.object.push({
+                type:'cone',
+                initPosition:leftPosition
+            })
             break;
-
         case '自行车':
             addPoint(leftPosition)
+            sceneData.value.object.push({
+                type:'ball',
+                initPosition:leftPosition
+            })
             break;
         case '平板':
             addLand(leftPosition)
+            sceneData.value.object.push({
+                type:'land',
+                initPosition:leftPosition
+            })
             break;
         case '人物':
-            addModels('assets/Jackie.glb',leftPosition)
+            addModels('assets/Jackie.glb', leftPosition)
+            sceneData.value.object.push({
+                type:'model',
+                initPosition:leftPosition,
+                path:'assets/Jackie.glb'
+            })
             break;
         case '机房':
-            addModels('assets/jifang.glb',leftPosition)
+            addModels('assets/jifang.glb', leftPosition)
+            sceneData.value.object.push({
+                type:'model',
+                initPosition:leftPosition,
+                path:'assets/jifang.glb'
+            })
             break;
     }
+    console.log(sceneData.value);
+    localStorage.setItem("scene",JSON.stringify(sceneData.value))
 });
 
 

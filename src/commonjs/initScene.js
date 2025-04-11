@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
-export const initScene =  (dom) => {
+export const initScene = (dom) => {
     const scene = new THREE.Scene();
     window.scene = scene
 
@@ -21,9 +21,9 @@ export const initScene =  (dom) => {
     const light = new THREE.AmbientLight(0xffffff);
     scene.add(light);
 
-    
-// 鼠标控制相机
-const controls = new OrbitControls(camera, renderer.domElement);
+
+    // 鼠标控制相机
+    const controls = new OrbitControls(camera, renderer.domElement);
 
     // 渲染场景
     function animate() {
@@ -33,4 +33,16 @@ const controls = new OrbitControls(camera, renderer.domElement);
         scene.backgroundRotation.y += 0.0001
     }
     animate()
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', onWindowResize);
+
+    function onWindowResize() {
+    // 更新相机宽高比
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix(); // 必须调用，否则相机不会生效
+
+    // 更新渲染器尺寸
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    }
 }
