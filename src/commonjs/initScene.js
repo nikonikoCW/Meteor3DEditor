@@ -2,7 +2,7 @@
  * @Author: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
  * @Date: 2025-04-10 17:38:30
  * @LastEditors: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
- * @LastEditTime: 2025-04-15 15:26:46
+ * @LastEditTime: 2025-04-15 15:40:20
  * @FilePath: \nico\src\commonjs\initScene.js
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -16,7 +16,7 @@ export const initScene = (dom) => {
 
     // 创建相机
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
-    camera.position.set(0, 272, 181);
+    camera.position.set(311.03264809072385, 98.96320277581572, 14.490559617396444);
     window.camera = camera
 
     // 创建渲染器

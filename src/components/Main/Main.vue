@@ -1,7 +1,10 @@
 <template>
   <div ref="container" class="three-container" id="three-container"></div>
-  <div class="layout-menu">
+  <div class="layout-left">
     <Menu></Menu>
+  </div>
+  <div class="layout-right">
+    <LayerManager/>
   </div>
   <div class="preview button-m" @click="preview">预览</div>
   <div class="down button-m" @click="down">导出</div>
@@ -13,6 +16,7 @@ import { onMounted } from 'vue'
 import { initScene } from "../../commonjs/initScene.js"
 import { loadHRd } from "../../commonjs/loadHdr.js"
 import Menu from "../Menu/menu.vue"
+import LayerManager from "../LayerManager/layerManager.vue"
 import { downloadGLTFWithAssets, downloadGLB } from "../../commonjs/downLoad.js"
 
 const router = useRouter()
@@ -41,6 +45,8 @@ const down = () => {
   downloadGLB('assets/day.hdr', 'day.hdr');
 }
 
+
+
 </script>
 
 <style scoped>
@@ -49,11 +55,19 @@ const down = () => {
   height: 100vh;
 }
 
-.layout-menu {
+.layout-left {
   position: absolute;
   left: 0;
   top: 0;
   height: 100%;
+}
+.layout-right{
+  
+  background: rgba(255, 255, 255, 0.2); /* 背景颜色 */
+  backdrop-filter: blur(10px); /* 毛玻璃效果 */
+  position: absolute;
+  right: 0px;
+  top: 0px;
 }
 
 .preview {
