@@ -22,7 +22,7 @@ let draggedValue = null;
 let dataList = ref([
     { name: '摄像头', img: 'http://116.196.110.130:5353/wz.png' },
     { name: '自行车', img: 'http://116.196.110.130:5353/wz.png' },
-    { name: '汽车', img: 'http://116.196.110.130:5353/wz.png' },
+    { name: '游戏建筑', img: 'http://116.196.110.130:5353/wz.png' },
     { name: '机房', img: 'http://116.196.110.130:5353/wz.png' },
     { name: '人物', img: 'http://116.196.110.130:5353/wz.png' },
     { name: '平板', img: 'http://116.196.110.130:5353/wz.png' },
@@ -98,6 +98,14 @@ window.addEventListener('drop', (event) => {
                 initPosition:leftPosition
             })
             break;
+        case '游戏建筑':
+            addModels('assets/model/scene.gltf', leftPosition)
+            sceneData.value.object.push({
+                type:'model',
+                initPosition:leftPosition,
+                path:'assets/model/scene.gltf'
+            })
+            break;
         case '人物':
             addModels('assets/Jackie.glb', leftPosition)
             sceneData.value.object.push({
@@ -107,11 +115,11 @@ window.addEventListener('drop', (event) => {
             })
             break;
         case '机房':
-            addModels('assets/jifang.glb', leftPosition)
+            addModels('assets/my-model.glb', leftPosition)
             sceneData.value.object.push({
                 type:'model',
                 initPosition:leftPosition,
-                path:'assets/jifang.glb'
+                path:'assets/my-model.glb'
             })
             break;
     }
