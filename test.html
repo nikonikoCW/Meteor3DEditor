@@ -1,0 +1,101 @@
+<!--
+ * @Author: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
+ * @Date: 2025-04-17 10:42:42
+ * @LastEditors: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
+ * @LastEditTime: 2025-04-17 10:48:20
+ * @FilePath: \nico\test.html
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>文件管理</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .folder, .file {
+      padding: 4px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .folder-label {
+      cursor: pointer;
+      user-select: none;
+    }
+    .children {
+      margin-left: 20px;
+      display: none;
+    }
+    .open > .children {
+      display: block;
+    }
+    .icon {
+      margin-right: 5px;
+    }
+    .trash {
+      cursor: pointer;
+      color: gray;
+    }
+  </style>
+</head>
+<body>
+  <h2>文件管理</h2>
+  <div class="folder open">
+    <div class="folder-label" onclick="toggleFolder(this)">
+      📁 项目文档
+    </div>
+    <div class="trash">🗑️</div>
+    <div class="children">
+      <div class="folder open">
+        <div class="folder-label" onclick="toggleFolder(this)">
+          📁 研发文档
+        </div>
+        <div class="trash">🗑️</div>
+        <div class="children">
+          <div class="file">
+            <span>📄 需求分析文档.docx</span>
+            <div class="trash">🗑️</div>
+          </div>
+          <div class="file">
+            <span>📊 项目进度表.xlsx</span>
+            <div class="trash">🗑️</div>
+          </div>
+        </div>
+      </div>
+      <div class="folder">
+        <div class="folder-label" onclick="toggleFolder(this)">
+          📁 设计资源
+        </div>
+        <div class="trash">🗑️</div>
+        <div class="children">
+          <!-- 可添加子文件或文件夹 -->
+        </div>
+      </div>
+      <div class="folder">
+        <div class="folder-label" onclick="toggleFolder(this)">
+          📁 开发文档
+        </div>
+        <div class="trash">🗑️</div>
+        <div class="children">
+          <!-- 可添加子文件或文件夹 -->
+        </div>
+      </div>
+      <div class="file">
+        <span>📕 项目总结报告.pdf</span>
+        <div class="trash">🗑️</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleFolder(label) {
+      const folder = label.parentElement;
+      folder.classList.toggle('open');
+    }
+  </script>
+</body>
+</html>

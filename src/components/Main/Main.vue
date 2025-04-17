@@ -6,8 +6,8 @@
   <div class="layout-right">
     <LayerManager/>
   </div>
-  <div class="preview button-m" @click="preview">预览</div>
-  <div class="down button-m" @click="down">导出</div>
+  <div class="preview button-m" @click="preview" v-if="false">预览</div>
+  <div class="down button-m" @click="down" v-if="false">导出</div>
 </template>
 
 <script setup>
@@ -68,6 +68,7 @@ const down = () => {
   position: absolute;
   right: 0px;
   top: 0px;
+  width: 240px;
 }
 
 .preview {

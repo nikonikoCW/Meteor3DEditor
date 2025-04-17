@@ -1,27 +1,42 @@
+<!-- FileTree.vue -->
 <template>
-    <div>
-        <h1>图层管理</h1>
-        <div class="layer-data">
-            
-        </div>
+    <div class="file-tree">
+        <p>图层管理</p>
+        <FileNode v-for="(item, index) in files" :key="index" :node="item" />
     </div>
-  </template>
-  
-  <script setup>
-  import { ref } from 'vue';
-  
-  const files = [
-  { name: '文件夹1', children: [{ name: '文件1-1' }, { name: '文件1-2' ,children: [{ name: '文件1-2-1' }, { name: '文件1-2-2' }]}] },
-  { name: '文件夹2', children: [{ name: '文件2-1' }] },
-  { name: '文件3' }
-];
+</template>
 
+<script setup>
+import { ref } from 'vue'
+import FileNode from './FileNode.vue'
 
-  
+const files = ref([
+    {
+        name: '文件夹A',
+        children: [
+            {
+                name: '文件夹C',
+                children: [
+                    { name: '文件1.txt', type: '文本', time: '2025-04-10' },
+                    { name: '文件2.png', type: '图片', time: '2025-04-11' }
+                ]
+            },
+            { name: '文件2.png', type: '图片', time: '2025-04-11' }
+        ]
+    },
+    {
+        name: '文件夹B',
+        children: [
+            { name: '文档.docx', type: '文档', time: '2025-04-12' },
+            { name: '演示.pptx', type: 'PPT', time: '2025-04-13' }
+        ]
+    }
+])
+</script>
 
-  </script>
-  
-  <style scoped>
-
-  </style>
-  
+<style scoped>
+.file-tree {
+    padding: 16px;
+    max-width: 800px;
+}
+</style>
