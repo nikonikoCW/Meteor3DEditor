@@ -1,12 +1,3 @@
-<!--
- * @Author: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
- * @Date: 2025-04-17 11:00:50
- * @LastEditors: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
- * @LastEditTime: 2025-04-17 11:10:18
- * @FilePath: \nico\src\components\LayerManager\FileNode.vue
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
--->
-<!-- FileNode.vue -->
 <template>
     <div class="file-node">
       <div
@@ -20,6 +11,7 @@
   
       <div
         class="node-file hoverable"
+        @click="deleteObject(node)"
         v-else
       >
         📄 {{ node.name }}
@@ -48,12 +40,17 @@
   })
   
   const expanded = ref(true)
-  const isFolder = computed(() => props.node.children && props.node.children.length)
+  const isFolder = computed(() => props.node.children)
   
   const toggle = () => {
     if (isFolder.value) {
       expanded.value = !expanded.value
     }
+  }
+  const deleteObject = (node) => {
+    console.log(node);
+    let a = scene.children.filter(item => item.uuid === node.uuid)
+    scene.remove(a[0])
   }
   </script>
   

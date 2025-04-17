@@ -14,24 +14,29 @@
 import { onMounted, ref } from 'vue';
 import * as THREE from 'three';
 import { addPoint, addCone, addLand, addModels } from "/src/commonjs/basicGeometries.js"
+import { sceneConfigStore } from "/src/store/layer.js"
+const store = sceneConfigStore()
 
 
 let raycaster, mouse;
 let draggedValue = null;
 
 let dataList = ref([
-    { name: '摄像头', img: 'http://116.196.110.130:5353/wz.png' },
-    { name: '自行车', img: 'http://116.196.110.130:5353/wz.png' },
+    { name: '圆锥', img: 'http://116.196.110.130:5353/wz.png' },
+    { name: '球体', img: 'http://116.196.110.130:5353/wz.png' },
     { name: '游戏建筑', img: 'http://116.196.110.130:5353/wz.png' },
     { name: '机房', img: 'http://116.196.110.130:5353/wz.png' },
     { name: '人物', img: 'http://116.196.110.130:5353/wz.png' },
     { name: '平板', img: 'http://116.196.110.130:5353/wz.png' },
 ])
 let sceneData = ref({
-    object: [],
-    environment: {
-        hdr: "environments/sky.hdr",
-        intensity: 1.0
+    scene: {
+        object: [
+        ],
+        environment: {
+            hdr: "environments/sky.hdr",
+            intensity: 1
+        }
     }
 })
 
@@ -68,7 +73,6 @@ window.addEventListener('drop', (event) => {
     // 如果有交点
     let leftPosition
     if (intersects.length > 0) {
-        const intersectPoint = intersects[0].point; // 获取交点坐标
         console.log('落点:', intersects); // 输出交点坐标
         leftPosition = intersects[0].point
 
@@ -76,55 +80,62 @@ window.addEventListener('drop', (event) => {
         leftPosition = new THREE.Vector3(0, 0, 0)
     }
 
+    let putData,uuid
     switch (draggedValue) {
-        case '摄像头':
+        case '圆锥':
             addCone(leftPosition)
-            sceneData.value.object.push({
+            putData = {
                 type:'cone',
-                initPosition:leftPosition
-            })
+                name:'圆锥',
+            }
             break;
-        case '自行车':
-            addPoint(leftPosition)
-            sceneData.value.object.push({
+        case '球体':
+            uuid = addPoint(leftPosition)
+            putData = {
                 type:'ball',
-                initPosition:leftPosition
-            })
+                name:'球体',
+            }
             break;
         case '平板':
             addLand(leftPosition)
-            sceneData.value.object.push({
+            putData = {
                 type:'land',
-                initPosition:leftPosition
-            })
+                name:'平板',
+            }
             break;
         case '游戏建筑':
             addModels('assets/model/scene.gltf', leftPosition)
-            sceneData.value.object.push({
+         
+            putData = {
                 type:'model',
-                initPosition:leftPosition,
+                name:'游戏建筑',
                 path:'assets/model/scene.gltf'
-            })
+            }
             break;
         case '人物':
             addModels('assets/Jackie.glb', leftPosition)
-            sceneData.value.object.push({
+            putData = {
                 type:'model',
-                initPosition:leftPosition,
+                name:'人物',
                 path:'assets/Jackie.glb'
-            })
+            }
             break;
         case '机房':
             addModels('assets/my-model.glb', leftPosition)
-            sceneData.value.object.push({
+            putData = {
                 type:'model',
-                initPosition:leftPosition,
+                name:'机房',
                 path:'assets/my-model.glb'
-            })
+            }
             break;
     }
-    console.log(sceneData.value);
+    putData.initPosition = leftPosition
+    putData.uuid = uuid
+    sceneData.value.scene.object.push(putData)
     localStorage.setItem("scene",JSON.stringify(sceneData.value))
+    store.setObject(sceneData.value.scene)
+    // console.log(store.scene);
+    
 });
 
 

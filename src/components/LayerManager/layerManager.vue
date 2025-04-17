@@ -1,14 +1,16 @@
 <!-- FileTree.vue -->
 <template>
     <div class="file-tree">
-        <p>图层管理</p>
-        <FileNode v-for="(item, index) in files" :key="index" :node="item" />
+        <p @click="log2">图层管理</p>
+        <FileNode v-for="(item, index) in store.files" :key="index" :node="item" />
     </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import FileNode from './FileNode.vue'
+import { sceneConfigStore } from "/src/store/layer.js"
+const store = sceneConfigStore()
 
 const files = ref([
     {
@@ -32,6 +34,10 @@ const files = ref([
         ]
     }
 ])
+
+function log2(){
+    console.log(store.files);
+}
 </script>
 
 <style scoped>
