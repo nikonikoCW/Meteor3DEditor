@@ -2,7 +2,7 @@
  * @Author: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
  * @Date: 2025-04-10 16:07:56
  * @LastEditors: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
- * @LastEditTime: 2025-04-17 16:18:33
+ * @LastEditTime: 2025-04-18 09:55:11
  * @FilePath: \nico\src\commonjs\basicGeometries.js
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -28,6 +28,7 @@ export const addCone = (position) => {
     const sphere = new THREE.Mesh(geometry, material);
     scene.add(sphere);
     sphere.position.copy(position)
+    return sphere.uuid
 }
 
 export const addLand = (position) => {
@@ -38,6 +39,7 @@ export const addLand = (position) => {
     scene.add(plane);
     plane.position.copy(position)
     plane.rotation.x = Math.PI / 2
+    return plane.uuid
 }
 export function addModels(path,position) {
 
@@ -53,6 +55,8 @@ export function addModels(path,position) {
         
         gltfScene.position.sub(center).add(position);
         scene.add(gltfScene)
+        
+        return gltfScene.uuid
 
     })
 }

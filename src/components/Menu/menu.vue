@@ -83,7 +83,7 @@ window.addEventListener('drop', (event) => {
     let putData,uuid
     switch (draggedValue) {
         case '圆锥':
-            addCone(leftPosition)
+        uuid = addCone(leftPosition)
             putData = {
                 type:'cone',
                 name:'圆锥',
@@ -97,14 +97,14 @@ window.addEventListener('drop', (event) => {
             }
             break;
         case '平板':
-            addLand(leftPosition)
+        uuid = addLand(leftPosition)
             putData = {
                 type:'land',
                 name:'平板',
             }
             break;
         case '游戏建筑':
-            addModels('assets/model/scene.gltf', leftPosition)
+        uuid = addModels('assets/model/scene.gltf', leftPosition)
          
             putData = {
                 type:'model',
@@ -113,7 +113,7 @@ window.addEventListener('drop', (event) => {
             }
             break;
         case '人物':
-            addModels('assets/Jackie.glb', leftPosition)
+        uuid = addModels('assets/Jackie.glb', leftPosition)
             putData = {
                 type:'model',
                 name:'人物',
@@ -121,7 +121,7 @@ window.addEventListener('drop', (event) => {
             }
             break;
         case '机房':
-            addModels('assets/my-model.glb', leftPosition)
+        uuid = addModels('assets/my-model.glb', leftPosition)
             putData = {
                 type:'model',
                 name:'机房',

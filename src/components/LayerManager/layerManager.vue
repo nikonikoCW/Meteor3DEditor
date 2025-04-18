@@ -38,6 +38,7 @@ const files = ref([
 function log2(){
     console.log(store.files);
 }
+
 </script>
 
 <style scoped>

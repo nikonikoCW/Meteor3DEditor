@@ -16,6 +16,11 @@ export const sceneConfigStore = defineStore('sceneConfig', {
     actions:{
         setObject(val){
             this.scene = val
+        },
+        deleteObject(uuid){
+            
+            let a = this.scene.object.filter(item => item.uuid !== uuid)
+            this.scene.object = a
         }
     },
     getters:{
