@@ -4,7 +4,7 @@
     <Menu></Menu>
   </div>
   <div class="layout-right">
-    <LayerManager/>
+    <LayerManager />
   </div>
   <div class="preview button-m" @click="preview" v-if="false">预览</div>
   <div class="down button-m" @click="down" v-if="false">导出</div>
@@ -18,6 +18,8 @@ import { loadHRd } from "../../commonjs/loadHdr.js"
 import Menu from "../Menu/menu.vue"
 import LayerManager from "../LayerManager/layerManager.vue"
 import { downloadGLTFWithAssets, downloadGLB } from "../../commonjs/downLoad.js"
+import { dbClick } from "../../commonjs/event.js"
+import { flyto } from "../../commonjs/camera.js"
 
 const router = useRouter()
 
@@ -26,6 +28,11 @@ onMounted(() => {
   console.log('mounted in the composition api!')
   initScene('three-container')
   loadHRd('./assets/day2.hdr')
+
+  window.addEventListener('dblclick', (event) => {
+    let a = dbClick(event)
+    flyto(a[0].object)
+  })
 })
 
 const preview = () => {
@@ -50,6 +57,13 @@ const down = () => {
 </script>
 
 <style scoped>
+.bb{
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width:180px;
+  height: 180px;
+}
 .three-container {
   width: 100%;
   height: 100vh;
@@ -61,10 +75,13 @@ const down = () => {
   top: 0;
   height: 100%;
 }
-.layout-right{
-  
-  background: rgba(255, 255, 255, 0.2); /* 背景颜色 */
-  backdrop-filter: blur(10px); /* 毛玻璃效果 */
+
+.layout-right {
+
+  background: rgba(255, 255, 255, 0.2);
+  /* 背景颜色 */
+  backdrop-filter: blur(10px);
+  /* 毛玻璃效果 */
   position: absolute;
   right: 0px;
   top: 0px;

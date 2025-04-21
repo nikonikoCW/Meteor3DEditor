@@ -2,7 +2,7 @@
  * @Author: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
  * @Date: 2025-04-15 15:17:59
  * @LastEditors: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
- * @LastEditTime: 2025-04-15 15:22:51
+ * @LastEditTime: 2025-04-18 16:51:45
  * @FilePath: \nico\src\commonjs\camera.js
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -15,7 +15,7 @@ export function flyto (val) {
             x: val.position.x,
             y: val.position.y,
             z: val.position.z
-        }, 500) // 过渡时间 1000 毫秒
+        }, 50) // 过渡时间 1000 毫秒
         .easing(TWEEN.Easing.Quadratic.Out) // 
         .start();
 
@@ -24,7 +24,7 @@ export function flyto (val) {
             x: val.target.x,
             y: val.target.y,
             z: val.target.z
-        }, 500)
+        }, 50)
         .easing(TWEEN.Easing.Quadratic.Out)
         
         .start();
