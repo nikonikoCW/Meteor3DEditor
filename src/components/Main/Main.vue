@@ -19,7 +19,7 @@ import Menu from "../Menu/menu.vue"
 import LayerManager from "../LayerManager/layerManager.vue"
 import { downloadGLTFWithAssets, downloadGLB } from "../../commonjs/downLoad.js"
 import { dbClick } from "../../commonjs/event.js"
-import { flyto } from "../../commonjs/camera.js"
+import { flyto ,focusOnObject} from "../../commonjs/camera.js"
 
 const router = useRouter()
 
@@ -31,7 +31,8 @@ onMounted(() => {
 
   window.addEventListener('dblclick', (event) => {
     let a = dbClick(event)
-    flyto(a[0].object)
+    // flyto(a[0].object)
+    focusOnObject(a[0].object)
   })
 })
 

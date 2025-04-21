@@ -1,30 +1,23 @@
-/*
- * @Author: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
- * @Date: 2025-04-15 15:17:59
- * @LastEditors: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
- * @LastEditTime: 2025-04-18 16:51:45
- * @FilePath: \nico\src\commonjs\camera.js
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
- */
 import TWEEN from '@tweenjs/tween.js';
+import * as THREE from 'three';
 
 export function flyto (val) {
     // 创建平滑过渡动画
-    new TWEEN.Tween(camera.position)
+    new TWEEN.Tween(window.camera.position)
         .to({
             x: val.position.x,
             y: val.position.y,
             z: val.position.z
-        }, 50) // 过渡时间 1000 毫秒
+        }, 500) // 过渡时间 1000 毫秒
         .easing(TWEEN.Easing.Quadratic.Out) // 
         .start();
 
-    new TWEEN.Tween(controls.target)
+    new TWEEN.Tween(window.controls.target)
         .to({
             x: val.target.x,
             y: val.target.y,
             z: val.target.z
-        }, 50)
+        }, 500)
         .easing(TWEEN.Easing.Quadratic.Out)
         
         .start();
@@ -40,4 +33,17 @@ export function getView () {
     };
     console.log(camera);
     
+}
+
+export function focusOnObject(object3D, camera=window.camera, distance = 5) {
+    // 获取模型的位置
+    const targetPosition = object3D.getWorldPosition(new THREE.Vector3());
+    
+    // 计算摄像机的新位置，保持一定距离
+    const direction = new THREE.Vector3().subVectors(camera.position, targetPosition).normalize();
+    const newCameraPosition = targetPosition.clone().add(direction.multiplyScalar(distance));
+    
+    // 更新相机的位置和朝向
+    camera.position.copy(newCameraPosition);
+    camera.lookAt(targetPosition);
 }
