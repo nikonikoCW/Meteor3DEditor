@@ -2,14 +2,15 @@
  * @Author: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
  * @Date: 2025-04-10 17:38:30
  * @LastEditors: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
- * @LastEditTime: 2025-04-21 14:43:38
+ * @LastEditTime: 2025-04-22 09:48:26
  * @FilePath: \nico\src\commonjs\initScene.js
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { ViewHelper } from 'three/addons/helpers/ViewHelper.js';
+// import { ViewHelper } from 'three/addons/helpers/ViewHelper.js';
+import { ViewHelper } from './ViewHelper.js';
 
 
 export const initScene = (dom) => {
@@ -46,7 +47,7 @@ export const initScene = (dom) => {
     const div = document.createElement( 'div' );
     div.id = 'viewHelper';
     div.style.position = 'absolute';
-    div.style.right = 0;
+    div.style.right = '276px';
     div.style.bottom = 0;
     div.style.height = '128px';
     div.style.width = '128px';

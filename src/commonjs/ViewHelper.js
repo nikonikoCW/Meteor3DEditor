@@ -124,8 +124,7 @@ class ViewHelper extends THREE.Object3D {
 			}
 
 			//
-
-			const x = dom.offsetWidth - dim;
+			const x = dom.offsetWidth - dim - 276;
 
 			renderer.clearDepth();
 
@@ -150,10 +149,10 @@ class ViewHelper extends THREE.Object3D {
 			if ( this.animating === true ) return false;
 
 			const rect = dom.getBoundingClientRect();
-			const offsetX = rect.left + ( dom.offsetWidth - dim );
+			const offsetX = rect.left + ( dom.offsetWidth - dim - 276 );
 			const offsetY = rect.top + ( dom.offsetHeight - dim );
-			mouse.x = ( ( event.clientX - offsetX ) / ( rect.width - offsetX ) ) * 2 - 1;
-			mouse.y = - ( ( event.clientY - offsetY ) / ( rect.bottom - offsetY ) ) * 2 + 1;
+			mouse.x = ( ( event.clientX - offsetX ) / dim ) * 2 - 1;
+			mouse.y = - ( ( event.clientY - offsetY ) / dim ) * 2 + 1;
 
 			raycaster.setFromCamera( mouse, camera );
 

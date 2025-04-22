@@ -1,13 +1,14 @@
 <template>
   <div ref="container" class="three-container" id="three-container"></div>
   <div class="layout-left">
-    <Menu></Menu>
+    <Source></Source>
   </div>
   <div class="layout-right">
+    <Menu></Menu>
     <LayerManager />
   </div>
-  <div class="preview button-m" @click="preview" v-if="false">预览</div>
-  <div class="down button-m" @click="down" v-if="false">导出</div>
+  <!-- <div class="preview button-m" @click="preview" v-if="false">预览</div>
+  <div class="down button-m" @click="down" v-if="false">导出</div> -->
 </template>
 
 <script setup>
@@ -15,6 +16,7 @@ import { useRouter } from 'vue-router';
 import { onMounted } from 'vue'
 import { initScene } from "../../commonjs/initScene.js"
 import { loadHRd } from "../../commonjs/loadHdr.js"
+import Source from "../Source/source.vue"
 import Menu from "../Menu/menu.vue"
 import LayerManager from "../LayerManager/layerManager.vue"
 import { downloadGLTFWithAssets, downloadGLB } from "../../commonjs/downLoad.js"
@@ -86,7 +88,8 @@ const down = () => {
   position: absolute;
   right: 0px;
   top: 0px;
-  width: 240px;
+  width: calc(240px + 36px);
+  display: flex;
 }
 
 .preview {
