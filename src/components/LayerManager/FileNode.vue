@@ -6,7 +6,7 @@
     </div>
 
     <div class="node-file hoverable" @click="deleteObject(node)" @contextmenu.prevent="(e) => handleContextMenu(e, node)" v-else>
-      📄 {{ node.name }}
+      <span class="me-moxing iconfont" style="color:white;"></span> {{ node.name }}
       <span class="iconfont me-shanchu"></span>
     </div>
 

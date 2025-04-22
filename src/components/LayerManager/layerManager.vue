@@ -1,7 +1,7 @@
 <!-- FileTree.vue -->
 <template>
     <div class="file-tree">
-        <p @click="log2">图层管理</p>
+        <!-- <p @click="log2">图层管理</p> -->
         <FileNode v-for="(item, index) in store.files" :key="index" :node="item" />
     </div>
 </template>

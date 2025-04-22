@@ -2,7 +2,7 @@
  * @Author: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
  * @Date: 2025-04-10 16:07:56
  * @LastEditors: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
- * @LastEditTime: 2025-04-18 09:55:11
+ * @LastEditTime: 2025-04-22 10:02:37
  * @FilePath: \nico\src\commonjs\basicGeometries.js
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -42,22 +42,27 @@ export const addLand = (position) => {
     return plane.uuid
 }
 export function addModels(path,position) {
+    return new Promise((resolve, reject) => {
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath('draco/gltf/');
+        const gltfLoader = new GLTFLoader();
+        gltfLoader.setDRACOLoader(dracoLoader);
 
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath('draco/gltf/');
-    const gltfLoader = new GLTFLoader();
-    gltfLoader.setDRACOLoader(dracoLoader);
+        gltfLoader.load(path, res => {
+            const gltfScene = res.scene;
+            const box = new THREE.Box3().setFromObject(gltfScene);
+            const center = box.getCenter(new THREE.Vector3());
+            
+            gltfScene.position.sub(center).add(position);
+            scene.add(gltfScene)
+            resolve(gltfScene.uuid); // 使用 Promise resolve
 
-    gltfLoader.load(path, res => {
-        const gltfScene = res.scene;
-        const box = new THREE.Box3().setFromObject(gltfScene);
-        const center = box.getCenter(new THREE.Vector3());
-        
-        gltfScene.position.sub(center).add(position);
-        scene.add(gltfScene)
-        
-        return gltfScene.uuid
-
+        },
+        undefined,
+        error => {
+            reject(error); // 处理加载错误
+        }
+        )
     })
 }
 

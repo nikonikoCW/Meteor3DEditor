@@ -1,14 +1,21 @@
 <template>
   <div ref="container" class="three-container" id="three-container"></div>
-  <div class="layout-left">
-    <Source></Source>
+  <div class="layout-main">
+    <div class="header">
+      <div class="btn button-m" @click="preview">预览</div>
+      <div class="btn button-m" @click="down">导出</div>
+    </div>
+    <div class="layout-content">
+      <div class="layout-left">
+        <Source>
+        </Source>
+      </div>
+      <div class="layout-right">
+        <Menu></Menu>
+        <LayerManager />
+      </div>
+    </div>
   </div>
-  <div class="layout-right">
-    <Menu></Menu>
-    <LayerManager />
-  </div>
-  <!-- <div class="preview button-m" @click="preview" v-if="false">预览</div>
-  <div class="down button-m" @click="down" v-if="false">导出</div> -->
 </template>
 
 <script setup>
@@ -21,7 +28,7 @@ import Menu from "../Menu/menu.vue"
 import LayerManager from "../LayerManager/layerManager.vue"
 import { downloadGLTFWithAssets, downloadGLB } from "../../commonjs/downLoad.js"
 import { dbClick } from "../../commonjs/event.js"
-import { flyto ,focusOnObject} from "../../commonjs/camera.js"
+import { flyto, focusOnObject } from "../../commonjs/camera.js"
 
 const router = useRouter()
 
@@ -60,50 +67,60 @@ const down = () => {
 </script>
 
 <style scoped>
-.bb{
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  width:180px;
-  height: 180px;
-}
 .three-container {
   width: 100%;
-  height: 100vh;
-}
-
-.layout-left {
+  height: 100%;
   position: absolute;
   left: 0;
   top: 0;
+}
+
+
+.layout-main {
+  width: 100%;
   height: 100%;
+
+  .header {
+
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+    height: 48px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    flex-direction: row-reverse;
+  }
+
+  .layout-content {
+    width: 100%;
+    height: calc(100% - 48px);
+    display: flex;
+    justify-content: space-between;
+
+
+
+    .layout-left {
+      height: 100%;
+    }
+
+    .layout-right {
+
+      background: rgba(255, 255, 255, 0.2);
+      /* 背景颜色 */
+      backdrop-filter: blur(10px);
+      /* 毛玻璃效果 */
+      width: calc(240px + 36px);
+      /* display: flex; */
+    }
+  }
 }
 
-.layout-right {
 
-  background: rgba(255, 255, 255, 0.2);
-  /* 背景颜色 */
-  backdrop-filter: blur(10px);
-  /* 毛玻璃效果 */
-  position: absolute;
-  right: 0px;
-  top: 0px;
-  width: calc(240px + 36px);
-  display: flex;
-}
-
-.preview {
-  position: absolute;
-  right: 12px;
-  top: 12px;
+.btn {
   cursor: pointer;
-}
-
-.down {
-  position: absolute;
-  right: 80px;
-  top: 12px;
-  cursor: pointer;
+  margin: 0 5px;
 }
 
 .button-m {
@@ -111,7 +128,7 @@ const down = () => {
   padding: 6px 12px;
   border: none;
   border-radius: 12px;
-  font-size: 16px;
+  font-size: 12px;
   font-weight: bold;
   color: white;
   cursor: pointer;

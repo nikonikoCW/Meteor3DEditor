@@ -57,7 +57,7 @@ onMounted(() => {
 window.addEventListener('dragover', (event) => {
     event.preventDefault();
 });
-window.addEventListener('drop', (event) => {
+window.addEventListener('drop', async (event) => {
 
     // 将鼠标坐标转换到 NDC（归一化设备坐标）
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -121,7 +121,7 @@ window.addEventListener('drop', (event) => {
             }
             break;
         case '机房':
-        uuid = addModels('assets/my-model.glb', leftPosition)
+        uuid = await addModels('assets/my-model.glb', leftPosition)
             putData = {
                 type:'model',
                 name:'机房',
