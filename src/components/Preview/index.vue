@@ -2,7 +2,7 @@
  * @Author: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
  * @Date: 2025-04-11 11:16:38
  * @LastEditors: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
- * @LastEditTime: 2025-04-15 15:37:26
+ * @LastEditTime: 2025-04-23 10:00:03
  * @FilePath: \nico\src\components\Preview\index.vue
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 -->
@@ -22,7 +22,7 @@ onMounted(() => {
     loadHRd('./assets/day.hdr')
 
     if (!sceneData) return
-    JSON.parse(sceneData).object.forEach(element => {
+    JSON.parse(sceneData).scene.object.forEach(element => {
         console.log(element);
         switch (element.type) {
             case 'cone':

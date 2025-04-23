@@ -26,7 +26,8 @@ import { loadHRd } from "../../commonjs/loadHdr.js"
 import Source from "../Source/source.vue"
 import Menu from "../Menu/menu.vue"
 import LayerManager from "../LayerManager/layerManager.vue"
-import { downloadGLTFWithAssets, downloadGLB } from "../../commonjs/downLoad.js"
+// import { downloadGLTFWithAssets, downloadGLB ,downloadAll} from "../../commonjs/downLoad.js"
+import GLTFDownloader from "../../commonjs/downLoad.js"
 import { dbClick } from "../../commonjs/event.js"
 import { flyto, focusOnObject } from "../../commonjs/camera.js"
 
@@ -38,10 +39,10 @@ onMounted(() => {
   initScene('three-container')
   loadHRd('./assets/day2.hdr')
 
-  window.addEventListener('dblclick', (event) => {
-    let a = dbClick(event)
+  document.getElementById('three-container').addEventListener('dblclick', (event) => {
+    // let a = dbClick(event)
     // flyto(a[0].object)
-    focusOnObject(a[0].object)
+    // focusOnObject(a[0].object)
   })
 })
 
@@ -57,9 +58,12 @@ const preview = () => {
 
 const down = () => {
   let sceneData = localStorage.getItem('scene')
-  // downloadGLTFWithAssets('assets/dungeon_low_poly_game_level_challenge/scene.gltf');
-  // downloadGLB('assets/dungeon_low_poly_game_level_challenge/scene.gltf', 'my-model.gltf');
-  downloadGLB('assets/day.hdr', 'day.hdr');
+  console.log(JSON.parse(sceneData).scene.object);
+  const downloader = new GLTFDownloader();
+  downloader.downloadAll();
+  // downloadGLTFWithAssets('assets/model/scene.gltf');
+  // downloadGLB('assets/jifang.glb', 'jifang.gl');
+  // downloadGLB('assets/day.hdr', 'day.hdr');
 }
 
 
@@ -112,7 +116,7 @@ const down = () => {
       backdrop-filter: blur(10px);
       /* 毛玻璃效果 */
       width: calc(240px + 36px);
-      /* display: flex; */
+      display: flex;
     }
   }
 }

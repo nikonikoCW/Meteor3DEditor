@@ -108,6 +108,7 @@ window.addEventListener('drop', async (event) => {
          
             putData = {
                 type:'model',
+                modeType:"gltf",
                 name:'游戏建筑',
                 path:'assets/model/scene.gltf'
             }
@@ -117,6 +118,7 @@ window.addEventListener('drop', async (event) => {
             putData = {
                 type:'model',
                 name:'人物',
+                modeType:"glb",
                 path:'assets/Jackie.glb'
             }
             break;
@@ -125,6 +127,7 @@ window.addEventListener('drop', async (event) => {
             putData = {
                 type:'model',
                 name:'机房',
+                modeType:"glb",
                 path:'assets/my-model.glb'
             }
             break;
