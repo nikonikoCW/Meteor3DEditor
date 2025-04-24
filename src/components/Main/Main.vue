@@ -11,7 +11,8 @@
       </div>
       <div class="layout-right">
         <Menu></Menu>
-        <LayerManager />
+        <!-- <LayerManager /> -->
+        <Weather />
       </div>
     </div>
   </div>
@@ -25,6 +26,7 @@ import { loadHRd } from "../../commonjs/loadHdr.js"
 import Source from "../Source/source.vue"
 import Menu from "../Menu/menu.vue"
 import LayerManager from "../LayerManager/layerManager.vue"
+import Weather from '../Weather/weather.vue';
 // import { downloadGLTFWithAssets, downloadGLB ,downloadAll} from "../../commonjs/downLoad.js"
 import Header from '../Header/header.vue';
 import { dbClick } from "../../commonjs/event.js"
