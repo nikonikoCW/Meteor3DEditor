@@ -51,6 +51,8 @@ class WeatherEffect {
     }
 }
 
+export default WeatherEffect;
+
 // let raindrops = []
 // let rainTexture = new THREE.TextureLoader().load('assets/images/rain.png')
 // let snowTexture = new THREE.TextureLoader().load('assets/images/snow.png')

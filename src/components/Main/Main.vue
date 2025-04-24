@@ -21,7 +21,7 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import { onMounted } from 'vue'
-import { initScene } from "../../commonjs/initScene.js"
+import Meteor3D from "../../commonjs/index.js"
 import { loadHRd } from "../../commonjs/loadHdr.js"
 import Source from "../Source/source.vue"
 import Menu from "../Menu/menu.vue"
@@ -29,21 +29,21 @@ import LayerManager from "../LayerManager/layerManager.vue"
 import Weather from '../Weather/weather.vue';
 // import { downloadGLTFWithAssets, downloadGLB ,downloadAll} from "../../commonjs/downLoad.js"
 import Header from '../Header/header.vue';
-import { dbClick } from "../../commonjs/event.js"
-import { flyto, focusOnObject } from "../../commonjs/camera.js"
+// import { dbClick } from "../../commonjs/event.js"
+// import { flyto, focusOnObject } from "../../commonjs/camera.js"
 
 const router = useRouter()
 
 
 onMounted(() => {
   console.log('mounted in the composition api!')
-  initScene('three-container')
+  
+  const meteor3D = new Meteor3D()
+  meteor3D.initScene('three-container')
   loadHRd('./assets/day2.hdr')
 
   document.getElementById('three-container').addEventListener('dblclick', (event) => {
-    // let a = dbClick(event)
-    // flyto(a[0].object)
-    // focusOnObject(a[0].object)
+
   })
 })
 
