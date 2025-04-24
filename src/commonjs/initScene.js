@@ -2,7 +2,7 @@
  * @Author: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
  * @Date: 2025-04-10 17:38:30
  * @LastEditors: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
- * @LastEditTime: 2025-04-24 14:10:18
+ * @LastEditTime: 2025-04-24 14:23:13
  * @FilePath: \nico\src\commonjs\initScene.js
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -59,10 +59,13 @@ export const initScene = (dom) => {
         helper.handleClick( event ) 
     });
 
-    const rain = new WeatherEffect({
-        type:'snow',
-        size:3
-    })
+    // const rain = new WeatherEffect({
+    //     type:'snow',
+    //     size:3
+    // })
+
+
+
     // 渲染场景
     function animate() {
         requestAnimationFrame(animate);
@@ -76,7 +79,7 @@ export const initScene = (dom) => {
         scene.backgroundRotation.y += 0.0001
 
 
-        rain.animation()
+        // rain.animation()
 
 
     }

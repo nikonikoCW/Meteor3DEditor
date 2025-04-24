@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tweenjs/tween.js": "^25.0.0",
+    "element-plus": "^2.9.8",
     "jszip": "^3.10.1",
     "pinia": "^3.0.2",
     "three": "0.172.0",

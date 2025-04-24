@@ -4,7 +4,7 @@ class WeatherEffect {
     constructor(options={}){
         // 创建一个雨滴数组
         this.raindrops = [];
-        this.raindropCount = 100000;
+        this.raindropCount = 1000;
         this.rainTexture=null;
         this.options = {
             type:'rain',
@@ -51,4 +51,27 @@ class WeatherEffect {
     }
 }
 
-export default WeatherEffect
+// let raindrops = []
+// let rainTexture = new THREE.TextureLoader().load('assets/images/rain.png')
+// let snowTexture = new THREE.TextureLoader().load('assets/images/snow.png')
+// for (let i = 0; i < this.raindropCount; i++) {
+//     const raindrop = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.rainTexture }));
+//     raindrop.position.set(
+//         Math.random() * 1000 - 250, // X位置
+//         Math.random() * 1000,       // Y位置
+//         Math.random() * 1000 - 250  // Z位置
+//     );
+//     raindrop.scale.set(this.options.size, this.options.size, this.options.size); // 设定雨滴的大小
+//     raindrops.push(raindrop);
+//     scene.add(raindrop);
+// }
+// export const Weather = (options = {}) =>{
+//     let options = {
+//         type:'rain',
+//         size:1,
+//         number:1000,
+//         area:1000,
+//         height:500,
+//         ...options
+//       };
+// }
