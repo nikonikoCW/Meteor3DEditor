@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 
-class GLTFDownloader {
+class ExportScene {
     constructor() {
         this.zip = new JSZip();
     }
@@ -99,7 +99,7 @@ class GLTFDownloader {
             const sceneData = localStorage.getItem('scene');
             const dataList = JSON.parse(sceneData).scene.object;
             const models = dataList.filter(item => item.type == 'model');
-            
+
             for (const model of models) {
                 if (model.modeType === 'gltf') {
                     await this._zipGltfModel(model.path);
@@ -196,7 +196,7 @@ class GLTFDownloader {
         document.body.removeChild(link);
         URL.revokeObjectURL(link.href);
     }
-    _zipJson(){
+    _zipJson() {
         let sceneData = localStorage.getItem('scene')
         try {
             const jsonString = JSON.stringify(JSON.parse(sceneData), null, 2); // 格式化JSON
@@ -207,6 +207,37 @@ class GLTFDownloader {
             return false;
         }
     }
+    async downloadJson() {
+
+        let output = window.scene.toJSON();
+        try {
+            output = JSON.stringify(output, null, '\t');
+            output = output.replace(/[\n\t]+([\d\.e\-\[\]]+)/g, '$1');
+        } catch (e) {
+            output = JSON.stringify(output);
+        }
+        this._saveString(output, 'scene.json')
+
+
+    }
+    _saveString(text, filename) {
+        const blob = new Blob([text], { type: 'application/json' });
+
+        // 使用 FileReader 处理大文件
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = event.target.result;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
+        reader.readAsDataURL(blob);
+    }
+
 }
 
-export default GLTFDownloader;
+export default ExportScene;
