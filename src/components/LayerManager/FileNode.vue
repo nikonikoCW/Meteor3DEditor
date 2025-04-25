@@ -15,16 +15,16 @@
     </div>
   </div>
   <div id="context-menu">
-        <div class="menu-item" onclick="alert('你点击了选项1')">选项1</div>
-        <div class="menu-item" onclick="alert('你点击了选项2')">选项2</div>
+        <div class="menu-item" @click="focus">聚焦</div>
+        <div class="menu-item" onclick="alert('你点击了选项2')">删除</div>
         <div class="menu-divider"></div>
-        <div class="menu-item" onclick="alert('你点击了选项3')">选项3</div>
+        <div class="menu-item" onclick="alert('你点击了选项3')">高亮</div>
     </div>
 </template>
 
 <script setup>
 import { defineEmits } from 'vue';
-import { ref, computed ,onMounted} from 'vue'
+import { ref, computed ,onMounted,toRaw} from 'vue'
 import FileNode from './FileNode.vue'
 import { focusOnObject ,getView,flyto} from "../../commonjs/camera.js"
 
@@ -42,6 +42,7 @@ const props = defineProps({
   item: Object
 })
 
+
 const expanded = ref(true)
 const isFolder = computed(() => props.node.children)
 
@@ -50,11 +51,7 @@ const toggle = () => {
     expanded.value = !expanded.value
   }
 }
-const focus = (node) => {
-  let a = scene.children.filter(item => item.uuid === node.uuid)
-  focusOnObject(window.camera , a[0])
 
-}
 const deleteObject = (node) => {
   console.log(node);
   let a = scene.children.filter(item => item.uuid === node.uuid)
@@ -78,8 +75,27 @@ onMounted(() => {
     });
 })
 
+let contextMenusite;
+const focus = () => {
+  
+  let node = contextMenusite
+  
+  setInterval(() => {
+    console.log(contextMenusite );
+  }, 10);
+  console.log(node);
+  let a = scene.children.filter(item => item.uuid === node.uuid)
+  console.log('xxuanzhong',a);
+  
+  focusOnObject(window.camera , a[0])
+
+}
 function handleContextMenu(e,node) {
   console.log(e,node);
+  contextMenusite = toRaw(node)
+  setInterval(() => {
+    console.log(contextMenusite.uuid );
+  }, 10);
   
     const contextMenu = document.getElementById('context-menu');
     

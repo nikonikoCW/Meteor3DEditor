@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import TWEEN from '@tweenjs/tween.js';
 import { ViewHelper } from '../commonjs/ViewHelper';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import {border}from"./effect.js"
 
 class Meteor3D {
     constructor() {
@@ -36,6 +38,8 @@ class Meteor3D {
         
 
         this.initViewHelper()
+
+     
 
         // 渲染场景
         function animate() {

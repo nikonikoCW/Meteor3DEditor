@@ -2,7 +2,6 @@ import TWEEN from '@tweenjs/tween.js';
 import * as THREE from 'three';
 
 export function flyto(val) {
-    debugger
     // 创建平滑过渡动画
     new TWEEN.Tween(camera.position)
         .to({
