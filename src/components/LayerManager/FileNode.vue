@@ -16,9 +16,10 @@
   </div>
   <div id="context-menu">
         <div class="menu-item" @click="focus">聚焦</div>
-        <div class="menu-item" onclick="alert('你点击了选项2')">删除</div>
+        <div class="menu-item" onclick="alert('你点击了选项2')">高亮</div>
+        <div class="menu-item" onclick="alert('你点击了选项2')">描边</div>
         <div class="menu-divider"></div>
-        <div class="menu-item" onclick="alert('你点击了选项3')">高亮</div>
+        <div class="menu-item" onclick="alert('你点击了选项3')">删除</div>
     </div>
 </template>
 

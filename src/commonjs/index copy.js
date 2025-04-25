@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import TWEEN from '@tweenjs/tween.js';
 import { ViewHelper } from '../commonjs/ViewHelper';
-import { border } from "./effect.js"
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import {border}from"./effect.js"
 
 class Meteor3D {
     constructor() {
@@ -11,7 +11,6 @@ class Meteor3D {
         this.clock = new THREE.Clock();
         this.scene = new THREE.Scene();
         this.helper = null;
-        this.composer = null
     }
     initScene(dom) {
         let that = this
@@ -36,12 +35,11 @@ class Meteor3D {
         // 鼠标控制相机
         const controls = new OrbitControls(camera, renderer.domElement);
         window.controls = controls
+        
 
         this.initViewHelper()
-        this.composer = new EffectComposer(renderer);
 
-        //添加后处理group
-        border(this.composer)
+     
 
         // 渲染场景
         function animate() {
@@ -50,19 +48,17 @@ class Meteor3D {
 
             const delta = that.clock.getDelta();
             renderer.autoClear = false
-
-            // renderer.render(that.scene, camera);
-            that.composer.render();
+            renderer.render(that.scene, camera);
 
             if (that.helper.animating) that.helper.update(delta);
             that.helper.render(renderer);
 
-            // renderer.autoClear = true
+            renderer.autoClear = true
 
-
+            
             TWEEN.update();
 
-
+            
             controls.update()
             camera.updateProjectionMatrix()
 
@@ -82,7 +78,7 @@ class Meteor3D {
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
     }
-    initViewHelper() {
+    initViewHelper(){
         this.helper = new ViewHelper(camera, window.renderer.domElement);
         this.helper.controls = controls;
         this.helper.controls.center = controls.target;
@@ -101,8 +97,8 @@ class Meteor3D {
             this.helper.handleClick(event)
         });
     }
-    weather() {
-
+    weather(){
+        
     }
 }
 
