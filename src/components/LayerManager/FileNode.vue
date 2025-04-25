@@ -5,9 +5,9 @@
       {{ node.name }}
     </div>
 
-    <div class="node-file hoverable" @click="deleteObject(node)" @contextmenu.prevent="(e) => handleContextMenu(e, node)" v-else>
+    <div class="node-file hoverable" @click="focus(node)"  @contextmenu.prevent="(e) => handleContextMenu(e, node)" v-else>
       <span class="me-moxing iconfont" style="color:white;"></span> {{ node.name }}
-      <span class="iconfont me-shanchu"></span>
+      <span class="iconfont me-shanchu" @click="deleteObject(node)"></span>
     </div>
 
     <div v-if="isFolder && expanded" class="children">
@@ -26,6 +26,7 @@
 import { defineEmits } from 'vue';
 import { ref, computed ,onMounted} from 'vue'
 import FileNode from './FileNode.vue'
+import { focusOnObject ,getView,flyto} from "../../commonjs/camera.js"
 
 import { sceneConfigStore } from "/src/store/layer.js"
 const store = sceneConfigStore()
@@ -48,6 +49,11 @@ const toggle = () => {
   if (isFolder.value) {
     expanded.value = !expanded.value
   }
+}
+const focus = (node) => {
+  let a = scene.children.filter(item => item.uuid === node.uuid)
+  focusOnObject(window.camera , a[0])
+
 }
 const deleteObject = (node) => {
   console.log(node);

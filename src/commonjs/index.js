@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import TWEEN from '@tweenjs/tween.js';
 import { ViewHelper } from '../commonjs/ViewHelper';
 
 class Meteor3D {
@@ -49,6 +50,13 @@ class Meteor3D {
             that.helper.render(renderer);
 
             renderer.autoClear = true
+
+            
+            TWEEN.update();
+
+            
+            controls.update()
+            camera.updateProjectionMatrix()
 
 
         }

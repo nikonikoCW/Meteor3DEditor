@@ -11,8 +11,8 @@
       </div>
       <div class="layout-right">
         <Menu></Menu>
-        <!-- <LayerManager /> -->
-        <Weather />
+        <LayerManager />
+        <!-- <Weather /> -->
       </div>
     </div>
   </div>
@@ -30,7 +30,7 @@ import Weather from '../Weather/weather.vue';
 // import { downloadGLTFWithAssets, downloadGLB ,downloadAll} from "../../commonjs/downLoad.js"
 import Header from '../Header/header.vue';
 // import { dbClick } from "../../commonjs/event.js"
-// import { flyto, focusOnObject } from "../../commonjs/camera.js"
+import { flyto, focusOnObject } from "../../commonjs/camera.js"
 
 const router = useRouter()
 

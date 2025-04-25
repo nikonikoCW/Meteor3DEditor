@@ -104,7 +104,7 @@ window.addEventListener('drop', async (event) => {
             }
             break;
         case '游戏建筑':
-        uuid = addModels('assets/model/scene.gltf', leftPosition)
+        uuid = await addModels('assets/model/scene.gltf', leftPosition)
          
             putData = {
                 type:'model',
@@ -114,7 +114,7 @@ window.addEventListener('drop', async (event) => {
             }
             break;
         case '人物':
-        uuid = addModels('assets/Jackie.glb', leftPosition)
+        uuid = await addModels('assets/Jackie.glb', leftPosition)
             putData = {
                 type:'model',
                 name:'人物',
