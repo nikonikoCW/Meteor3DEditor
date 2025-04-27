@@ -51,7 +51,7 @@ const focus = () => {
 }
 const handleContextMenu = (e, node) => {
   console.log('右键菜单事件:', node.uuid);
-  console.log('右键事件:', e);
+  console.log('右键事件:', 1920-e.clientX,e.clientY);
 
   contextMenusite = node
   // 这里你可以处理右键菜单的显示位置或其他操作
@@ -85,11 +85,8 @@ const handleContextMenu = (e, node) => {
     }
 
     // 设置菜单位置
-    // console.log(x,x-1920+240);
-    
-    //240是父辈菜单的宽度
-    contextMenu.style.left = x-windowWidth+240 + 'px';
-    contextMenu.style.top = y + 'px';
+    contextMenu.style.left = x-(1920-240) + 'px';
+    contextMenu.style.top = y-48 + 'px';
 };
 
 </script>
@@ -98,12 +95,15 @@ const handleContextMenu = (e, node) => {
 .file-tree {
     padding: 16px;
     max-width: 800px;
+    position: relative;
 }
 
 
 #context-menu {
-    position: fixed;
+    position: absolute;
     /* left: 0; */
+    left: 100px;
+    top: 80px;
     display: none;
     background-color: white;
     border: 1px solid #ddd;
