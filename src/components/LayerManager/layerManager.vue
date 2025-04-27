@@ -9,7 +9,7 @@
             <div class="menu-item" onclick="alert('你点击了选项2')">高亮</div>
             <div class="menu-item" onclick="alert('你点击了选项2')">描边</div>
             <div class="menu-divider"></div>
-            <div class="menu-item" onclick="alert('你点击了选项3')">删除</div>
+            <div class="menu-item" @click="deleteObject">删除</div>
         </div>
     </div>
 </template>
@@ -89,6 +89,14 @@ const handleContextMenu = (e, node) => {
     contextMenu.style.top = y-48 + 'px';
 };
 
+const deleteObject = () => {
+  let node = contextMenusite
+  let a = scene.children.filter(item => item.uuid === node.uuid)
+  scene.remove(a[0])
+  //清除对应的store
+  store.deleteObject(node.uuid)
+
+}
 </script>
 
 <style scoped>

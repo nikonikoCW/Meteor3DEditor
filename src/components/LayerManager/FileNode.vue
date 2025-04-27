@@ -7,7 +7,7 @@
 
     <div class="node-file hoverable" @click="focus(node)"  @contextmenu.prevent="(e) => handleContextMenu(e, node)" v-else>
       <span class="me-moxing iconfont" style="color:white;"></span> {{ node.name }}
-      <span class="iconfont me-shanchu" @click="deleteObject(node)"></span>
+      <!-- <span class="iconfont me-shanchu" @click="deleteObject(node)"></span> -->
     </div>
 
     <div v-if="isFolder && expanded" class="children">
@@ -20,9 +20,6 @@
 import { defineEmits } from 'vue';
 import { ref, computed ,onMounted,toRaw} from 'vue'
 import FileNode from './FileNode.vue'
-
-import { sceneConfigStore } from "/src/store/layer.js"
-const store = sceneConfigStore()
 
 
 const emit = defineEmits(['message-to-parent']);
@@ -44,15 +41,6 @@ const toggle = () => {
   }
 }
 
-const deleteObject = (node) => {
-  console.log(node);
-  let a = scene.children.filter(item => item.uuid === node.uuid)
-  scene.remove(a[0])
-
-  //清除对应的store
-  store.deleteObject(node.uuid)
-
-}
 
 
 
