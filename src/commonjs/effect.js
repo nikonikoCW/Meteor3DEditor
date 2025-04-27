@@ -34,7 +34,7 @@ export const border = (composer) => {
 
         let a = new THREE.Group()
         a.add(cubeA)
-        window.scene.add(a)
+        // window.scene.add(a)
         outlinePass.selectedObjects = [a];
         composer.addPass(outlinePass);
 
