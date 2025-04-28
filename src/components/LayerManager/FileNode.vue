@@ -7,7 +7,6 @@
 
     <div class="node-file hoverable" @click="focus(node)"  @contextmenu.prevent="(e) => handleContextMenu(e, node)" v-else>
       <span class="me-moxing iconfont" style="color:white;"></span> {{ node.name }}
-      <!-- <span class="iconfont me-shanchu" @click="deleteObject(node)"></span> -->
     </div>
 
     <div v-if="isFolder && expanded" class="children">

@@ -4,6 +4,7 @@ import {
 } from 'vue-router'
 const Main = () => import('../components/Main/Main.vue')
 const Preview = () => import('../components/Preview/index.vue')
+const SceneManagement = () => import('../components/SceneManagement/SceneManagement.vue')
 
 const basicRouter = import.meta.glob('/src/components/Tool/*.vue')
 let routes = [
@@ -18,6 +19,11 @@ let routes = [
         path: '/preview',
         name: 'preview',
         component: Preview
+    },
+    {
+        path: '/SceneManagement',
+        name: 'sceneManagement',
+        component: SceneManagement
     }
 ]
 

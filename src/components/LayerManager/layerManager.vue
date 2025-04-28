@@ -9,7 +9,7 @@
             <div class="menu-item" onclick="alert('你点击了选项2')">高亮</div>
             <div class="menu-item" onclick="alert('你点击了选项2')">描边</div>
             <div class="menu-divider"></div>
-            <div class="menu-item" @click="deleteObject">删除</div>
+            <div class="menu-item" @click="deleteObject">删除<span class="iconfont me-shanchu" @click="deleteObject(node)"></span></div>
         </div>
     </div>
 </template>
@@ -118,7 +118,7 @@ const deleteObject = () => {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     border-radius: 4px;
     z-index: 1000;
-    min-width: 150px;
+    min-width: 100px;
 }
 
 .menu-item {
