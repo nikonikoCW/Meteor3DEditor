@@ -2,7 +2,7 @@
  * @Author: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
  * @Date: 2025-04-10 16:07:56
  * @LastEditors: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
- * @LastEditTime: 2025-04-22 10:02:37
+ * @LastEditTime: 2025-04-29 09:43:02
  * @FilePath: \nico\src\commonjs\basicGeometries.js
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -33,7 +33,7 @@ export const addCone = (position) => {
 
 export const addLand = (position) => {
     // 创建蓝色网格
-    const geometry = new THREE.PlaneGeometry(1000, 1000);
+    const geometry = new THREE.PlaneGeometry(4000, 4000);
     const material = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.5, color: 0x0000ff, side: THREE.DoubleSide });
     const plane = new THREE.Mesh(geometry, material);
     scene.add(plane);

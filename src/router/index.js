@@ -5,6 +5,7 @@ import {
 const Main = () => import('../components/Main/Main.vue')
 const Preview = () => import('../components/Preview/index.vue')
 const SceneManagement = () => import('../components/SceneManagement/SceneManagement.vue')
+const Test = () => import('../components/Test/Test.vue')
 
 const basicRouter = import.meta.glob('/src/components/Tool/*.vue')
 let routes = [
@@ -24,6 +25,11 @@ let routes = [
         path: '/SceneManagement',
         name: 'sceneManagement',
         component: SceneManagement
+    },
+    {
+        path: '/test',
+        name: 'Test',
+        component: Test
     }
 ]
 

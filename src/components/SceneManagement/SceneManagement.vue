@@ -4,8 +4,8 @@
 
     <nav class="navbar">
       <div class="logo">
-        <img src="https://via.placeholder.com/40" alt="Logo" />
-        <h1>3D Model Hub</h1>
+        <img src="/assets/images/meteor.png" alt="Logo" />
+        <h1>Meteor 3D Editor</h1>
       </div>
       <div class="nav-links">
         <a href="#">首页</a>
@@ -52,7 +52,7 @@
         <div class="model-card" v-for="model in models" :key="model.id">
           <div class="model-card-inner" :class="{ flipped: model.flipped }">
             <div class="model-card-front">
-              <div class="model-preview">
+              <div class="model-preview" @click="closeFullscreen(true)">
                 <img :src="model.preview" alt="Model Preview" />
               </div>
               <div class="model-info">
@@ -71,10 +71,10 @@
       </div>
     </div>
 
-    <div class="fullscreen-view" v-if="showFullscreen" @click="closeFullscreen">
+    <div class="fullscreen-view" v-if="showFullscreen" @click="closeFullscreen(false)">
       <div class="fullscreen-content" @click.stop>
         <p>全屏3D模型视图（占位符）</p>
-        <button class="close-fullscreen" @click="closeFullscreen">关闭</button>
+        <button class="close-fullscreen" @click="closeFullscreen(false)">关闭</button>
       </div>
     </div>
 
@@ -123,8 +123,8 @@ const toggleFlip = (id) => {
   model.flipped = !model.flipped;
 };
 
-const closeFullscreen = () => {
-  showFullscreen.value = false;
+const closeFullscreen = (val) => {
+  showFullscreen.value = val;
 };
 
 onMounted(() => {
@@ -160,7 +160,7 @@ onMounted(() => {
     });
   }
 
-  // 闪烁加载效果
+  // 闪烁加载效果   
   document.querySelectorAll('.model-preview').forEach(preview => {
     setTimeout(() => {
       preview.classList.add('loaded');

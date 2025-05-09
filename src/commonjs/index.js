@@ -5,6 +5,9 @@ import { ViewHelper } from '../commonjs/ViewHelper';
 import { border } from "./effect.js"
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import Transform from "./transform.js"
+
 class Meteor3D {
     constructor() {
         // 构造函数
@@ -12,9 +15,14 @@ class Meteor3D {
         this.scene = new THREE.Scene();
         this.helper = null;
         this.composer = null
+        this.dom = null
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+        this.transform = null
     }
     initScene(dom) {
         let that = this
+        this.dom = dom
 
         window.scene = this.scene
 
@@ -43,6 +51,7 @@ class Meteor3D {
         //添加后处理group
         border(this.composer)
 
+
         // 渲染场景
         function animate() {
             requestAnimationFrame(animate);
@@ -51,8 +60,8 @@ class Meteor3D {
             const delta = that.clock.getDelta();
             renderer.autoClear = false
 
-            // renderer.render(that.scene, camera);
-            that.composer.render();
+            renderer.render(that.scene, camera);
+            // that.composer.render();
 
             if (that.helper.animating) that.helper.update(delta);
             that.helper.render(renderer);
@@ -69,6 +78,66 @@ class Meteor3D {
 
         }
         animate()
+
+        // this.transform = new Transform()
+        //控制器
+        
+        const transformControls = new TransformControls(camera, renderer.domElement);
+        const transformHelper = transformControls.getHelper();
+        this.scene.add(transformHelper); // 添加变换控件辅助对象到场景
+        // this.scene.add(transformControls);
+
+        
+        let isDragging = false;
+        transformControls.addEventListener('dragging-changed', (event) => {
+            controls.enabled = !event.value;
+            isDragging = event.value;
+        });
+
+        // 变换更新时渲染
+        transformControls.addEventListener('change', () => {
+            renderer.render(scene, camera);
+        });
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        function onMouseClick(event) {
+            event.preventDefault();
+
+            // 如果正在拖动，忽略点击事件
+            if (isDragging) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            // 检测正方体和变换控件辅助对象
+            
+
+            const objects = [];
+            that.scene.children.forEach(element => {
+                if(!element.isTransformControlsRoot) objects.push( element );
+            });
+
+            const intersects  = raycaster.intersectObjects( objects, false );
+    
+        
+            
+            if (intersects.length > 0) {
+                // 点击了正方体，附加变换控件
+                transformControls.attach(intersects[0].object);
+                // 点击了变换控件（transformHelper），保持当前状态，不detach
+            } else {
+                // 点击其他地方，取消变换控件
+                transformControls.detach();
+            }
+        }
+
+        renderer.domElement.addEventListener('click', onMouseClick);
+        //控制器结束
+        
+        
 
         // 监听窗口大小变化
         window.addEventListener('resize', onWindowResize);
@@ -99,6 +168,31 @@ class Meteor3D {
 
         div.addEventListener('pointerup', (event) => {
             this.helper.handleClick(event)
+        });
+    }
+
+    leftClick(){
+        document.getElementById(this.dom).addEventListener('click', (event) => {
+            
+            // 将鼠标坐标转换到 NDC（归一化设备坐标）
+            this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // 使用射线投射器
+            this.raycaster.params.Line.threshold = 0.1//调整精度
+            this.raycaster.setFromCamera(this.mouse, camera);
+
+            // 计算射线与场景中的物体的交点
+            const intersects = this.raycaster.intersectObjects(scene.children);
+
+            // 如果有交点
+            if (intersects.length > 0) {
+                
+                console.log('Clicked at:', intersects[0].object); // 输出交点坐标
+                // this.transform.active(intersects[0].object)
+            }else{
+                
+            }
         });
     }
     weather() {

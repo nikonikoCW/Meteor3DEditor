@@ -2,7 +2,7 @@
   <div ref="container" class="three-container" id="three-container"></div>
   <div class="layout-main">
     <div class="header">
-    <Header />
+      <Header />
     </div>
     <div class="layout-content">
       <div class="layout-left">
@@ -14,32 +14,34 @@
         <LayerManager />
         <!-- <Weather /> -->
       </div>
+      
+      <div class="transform-position">
+          <TransformControls />
+        </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router';
 import { onMounted } from 'vue'
 import Meteor3D from "../../commonjs/index.js"
 import { loadHRd } from "../../commonjs/loadHdr.js"
 import Source from "../Source/source.vue"
 import Menu from "../Menu/menu.vue"
+import TransformControls from "../TransformControls/TransformControls.vue"
 import LayerManager from "../LayerManager/layerManager.vue"
 import Weather from '../Weather/weather.vue';
 // import { downloadGLTFWithAssets, downloadGLB ,downloadAll} from "../../commonjs/downLoad.js"
 import Header from '../Header/header.vue';
-// import { dbClick } from "../../commonjs/event.js"
-import { flyto, focusOnObject } from "../../commonjs/camera.js"
 
-const router = useRouter()
 
 
 onMounted(() => {
   console.log('mounted in the composition api!')
-  
+
   const meteor3D = new Meteor3D()
   meteor3D.initScene('three-container')
+  // meteor3D.leftClick()
   loadHRd('./assets/day2.hdr')
 
   document.getElementById('three-container').addEventListener('dblclick', (event) => {
@@ -47,11 +49,6 @@ onMounted(() => {
   })
 })
 
-const preview = () => {
-  router.push({
-    name: 'preview'
-  })
-}
 
 // 使用示例
 
@@ -111,9 +108,14 @@ const preview = () => {
       /* 毛玻璃效果 */
       width: calc(240px + 36px);
       display: flex;
+
     }
   }
 }
 
-
+.transform-position {
+  position: fixed;
+  right: 300px;
+  top:60px;
+}
 </style>

@@ -15,9 +15,11 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router';
 import ExportScene from "../../commonjs/exportScene.js"
 import ImportScene from "../../commonjs/importScene.js"
 
+const router = useRouter()
 const exportJson = () => {
     let sceneData = localStorage.getItem('scene')
     console.log(JSON.parse(sceneData).scene.object);
@@ -28,6 +30,12 @@ const exportJson = () => {
     // downloadGLB('assets/day.hdr', 'day.hdr');
 }
 
+
+const preview = () => {
+  router.push({
+    name: 'preview'
+  })
+}
 
 const importJson = (event) => {
     const importScene = new ImportScene()
