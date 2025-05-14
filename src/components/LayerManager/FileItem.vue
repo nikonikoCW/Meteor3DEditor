@@ -32,7 +32,7 @@ const props = defineProps({
 
 
 const expanded = ref(true)
-const isFolder = computed(() => props.node.isGroup)
+const isFolder = computed(() => props.node.children)
 
 const toggle = () => {
   if (isFolder.value) {

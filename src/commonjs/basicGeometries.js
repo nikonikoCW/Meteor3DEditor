@@ -2,7 +2,7 @@
  * @Author: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
  * @Date: 2025-04-10 16:07:56
  * @LastEditors: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
- * @LastEditTime: 2025-04-29 09:43:02
+ * @LastEditTime: 2025-05-14 17:42:53
  * @FilePath: \nico\src\commonjs\basicGeometries.js
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -16,6 +16,7 @@ export const addPoint = (position) => {
     const geometry = new THREE.SphereGeometry(1, 32, 32);
     const material = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1, metalness: 1 });
     const sphere = new THREE.Mesh(geometry, material);
+    sphere.name='球体'
     scene.add(sphere);
     sphere.position.copy(position)
     return sphere.uuid
@@ -26,6 +27,7 @@ export const addCone = (position) => {
     let geometry = new THREE.ConeGeometry(0.5, 2, 16, 1);
     const material = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1, metalness: 1 });
     const sphere = new THREE.Mesh(geometry, material);
+    sphere.name='圆锥'
     scene.add(sphere);
     sphere.position.copy(position)
     return sphere.uuid
@@ -36,6 +38,7 @@ export const addLand = (position) => {
     const geometry = new THREE.PlaneGeometry(4000, 4000);
     const material = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.5, color: 0x0000ff, side: THREE.DoubleSide });
     const plane = new THREE.Mesh(geometry, material);
+    plane.name='平面'
     scene.add(plane);
     plane.position.copy(position)
     plane.rotation.x = Math.PI / 2

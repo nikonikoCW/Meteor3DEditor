@@ -2,27 +2,46 @@
 <template>
     <div class="file-tree">
         <p @click="log2">图层管理</p>
-        <FileNode v-for="(item, index) in store.files" :key="index" :node="item" @handle-context-menu="handleContextMenu"/>
-        
+        <FileNode v-for="(item, index) in sceneChildren" :key="index" :node="item"
+            @handle-context-menu="handleContextMenu" />
+
         <div id="context-menu">
             <div class="menu-item" @click="focus">聚焦</div>
             <div class="menu-item" onclick="alert('你点击了选项2')">高亮</div>
             <div class="menu-item" onclick="alert('你点击了选项2')">描边</div>
             <div class="menu-divider"></div>
-            <div class="menu-item" @click="deleteObject">删除<span class="iconfont me-shanchu" @click="deleteObject(node)"></span></div>
+            <div class="menu-item" @click="deleteObject">删除<span class="iconfont me-shanchu"
+                    @click="deleteObject(node)"></span></div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref ,onMounted,toRaw} from 'vue'
+import { ref, onMounted, toRaw, computed } from 'vue'
 import FileNode from './FileNode.vue'
 import { sceneConfigStore } from "/src/store/layer.js"
-import { focusOnObject ,getView,flyto} from "../../commonjs/camera.js"
+import { focusOnObject, getView, flyto } from "../../commonjs/camera.js"
 const store = sceneConfigStore()
 
-function log2(){
+function log2() {
+    sceneVersion.value++;
+    // console.log(sceneChildren);
+    // let result = []
+    // window.scene.children.forEach(object => {
+    //         if (object.isMesh) {
+    //             // 基础几何体
+    //             result.push(object);
+    //         } else if (object.isGroup || object.isScene) {
+    //             // 导入的gltf/glb模型通常会是一个Group或Scene
+    //             result.push(object);
+    //         }
+    //     });
+    //     console.log(result);
+    console.log(sceneChildren);
     console.log(store.files);
+    
+
+
 }
 onMounted(() => {
     const contextMenu = document.getElementById('context-menu');
@@ -37,27 +56,50 @@ onMounted(() => {
     });
 })
 
+const sceneVersion = ref(0); // 新增的版本跟踪器
+const sceneChildren = computed(() => {
+    sceneVersion.value; // 建立依赖关系
+    let result = []
+    if (window.scene && window.scene.children) {
+        window.scene.children.forEach(object => {
+            if (object.isMesh) {
+                // 基础几何体
+                result.push(object);
+            } else if (object.isGroup || object.isScene) {
+                // 导入的gltf/glb模型通常会是一个Group或Scene
+                result.push(object);
+            }
+        });
+    }
+    let c = [{
+                name: '场景模型',
+                isGroup:true,
+                children: result
+            }]
+    return c
+});
+
 
 let contextMenusite = null
 const focus = () => {
-  
-  let node = contextMenusite
-  
-  console.log(node);
-  let a = scene.children.filter(item => item.uuid === node.uuid)
-  console.log('xxuanzhong',a);
-  focusOnObject(window.camera , a[0])
+
+    let node = contextMenusite
+
+    console.log(node);
+    let a = scene.children.filter(item => item.uuid === node.uuid)
+    console.log('xxuanzhong', a);
+    focusOnObject(window.camera, node)
 
 }
 const handleContextMenu = (e, node) => {
-  console.log('右键菜单事件:', node.uuid);
-  console.log('右键事件:', 1920-e.clientX,e.clientY);
+    console.log('右键菜单事件:', node.uuid);
+    console.log('右键事件:', 1920 - e.clientX, e.clientY);
 
-  contextMenusite = node
-  // 这里你可以处理右键菜单的显示位置或其他操作
+    contextMenusite = node
+    // 这里你可以处理右键菜单的显示位置或其他操作
 
-  const contextMenu = document.getElementById('context-menu');
-    
+    const contextMenu = document.getElementById('context-menu');
+
     // 阻止默认右键菜单
     e.preventDefault();
 
@@ -85,16 +127,16 @@ const handleContextMenu = (e, node) => {
     }
 
     // 设置菜单位置
-    contextMenu.style.left = x-(1920-240) + 'px';
-    contextMenu.style.top = y-48 + 'px';
+    contextMenu.style.left = x - (1920 - 240) + 'px';
+    contextMenu.style.top = y - 48 + 'px';
 };
 
 const deleteObject = () => {
-  let node = contextMenusite
-  let a = scene.children.filter(item => item.uuid === node.uuid)
-  scene.remove(a[0])
-  //清除对应的store
-  store.deleteObject(node.uuid)
+    let node = contextMenusite
+    let a = scene.children.filter(item => item.uuid === node.uuid)
+    scene.remove(a[0])
+    //清除对应的store
+    store.deleteObject(node.uuid)
 
 }
 </script>
@@ -104,6 +146,7 @@ const deleteObject = () => {
     padding: 16px;
     max-width: 800px;
     position: relative;
+    /* overflow: scroll; */
 }
 
 
