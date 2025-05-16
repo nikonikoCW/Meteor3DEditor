@@ -20,28 +20,10 @@
 import { ref, onMounted, toRaw, computed } from 'vue'
 import FileNode from './FileNode.vue'
 import { sceneConfigStore } from "/src/store/layer.js"
-import { focusOnObject, getView, flyto } from "../../commonjs/camera.js"
+import { focusOnObject } from "../../commonjs/camera.js"
 const store = sceneConfigStore()
 
 function log2() {
-    sceneVersion.value++;
-    // console.log(sceneChildren);
-    // let result = []
-    // window.scene.children.forEach(object => {
-    //         if (object.isMesh) {
-    //             // 基础几何体
-    //             result.push(object);
-    //         } else if (object.isGroup || object.isScene) {
-    //             // 导入的gltf/glb模型通常会是一个Group或Scene
-    //             result.push(object);
-    //         }
-    //     });
-    //     console.log(result);
-    console.log(sceneChildren);
-    console.log(store.files);
-    
-
-
 }
 onMounted(() => {
     const contextMenu = document.getElementById('context-menu');
@@ -56,9 +38,8 @@ onMounted(() => {
     });
 })
 
-const sceneVersion = ref(0); // 新增的版本跟踪器
 const sceneChildren = computed(() => {
-    sceneVersion.value; // 建立依赖关系
+    store.UpdateVersion;
     let result = []
     if (window.scene && window.scene.children) {
         window.scene.children.forEach(object => {

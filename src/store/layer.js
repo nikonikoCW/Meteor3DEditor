@@ -10,7 +10,8 @@ export const sceneConfigStore = defineStore('sceneConfig', {
                     hdr: "environments/sky.hdr",
                     intensity: 1
                 }
-            }
+            },
+            UpdateVersion:0
         }
     },
     actions:{
@@ -21,6 +22,9 @@ export const sceneConfigStore = defineStore('sceneConfig', {
             
             let a = this.scene.object.filter(item => item.uuid !== uuid)
             this.scene.object = a
+        },
+        updateScene(){
+            this.UpdateVersion++
         }
     },
     getters:{

@@ -22,12 +22,12 @@ let raycaster, mouse;
 let draggedValue = null;
 
 let dataList = ref([
-    { name: '圆锥', img: 'http://116.196.110.130:5353/wz.png' },
-    { name: '球体', img: 'http://116.196.110.130:5353/wz.png' },
-    { name: '游戏建筑', img: 'http://116.196.110.130:5353/wz.png' },
-    { name: '机房', img: 'http://116.196.110.130:5353/wz.png' },
-    { name: '人物', img: 'http://116.196.110.130:5353/wz.png' },
-    { name: '平板', img: 'http://116.196.110.130:5353/wz.png' },
+    { name: '圆锥', img: 'https://picsum.photos/80/80?random=1' },
+    { name: '球体', img: 'https://picsum.photos/80/80?random=2' },
+    { name: '游戏建筑', img: 'https://picsum.photos/80/80?random=3' },
+    { name: '机房', img: 'https://picsum.photos/80/80?random=4' },
+    { name: '人物', img: 'https://picsum.photos/80/80?random=5' },
+    { name: '平板', img: 'https://picsum.photos/80/80?random=6' },
 ])
 let sceneData = ref({
     scene: {
@@ -135,8 +135,8 @@ window.addEventListener('drop', async (event) => {
     putData.initPosition = leftPosition
     putData.uuid = uuid
     sceneData.value.scene.object.push(putData)
-    localStorage.setItem("scene",JSON.stringify(sceneData.value))
     store.setObject(sceneData.value.scene)
+    store.updateScene()
     // console.log(store.scene);
     
 });
