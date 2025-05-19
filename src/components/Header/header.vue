@@ -4,7 +4,7 @@
         <span class="logo-name">Meteor3D</span>
     </div>
     <div class="header-rght">
-        <div class="btn button-m" @click="preview">预览</div>
+        <!-- <div class="btn button-m" @click="preview">预览</div> -->
         <!-- 导入 -->
         <label class="custom-upload-btn">
             <div class="btn button-m">导入</div>

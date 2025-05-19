@@ -4,10 +4,10 @@ class WeatherEffect {
     constructor(options={}){
         // 创建一个雨滴数组
         this.raindrops = [];
-        this.raindropCount = 1000;
+        this.raindropCount = 20000;
         this.rainTexture=null;
         this.options = {
-            type:'rain',
+            type:'snow',
             size:1,
             ...options
           };

@@ -7,6 +7,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import Transform from "./transform.js"
+import WeatherEffect from "./weather.js"
 
 class Meteor3D {
     constructor() {
@@ -50,7 +51,7 @@ class Meteor3D {
 
         //添加后处理group
         border(this.composer)
-
+        const weather = new WeatherEffect()
 
         // 渲染场景
         function animate() {
@@ -74,6 +75,7 @@ class Meteor3D {
 
             controls.update()
             camera.updateProjectionMatrix()
+            weather.animation()
 
 
         }

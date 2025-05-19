@@ -8,6 +8,7 @@
 </template>
 
 <script setup>
+import { defineEmits } from 'vue';
 import { ref } from "vue"
 let navList = ref([
     { status:false,name: '场景配置', icon: "iconfont me-gis_changjing" },
@@ -15,6 +16,7 @@ let navList = ref([
     { status:false,name: '天气', icon: "iconfont me-nongyun" },
 ])
 
+const emit = defineEmits(['message-to-parent']);
 
 
 const active = (node) => {
@@ -22,6 +24,7 @@ const active = (node) => {
         element.status = false
     });
     node.status = true
+    emit('changeMenu', node);
 }
 </script>
 

@@ -10,9 +10,9 @@
         </Source>
       </div>
       <div class="layout-right">
-        <Menu></Menu>
-        <LayerManager />
-        <!-- <Weather /> -->
+        <Menu @changeMenu="changeMenu"></Menu>
+        <LayerManager v-if="menuName==='图层管理'"/>
+        <Weather v-if="menuName==='天气'"/>
       </div>
       
       <div class="transform-position">
@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted ,ref} from 'vue'
 import Meteor3D from "../../commonjs/index.js"
 import { loadHRd } from "../../commonjs/loadHdr.js"
 import Source from "../Source/source.vue"
@@ -35,7 +35,12 @@ import Weather from '../Weather/weather.vue';
 import Header from '../Header/header.vue';
 
 
-
+const menuName = ref('场景配置')
+const changeMenu = (node) => {
+  
+  menuName.value = node.name
+  console.log(menuName.value);
+}
 onMounted(() => {
   console.log('mounted in the composition api!')
 
