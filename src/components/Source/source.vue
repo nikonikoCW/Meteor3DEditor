@@ -67,9 +67,10 @@ window.addEventListener('drop', async (event) => {
     raycaster.params.Line.threshold = 0.1//调整精度
     raycaster.setFromCamera(mouse, camera);
 
+    //去除TransformControl
+    let rayList = scene.children.filter(item => item.isTransformControlsRoot != true)
     // 计算射线与场景中的物体的交点
-    const intersects = raycaster.intersectObjects(scene.children);
-
+    const intersects = raycaster.intersectObjects(rayList);
     // 如果有交点
     let leftPosition
     if (intersects.length > 0) {
@@ -79,56 +80,56 @@ window.addEventListener('drop', async (event) => {
     } else {
         leftPosition = new THREE.Vector3(0, 0, 0)
     }
-
-    let putData,uuid
+    let putData, uuid
     switch (draggedValue) {
         case '圆锥':
-        uuid = addCone(leftPosition)
+
+            uuid = addCone(leftPosition)
             putData = {
-                type:'cone',
-                name:'圆锥',
+                type: 'cone',
+                name: '圆锥',
             }
             break;
         case '球体':
             uuid = addPoint(leftPosition)
             putData = {
-                type:'ball',
-                name:'球体',
+                type: 'ball',
+                name: '球体',
             }
             break;
         case '平板':
-        uuid = addLand(leftPosition)
+            uuid = addLand(leftPosition)
             putData = {
-                type:'land',
-                name:'平板',
+                type: 'land',
+                name: '平板',
             }
             break;
         case '游戏建筑':
-        uuid = await addModels('assets/model/scene.gltf', leftPosition)
-         
+            uuid = await addModels('assets/model/scene.gltf', leftPosition)
+
             putData = {
-                type:'model',
-                modeType:"gltf",
-                name:'游戏建筑',
-                path:'assets/model/scene.gltf'
+                type: 'model',
+                modeType: "gltf",
+                name: '游戏建筑',
+                path: 'assets/model/scene.gltf'
             }
             break;
         case '人物':
-        uuid = await addModels('assets/Jackie.glb', leftPosition)
+            uuid = await addModels('assets/Jackie.glb', leftPosition)
             putData = {
-                type:'model',
-                name:'人物',
-                modeType:"glb",
-                path:'assets/Jackie.glb'
+                type: 'model',
+                name: '人物',
+                modeType: "glb",
+                path: 'assets/Jackie.glb'
             }
             break;
         case '机房':
-        uuid = await addModels('assets/my-model.glb', leftPosition)
+            uuid = await addModels('assets/my-model.glb', leftPosition)
             putData = {
-                type:'model',
-                name:'机房',
-                modeType:"glb",
-                path:'assets/my-model.glb'
+                type: 'model',
+                name: '机房',
+                modeType: "glb",
+                path: 'assets/my-model.glb'
             }
             break;
     }
@@ -138,7 +139,7 @@ window.addEventListener('drop', async (event) => {
     store.setObject(sceneData.value.scene)
     store.updateScene()
     // console.log(store.scene);
-    
+
 });
 
 

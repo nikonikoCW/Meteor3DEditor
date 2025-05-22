@@ -1,5 +1,5 @@
 <template>
-  <div ref="container" class="three-container" id="three-container"></div>
+  <div ref="threeCavans" class="three-container" id="three-container"></div>
   <div class="layout-main">
     <div class="header">
       <Header />
@@ -25,17 +25,16 @@
 <script setup>
 import { onMounted ,ref} from 'vue'
 import Meteor3D from "../../commonjs/index.js"
-import { loadHRd } from "../../commonjs/loadHdr.js"
 import Source from "../Source/source.vue"
 import Menu from "../Menu/menu.vue"
 import TransformControls from "../TransformControls/TransformControls.vue"
 import LayerManager from "../LayerManager/layerManager.vue"
 import Weather from '../Weather/weather.vue';
-// import { downloadGLTFWithAssets, downloadGLB ,downloadAll} from "../../commonjs/downLoad.js"
 import Header from '../Header/header.vue';
 
 
-const menuName = ref('场景配置')
+const menuName = ref('图层管理')
+const threeCavans = ref(null)
 const changeMenu = (node) => {
   
   menuName.value = node.name
@@ -44,11 +43,11 @@ const changeMenu = (node) => {
 onMounted(() => {
   console.log('mounted in the composition api!')
 
-  const meteor3D = new Meteor3D()
-  meteor3D.initScene('three-container')
-  // meteor3D.leftClick()
-  loadHRd('./assets/day2.hdr')
-
+  const meteor3D = new Meteor3D({
+    container:threeCavans.value
+  })
+  window.meteor3D = meteor3D
+  meteor3D.loadHrd()
   document.getElementById('three-container').addEventListener('dblclick', (event) => {
 
   })

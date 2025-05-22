@@ -10,7 +10,7 @@
             <div class="menu-item" onclick="alert('你点击了选项2')">高亮</div>
             <div class="menu-item" onclick="alert('你点击了选项2')">描边</div>
             <div class="menu-divider"></div>
-            <div class="menu-item" @click="deleteObject">删除<span class="iconfont me-shanchu"
+            <div class="menu-item" @click="deleteObject(item)">删除<span class="iconfont me-shanchu"
                     @click="deleteObject(node)"></span></div>
         </div>
     </div>

@@ -4,101 +4,71 @@ import TWEEN from '@tweenjs/tween.js';
 import { ViewHelper } from '../commonjs/ViewHelper';
 import { border } from "./effect.js"
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-
+import HRDManager from "./loadHdr.js"
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import Transform from "./transform.js"
-import WeatherEffect from "./weather.js"
 
 class Meteor3D {
-    constructor() {
+    constructor(config) {
         // 构造函数
         this.clock = new THREE.Clock();
         this.scene = new THREE.Scene();
+        window.scene = this.scene
         this.helper = null;
         this.composer = null
         this.dom = null
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
         this.transform = null
-    }
-    initScene(dom) {
-        let that = this
-        this.dom = dom
-
-        window.scene = this.scene
-
-        // 创建相机
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
-        camera.position.set(311.03264809072385, 98.96320277581572, 14.490559617396444);
-        window.camera = camera
-
-        // 创建渲染器
-        const renderer = new THREE.WebGLRenderer();
-        window.renderer = renderer
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.getElementById(dom).appendChild(renderer.domElement);
-
-        const light = new THREE.AmbientLight(0xffffff);
-        this.scene.add(light);
 
 
-        // 鼠标控制相机
-        const controls = new OrbitControls(camera, renderer.domElement);
-        window.controls = controls
+        this.container = config.container;
+        this.scene.background = new THREE.Color(config.backgroundColor || 0x000000);
 
-        this.initViewHelper()
-        this.composer = new EffectComposer(renderer);
+        this.camera = new THREE.PerspectiveCamera(
+            config.fov || 75,
+            this.container.clientWidth / this.container.clientHeight,
+            config.near || 0.1,
+            config.far || 1000
+        );
+        window.camera = this.camera
+        this.camera.position.set(0, 0, 5);
 
-        //添加后处理group
-        border(this.composer)
-        const weather = new WeatherEffect()
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+        this.container.appendChild(this.renderer.domElement);
 
-        // 渲染场景
-        function animate() {
-            requestAnimationFrame(animate);
-            that.scene.backgroundRotation.y += 0.0001
+        this.modules = new Map();
+        this.animationCallbacks = new Set(); // 存储动画回调
+        this.isAnimating = false; // 标记动画循环是否运行
+        this.animationFrameId = null; // 存储 requestAnimationFrame ID
 
-            const delta = that.clock.getDelta();
-            renderer.autoClear = false
-
-            renderer.render(that.scene, camera);
-            // that.composer.render();
-
-            if (that.helper.animating) that.helper.update(delta);
-            that.helper.render(renderer);
-
-            // renderer.autoClear = true
-
-
-            TWEEN.update();
-
-
-            controls.update()
-            camera.updateProjectionMatrix()
-            weather.animation()
-
-
-        }
-        animate()
-
-        // this.transform = new Transform()
-        //控制器
         
-        const transformControls = new TransformControls(camera, renderer.domElement);
+        // 鼠标控制相机
+        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+        window.controls = this.controls
+
+        window.addEventListener('resize', this.handleResize.bind(this));
+        this.initViewHelper()
+        this.#startAnimation()
+        this.initTransform()
+    }
+    initTransform(){
+        let that = this
+        const transformControls = new TransformControls(camera, this.renderer.domElement);
         const transformHelper = transformControls.getHelper();
         this.scene.add(transformHelper); // 添加变换控件辅助对象到场景
         // this.scene.add(transformControls);
 
-        
+
         let isDragging = false;
         transformControls.addEventListener('dragging-changed', (event) => {
-            controls.enabled = !event.value;
+            this.controls.enabled = !event.value;
             isDragging = event.value;
         });
 
         // 变换更新时渲染
         transformControls.addEventListener('change', () => {
-            renderer.render(scene, camera);
+            this.renderer.render(scene, camera);
         });
 
         const raycaster = new THREE.Raycaster();
@@ -115,17 +85,17 @@ class Meteor3D {
 
             raycaster.setFromCamera(mouse, camera);
             // 检测正方体和变换控件辅助对象
-            
+
 
             const objects = [];
             that.scene.children.forEach(element => {
-                if(!element.isTransformControlsRoot) objects.push( element );
+                if (!element.isTransformControlsRoot) objects.push(element);
             });
 
-            const intersects  = raycaster.intersectObjects( objects, false );
-    
-        
-            
+            const intersects = raycaster.intersectObjects(objects, false);
+
+
+
             if (intersects.length > 0) {
                 // 点击了正方体，附加变换控件
                 transformControls.attach(intersects[0].object);
@@ -136,25 +106,10 @@ class Meteor3D {
             }
         }
 
-        renderer.domElement.addEventListener('click', onMouseClick);
-        //控制器结束
-        
-        
-
-        // 监听窗口大小变化
-        window.addEventListener('resize', onWindowResize);
-
-        function onWindowResize() {
-            // 更新相机宽高比
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix(); // 必须调用，否则相机不会生效
-
-            // 更新渲染器尺寸
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
+        this.renderer.domElement.addEventListener('click', onMouseClick);
     }
     initViewHelper() {
-        this.helper = new ViewHelper(camera, window.renderer.domElement);
+        this.helper = new ViewHelper(camera, this.renderer.domElement);
         this.helper.controls = controls;
         this.helper.controls.center = controls.target;
 
@@ -173,9 +128,9 @@ class Meteor3D {
         });
     }
 
-    leftClick(){
+    leftClick() {
         document.getElementById(this.dom).addEventListener('click', (event) => {
-            
+
             // 将鼠标坐标转换到 NDC（归一化设备坐标）
             this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -189,20 +144,102 @@ class Meteor3D {
 
             // 如果有交点
             if (intersects.length > 0) {
-                
+
                 console.log('Clicked at:', intersects[0].object); // 输出交点坐标
                 // this.transform.active(intersects[0].object)
-            }else{
-                
+            } else {
+
             }
         });
     }
-    weather() {
+    registerModule(name, moduleInstance) {
+        this.modules.set(name, moduleInstance);
+    }
 
+    getModule(name) {
+        return this.modules.get(name);
+    }
+
+    getScene() {
+        return this.scene;
+    }
+
+    getCamera() {
+        return this.camera;
+    }
+
+    getRenderer() {
+        return this.renderer;
+    }
+
+    render() {
+        this.renderer.render(this.scene, this.camera);
+    }
+
+    // 添加动画回调
+    addAnimationCallback(callback) {
+        this.animationCallbacks.add(callback);
+    }
+
+    // 移除动画回调
+    removeAnimationCallback(callback) {
+        this.animationCallbacks.delete(callback);
+    }
+
+    // 启动动画循环
+    #startAnimation() {
+        if (this.isAnimating) return;
+        this.isAnimating = true;
+        const animateLoop = () => {
+            
+            const delta = this.clock.getDelta();
+            this.scene.backgroundRotation.y += 0.0001
+            this.animationFrameId = requestAnimationFrame(animateLoop);
+            this.animationCallbacks.forEach(callback => callback());
+            this.renderer.autoClear = false
+            this.render();
+
+
+
+            if (this.helper.animating) this.helper.update(delta);
+            this.helper.render(this.renderer);
+            
+            TWEEN.update();
+
+            
+            this.controls.update()
+            this.camera.updateProjectionMatrix()
+        };
+        animateLoop();
+    }
+
+    // 停止动画循环
+    stopAnimation() {
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+            this.isAnimating = false;
+        }
+    }
+
+    handleResize() {
+        const { clientWidth, clientHeight } = this.container;
+        this.camera.aspect = clientWidth / clientHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(clientWidth, clientHeight);
+    }
+
+    dispose() {
+        window.removeEventListener('resize', this.handleResize.bind(this));
+        this.stopAnimation(); // 停止动画
+        this.modules.forEach(module => module.dispose?.());
+        this.renderer.dispose();
+        this.container.removeChild(this.renderer.domElement);
+    }
+    loadHrd(){
+        new HRDManager(this.scene,'./assets/day2.hdr')
     }
 }
 
-// 合并不同功能模块的方法
-Object.assign(Meteor3D.prototype);
 
 export default Meteor3D;
