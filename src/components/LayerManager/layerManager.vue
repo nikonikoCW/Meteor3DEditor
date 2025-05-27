@@ -24,6 +24,8 @@ import { focusOnObject } from "../../commonjs/camera.js"
 const store = sceneConfigStore()
 
 function log2() {
+    console.log(sceneChildren);
+    
 }
 onMounted(() => {
     const contextMenu = document.getElementById('context-menu');
@@ -43,7 +45,7 @@ const sceneChildren = computed(() => {
     let result = []
     if (window.scene && window.scene.children) {
         window.scene.children.forEach(object => {
-            if (object.isMesh) {
+            if (object.isMesh || object.isSprite) {
                 // 基础几何体
                 result.push(object);
             } else if (object.isGroup || object.isScene) {

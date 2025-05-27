@@ -1,8 +1,25 @@
 <template>
-    <div class="menu">
+    <div class="menu scroll-box">
+        <div class="tag">矢量几何</div>
         <ul class="thumbnail-list">
             <!-- 示例缩略图1 -->
-            <li class="thumbnail-item" v-for="i in dataList" :key="i.index" :name="i.name">
+            <li class="thumbnail-item" v-for="i in vectorList" :key="i.index" :name="i.name">
+                <img :src="i.img" :alt="i.name" draggable="true" class="thumbnail draggable">
+                <span class="thumbnail-caption">{{ i.name }}</span>
+            </li>
+        </ul>
+        <div class="tag">标签特效</div>
+        <ul class="thumbnail-list">
+            <!-- 示例缩略图1 -->
+            <li class="thumbnail-item" v-for="i in labelList" :key="i.index" :name="i.name">
+                <img :src="i.img" :alt="i.name" draggable="true" class="thumbnail draggable">
+                <span class="thumbnail-caption">{{ i.name }}</span>
+            </li>
+        </ul>
+        <div class="tag">模型</div>
+        <ul class="thumbnail-list">
+            <!-- 示例缩略图1 -->
+            <li class="thumbnail-item" v-for="i in modelList" :key="i.index" :name="i.name">
                 <img :src="i.img" :alt="i.name" draggable="true" class="thumbnail draggable">
                 <span class="thumbnail-caption">{{ i.name }}</span>
             </li>
@@ -14,6 +31,7 @@
 import { onMounted, ref } from 'vue';
 import * as THREE from 'three';
 import { addPoint, addCone, addLand, addModels } from "/src/commonjs/basicGeometries.js"
+import addLbael from "/src/commonjs/label.js"
 import { sceneConfigStore } from "/src/store/layer.js"
 const store = sceneConfigStore()
 
@@ -21,24 +39,30 @@ const store = sceneConfigStore()
 let raycaster, mouse;
 let draggedValue = null;
 
-let dataList = ref([
+let vectorList = ref([
     { name: '圆锥', img: 'https://picsum.photos/80/80?random=1' },
     { name: '球体', img: 'https://picsum.photos/80/80?random=2' },
+    { name: '平板', img: 'https://picsum.photos/80/80?random=6' },
+])
+let labelList = ref([
+    { name: '弹窗', img: 'https://picsum.photos/80/80?random=1' },
+    { name: '特效点', img: 'https://picsum.photos/80/80?random=1' },
+])
+let modelList = ref([
     { name: '游戏建筑', img: 'https://picsum.photos/80/80?random=3' },
     { name: '机房', img: 'https://picsum.photos/80/80?random=4' },
     { name: '人物', img: 'https://picsum.photos/80/80?random=5' },
-    { name: '平板', img: 'https://picsum.photos/80/80?random=6' },
 ])
-let sceneData = ref({
-    scene: {
-        object: [
-        ],
-        environment: {
-            hdr: "environments/sky.hdr",
-            intensity: 1
-        }
-    }
-})
+// let sceneData = ref({
+//     scene: {
+//         object: [
+//         ],
+//         environment: {
+//             hdr: "environments/sky.hdr",
+//             intensity: 1
+//         }
+//     }
+// })
 
 // 光线投射器
 raycaster = new THREE.Raycaster();
@@ -132,13 +156,24 @@ window.addEventListener('drop', async (event) => {
                 path: 'assets/my-model.glb'
             }
             break;
+        case '弹窗':
+            let a = new addLbael({
+                position:leftPosition,
+                name:'警告图标'
+            })
+            a.createSprite()
+            putData = {
+                type: 'label',
+                name: '弹窗',
+            }
+            break;
     }
     putData.initPosition = leftPosition
     putData.uuid = uuid
-    sceneData.value.scene.object.push(putData)
-    store.setObject(sceneData.value.scene)
-    store.updateScene()
-    // console.log(store.scene);
+    // sceneData.value.scene.object.push(putData)
+    // store.setObject(sceneData.value.scene)
+    
+    store.updateScene() //更新场景内图层版本号，告知图层面板更新
 
 });
 
@@ -194,5 +229,46 @@ window.addEventListener('drop', async (event) => {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.tag {
+    margin: 8px 0 0 8px;
+    display: inline-block;
+    position: relative;
+    padding: 4px 8px;
+    background: linear-gradient(45deg, #1a1a1a, #2a2a2a);
+    color: #00ffcc;
+    text-transform: uppercase;
+    font-size: 9px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 255, 204, 0.5),
+        0 0 30px rgba(0, 255, 204, 0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+}
+
+.tag:hover {
+    box-shadow: 0 0 25px rgba(0, 255, 204, 0.7),
+        0 0 50px rgba(0, 255, 204, 0.4);
+}
+
+.tag::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.2),
+            transparent);
+    transition: 0.5s;
+}
+
+.tag:hover::before {
+    left: 100%;
 }
 </style>
