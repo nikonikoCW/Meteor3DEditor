@@ -13,6 +13,7 @@
         <Menu @changeMenu="changeMenu"></Menu>
         <LayerManager v-if="menuName==='图层管理'"/>
         <Weather v-if="menuName==='天气'"/>
+        <Attribute v-if="menuName==='属性'"/>
       </div>
       
       <div class="transform-position">
@@ -30,6 +31,7 @@ import Menu from "../Menu/menu.vue"
 import TransformControls from "../TransformControls/TransformControls.vue"
 import LayerManager from "../LayerManager/layerManager.vue"
 import Weather from '../Weather/weather.vue';
+import Attribute from '../Attribute/attribute.vue';
 import Header from '../Header/header.vue';
 
 

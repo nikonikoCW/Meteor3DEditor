@@ -18,7 +18,11 @@ class Meteor3D {
         this.dom = null
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
-        this.transform = null
+        //transformControls
+        this.transformControls = null
+        this.transMode='translate'
+        this.selectedModel = null
+        
 
 
         this.container = config.container;
@@ -54,20 +58,20 @@ class Meteor3D {
     }
     initTransform(){
         let that = this
-        const transformControls = new TransformControls(camera, this.renderer.domElement);
-        const transformHelper = transformControls.getHelper();
+        this.transformControls = new TransformControls(camera, this.renderer.domElement);
+        const transformHelper = this.transformControls.getHelper();
         this.scene.add(transformHelper); // 添加变换控件辅助对象到场景
-        // this.scene.add(transformControls);
+        // this.scene.add(this.transformControls);
 
 
         let isDragging = false;
-        transformControls.addEventListener('dragging-changed', (event) => {
+        this.transformControls.addEventListener('dragging-changed', (event) => {
             this.controls.enabled = !event.value;
             isDragging = event.value;
         });
 
         // 变换更新时渲染
-        transformControls.addEventListener('change', () => {
+        this.transformControls.addEventListener('change', () => {
             this.renderer.render(scene, camera);
         });
 
@@ -92,21 +96,28 @@ class Meteor3D {
                 if (!element.isTransformControlsRoot) objects.push(element);
             });
 
-            const intersects = raycaster.intersectObjects(objects, false);
+            const intersects = raycaster.intersectObjects(objects,true);//ture选择后代，false不选择后代
 
-
+            
 
             if (intersects.length > 0) {
+                let seleted = intersects[0].object
+                that.selectedModel = seleted
                 // 点击了正方体，附加变换控件
-                transformControls.attach(intersects[0].object);
+                that.transformControls.attach(seleted);
                 // 点击了变换控件（transformHelper），保持当前状态，不detach
             } else {
                 // 点击其他地方，取消变换控件
-                transformControls.detach();
+                that.transformControls.detach();
             }
+            
         }
 
         this.renderer.domElement.addEventListener('click', onMouseClick);
+    }
+    setTransFormMode(mode){
+        this.transformControls.setMode(mode)
+        this.transMode = mode
     }
     initViewHelper() {
         this.helper = new ViewHelper(camera, this.renderer.domElement);
@@ -146,7 +157,6 @@ class Meteor3D {
             if (intersects.length > 0) {
 
                 console.log('Clicked at:', intersects[0].object); // 输出交点坐标
-                // this.transform.active(intersects[0].object)
             } else {
 
             }

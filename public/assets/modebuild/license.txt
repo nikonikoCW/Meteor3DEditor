@@ -1,8 +1,0 @@
-Model Information:
-* title:	Festive World - Minecraft
-* source:	https://sketchfab.com/3d-models/festive-world-minecraft-69e56c8fbe644849a8bd957f5e80a552
-* author:	guus (https://sketchfab.com/guuss2)
-
-Model License:
-* license type:	SKETCHFAB Standard (https://sketchfab.com/licenses)
-* requirements:	Under basic restrictions, use worldwide, on all types of media, commercially or not, and in all types of derivative works

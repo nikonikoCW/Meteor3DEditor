@@ -14,6 +14,7 @@ let navList = ref([
     { status:false,name: '场景配置', icon: "iconfont me-gis_changjing" },
     { status:true,name: '图层管理', icon: "iconfont me-mti-tucengguanli" },
     { status:false,name: '天气', icon: "iconfont me-nongyun" },
+    { status:false,name: '属性', icon: "iconfont me-jiandanmoxing" }
 ])
 
 const emit = defineEmits(['message-to-parent']);
