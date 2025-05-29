@@ -1,7 +1,7 @@
 <!-- FileTree.vue -->
 <template>
     <div class="file-tree">
-        <p @click="log2">图层管理{{ store.UpdateVersion }}</p>
+        <p @click="log2">图层管理</p>
         <FileNode v-for="(item, index) in sceneChildren" :key="index" :node="item"
             @handle-context-menu="handleContextMenu" />
 
