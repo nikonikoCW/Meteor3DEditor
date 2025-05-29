@@ -1,7 +1,6 @@
 # 🌌 Meteor3D Editor - 数字孪生场景构建系统
 
-![Meteor3D Editor Logo](./public/assets/images/meteor.png =100x100) <!-- 如果有LOGO图片链接可替换 -->
-
+<img src="./public/assets/images/meteor.png" alt="Meteor3D Editor Logo" width="100" height="100">
 
 ## ✨ 项目简介
 
