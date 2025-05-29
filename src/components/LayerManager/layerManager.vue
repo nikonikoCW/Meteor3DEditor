@@ -25,7 +25,7 @@ const store = sceneConfigStore()
 
 function log2() {
     console.log(sceneChildren);
-    
+
 }
 onMounted(() => {
     const contextMenu = document.getElementById('context-menu');
@@ -55,10 +55,10 @@ const sceneChildren = computed(() => {
         });
     }
     let c = [{
-                name: '场景模型',
-                isGroup:true,
-                children: result
-            }]
+        name: '场景模型',
+        isGroup: true,
+        children: result
+    }]
     return c
 });
 
