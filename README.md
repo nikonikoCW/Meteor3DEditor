@@ -1,6 +1,6 @@
 # 🌌 Meteor3D Editor - 数字孪生场景构建系统
 
-![Meteor3D Editor Logo](https://via.placeholder.com/200x80?text=Meteor3D) <!-- 如果有LOGO图片链接可替换 -->
+![Meteor3D Editor Logo](./public/assets/images/meteor.png) <!-- 如果有LOGO图片链接可替换 -->
 
 ## ✨ 项目简介
 
@@ -33,7 +33,7 @@
 
 📷 示例截图：
 
-![左侧菜单与拖拽构建](./public/assets/123.jpg)
+![左侧菜单与拖拽构建](./public/assets/images/md/2.png)
 
 ---
 
@@ -56,7 +56,7 @@
 
 📷 示例截图：
 
-![右侧属性与图层管理](./public/assets/earth.jpg)
+![右侧属性与图层管理](./public/assets/images/md/2.png)
 
 ---
 
@@ -67,6 +67,9 @@
 - 支持按上传时间、面数复杂度、标签等筛选；
 - 每个模型提供预览与“添加到场景”功能。
 
+📷 示例截图：
+
+![右侧属性与图层管理](./public/assets/images/md/1.png)
 ---
 
 ## 🔍 特性亮点
