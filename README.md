@@ -1,4 +1,4 @@
-# 🌌 Meteor3D Editor - 数字孪生场景构建系统
+# <img src="./public/assets/images/meteor.png" alt="Meteor3D Editor Logo" width="34" height="34"> Meteor3D Editor - 数字孪生场景构建系统
 
 <img src="./public/assets/images/meteor.png" alt="Meteor3D Editor Logo" width="100" height="100">
 
