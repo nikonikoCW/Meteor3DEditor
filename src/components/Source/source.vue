@@ -49,7 +49,7 @@ let labelList = ref([
     { name: '特效点', img: 'https://picsum.photos/80/80?random=1' },
 ])
 let modelList = ref([
-    { name: '游戏建筑', img: 'https://picsum.photos/80/80?random=3' },
+    { name: '车', img: 'https://picsum.photos/80/80?random=3' },
     { name: '机房', img: 'https://picsum.photos/80/80?random=4' },
     { name: '人物', img: 'https://picsum.photos/80/80?random=5' },
 ])
@@ -128,13 +128,13 @@ window.addEventListener('drop', async (event) => {
                 name: '平板',
             }
             break;
-        case '游戏建筑':
-            uuid = await addModels('assets/model/scene.gltf', leftPosition)
+        case '车':
+            uuid = await addModels('assets/model/scene.gltf', leftPosition,0.01)
 
             putData = {
                 type: 'model',
                 modeType: "gltf",
-                name: '游戏建筑',
+                name: '车',
                 path: 'assets/model/scene.gltf'
             }
             break;

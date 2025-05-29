@@ -2,7 +2,7 @@
  * @Author: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
  * @Date: 2025-04-10 16:07:56
  * @LastEditors: 你的猫掉了耶 8210531+cwniconico@user.noreply.gitee.com
- * @LastEditTime: 2025-05-27 11:11:14
+ * @LastEditTime: 2025-05-29 09:24:34
  * @FilePath: \nico\src\commonjs\basicGeometries.js
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -44,7 +44,7 @@ export const addLand = (position) => {
     plane.rotation.x = Math.PI / 2
     return plane.uuid
 }
-export function addModels(path,position) {
+export function addModels(path,position,scale=1) {
     return new Promise((resolve, reject) => {
         const dracoLoader = new DRACOLoader();
         dracoLoader.setDecoderPath('draco/gltf/');
@@ -53,6 +53,7 @@ export function addModels(path,position) {
 
         gltfLoader.load(path, res => {
             const gltfScene = res.scene;
+            gltfScene.scale.set(scale,scale,scale)
             const box = new THREE.Box3().setFromObject(gltfScene);
             //盒子中心
             const center = box.getCenter(new THREE.Vector3());

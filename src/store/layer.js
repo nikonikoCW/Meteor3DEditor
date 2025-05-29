@@ -11,8 +11,7 @@ export const sceneConfigStore = defineStore('sceneConfig', {
                     intensity: 1
                 }
             },
-            UpdateVersion:0,
-            selectedObject3d:null
+            UpdateVersion:0
         }
     },
     actions:{
@@ -26,9 +25,6 @@ export const sceneConfigStore = defineStore('sceneConfig', {
         },
         updateScene(){
             this.UpdateVersion++
-        },
-        updateScene(val){
-            this.selectedObject3d = val
         }
     },
     getters:{
