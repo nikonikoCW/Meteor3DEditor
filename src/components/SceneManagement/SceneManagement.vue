@@ -89,19 +89,21 @@
         <a href="#"><i class="fab fa-facebook"></i></a>
         <a href="#"><i class="fab fa-instagram"></i></a>
       </div>
-      <p>© 2025 3D Model Hub. 保留所有权利。</p>
+      <p>© 2025 Meteor 3D Editor. 保留所有权利。</p>
     </footer>
   </div>
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router';
 import { ref, onMounted } from 'vue';
 
+const router = useRouter()
 // 响应式状态
 const isFilterActive = ref(false);
 const showFullscreen = ref(false);
 const models = ref([
-  { id: 1, title: '空间站', description: '高多边形科幻空间站，带有详细纹理。', details: '多边形数: 150K\n纹理: 4K\n类别: 科幻', preview: 'https://ai-public.mastergo.com/ai/img_res/e161f9f5d5b45eaf33c05c0a79bb4752.jpg', flipped: false },
+  { id: 1, title: '空间站', description: '高多边形科幻空间站，带有详细纹理。', details: '多边形数: 150K\n纹理: 4K\n类别: 科幻', preview: '/assets/images/md/3.png', flipped: false },
   { id: 2, title: '赛博车', description: '带有动画灯光的未来主义低多边形载具。', details: '多边形数: 20K\n纹理: 2K\n类别: 载具', preview: 'https://ai-public.mastergo.com/ai/img_res/02ac055f6e8acf696214fe1d82206eaa.jpg', flipped: false },
   { id: 3, title: '机器人角色', description: '高分辨率纹理的动画机器人。', details: '多边形数: 80K\n纹理: 4K\n类别: 角色', preview: 'https://ai-public.mastergo.com/ai/img_res/3c0e7dcb44a54ea5473a735893782437.jpg', flipped: false },
   { id: 4, title: '未来建筑', description: '带有霓虹装饰的现代建筑模型。', details: '多边形数: 100K\n纹理: 4K\n类别: 建筑', preview: 'https://ai-public.mastergo.com/ai/img_res/02ac055f6e8acf696214fe1d82206eaa.jpg', flipped: false },
@@ -124,7 +126,10 @@ const toggleFlip = (id) => {
 };
 
 const closeFullscreen = (val) => {
-  showFullscreen.value = val;
+  // showFullscreen.value = val;
+  router.push({
+    name: 'scene'
+  })
 };
 
 onMounted(() => {
@@ -459,7 +464,7 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.3), transparent);
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 15s infinite;
 }
 
 @keyframes shimmer {
