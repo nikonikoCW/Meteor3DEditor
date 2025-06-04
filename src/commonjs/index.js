@@ -7,6 +7,9 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import HRDManager from "./loadHdr.js"
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
+import { sceneConfigStore } from "/src/store/layer.js"
+const store = sceneConfigStore()
+
 class Meteor3D {
     constructor(config) {
         // 构造函数
@@ -103,6 +106,7 @@ class Meteor3D {
             if (intersects.length > 0) {
                 let seleted = intersects[0].object
                 that.selectedModel = seleted
+                store.updateScene()
                 // 点击了正方体，附加变换控件
                 that.transformControls.attach(seleted);
                 // 点击了变换控件（transformHelper），保持当前状态，不detach

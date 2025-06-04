@@ -89,7 +89,7 @@
         <a href="#"><i class="fab fa-facebook"></i></a>
         <a href="#"><i class="fab fa-instagram"></i></a>
       </div>
-      <p>© 2025 Meteor 3D Editor. 保留所有权利。</p>
+      <p><span>© 2025 Meteor 3D Editor. 保留所有权利。</span><span style="margin: 0 20px;">|</span> <span>蜀ICP备2025144361号</span> </p>
     </footer>
   </div>
 </template>

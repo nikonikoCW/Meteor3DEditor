@@ -1,76 +1,143 @@
 <template>
-    <el-form :model="form" label-width="auto" class="weather-option">
-        <p>位置</p>
-        <el-form-item label="X" >
-            <el-input v-model="modelValue.position.x"  size="small" class="me-input"/>
-        </el-form-item>
-        <el-form-item label="Y">
-            <el-input v-model="form.speed" :min="1" :max="10"  size="small" class="me-input"/>
-        </el-form-item>
-        <el-form-item label="Z">
-            <el-input v-model="form.height" :min="1" :max="1000"  size="small" class="me-input"/>
-        </el-form-item>
-        <p>旋转</p>
-        <el-form-item label="X" >
-            <el-input v-model="form.size" :min="1" :max="10"  size="small" class="me-input"/>
-        </el-form-item>
-        <el-form-item label="Y">
-            <el-input v-model="form.speed" :min="1" :max="10"  size="small" class="me-input"/>
-        </el-form-item>
-        <el-form-item label="Z">
-            <el-input v-model="form.height" :min="1" :max="1000"  size="small" class="me-input"/>
-        </el-form-item>
-        <p>缩放</p>
-        <el-form-item label="X" >
-            <el-input v-model="form.size" :min="1" :max="10"  size="small" class="me-input"/>
-        </el-form-item>
-        <el-form-item label="Y">
-            <el-input v-model="form.speed" :min="1" :max="10"  size="small" class="me-input"/>
-        </el-form-item>
-        <el-form-item label="Z">
-            <el-input v-model="form.height" :min="1" :max="1000"  size="small" class="me-input"/>
-        </el-form-item>
-    </el-form>
+    <div class="panel">
+        <div class="tabs">
+            <div class="tab active">属性</div>
+        </div>
+
+        <div class="label">类型</div>
+        <input type="text" value="Mesh" disabled>
+
+        <div class="label">名称</div>
+        <input type="text" value="BoxGeometry" v-model="models.name" @change="updateObejct('name')">
+
+        <div class="label">位置</div>
+        <div class="row">
+            <input type="text" value="2.147" placeholder="X">
+            <input type="text" value="0.500" placeholder="Y">
+            <input type="text" value="0.336" placeholder="Z">
+        </div>
+
+        <div class="label">旋转</div>
+        <div class="row">
+            <input type="text" value="0.000">
+            <input type="text" value="0.000">
+            <input type="text" value="0.000">
+        </div>
+
+        <div class="label">缩放</div>
+        <div class="row">
+            <input type="text" value="1.000">
+            <input type="text" value="1.000">
+            <input type="text" value="1.000">
+        </div>
+
+        <div class="toggle"><el-switch v-model="models.visible" size="small"  @change="updateObejct('visible')"/> 可见性
+        </div>
+        <div class="toggle"><input type="checkbox"> 投射阴影</div>
+        <div class="toggle"><input type="checkbox" checked> 接收阴影</div>
+        <div class="toggle"><input type="checkbox" checked> 视锥体裁剪</div>
+    </div>
 </template>
 
 <script setup>
-import { reactive,onMounted ,computed,ref} from 'vue'
+import { reactive, onMounted, computed, ref, watch } from 'vue'
+import { sceneConfigStore } from "/src/store/layer.js"
+import { storeToRefs } from 'pinia';
+const store = sceneConfigStore()
 
-const form = reactive({
-  locationX: 'null',
-  locationY:1,
-  locationZ:10,
-  scaleX:500,
-  scaleY:1000,
-  scaleZ:1000,
-  rotationX:500,
-  rotationY:1000,
-  rotationZ:1000,
+const { UpdateVersion } = storeToRefs(store);
+const models = reactive({
+    name: '',
+    visible: true
 })
-let modelValue = reactive({
-    position:{
-        x:0
+
+
+
+const updateUI = () => {
+    models.name = meteor3D.selectedModel.name;
+    models.visible = meteor3D.selectedModel.visible;
+}
+const updateObejct = (call) => {
+    const updateValue = {
+        name: () => {
+            meteor3D.selectedModel.name = models.name
+        },
+        visible: () => {
+            meteor3D.selectedModel.visible = models.visible
+        },
     }
-})
+    updateValue[call]()
+}
 
-onMounted(()=>{
-    console.log(meteor3D);
-    debugger
-    modelValue = meteor3D.selectedModel
-})
 
+watch(UpdateVersion, (newVal, oldVal) => {
+    console.log('someState changed:', newVal);
+    updateUI()
+}, { immediate: true });
 
 </script>
 
 <style scoped>
-.weather-option{
-    width: 100%;
-    /* background-color: red; */
+.panel {
+    width: 300px;
+    background-color: rgba(0, 0, 0, 0);
+    padding: 15px;
+    border-radius: 5px;
+
+    font-family: sans-serif;
+    color: #fff;
 }
-.me-select{
-    width: 120px;
+
+.tabs {
+    display: flex;
+    background-color: rgba(0, 0, 0, 0.2);
+    margin-bottom: 15px;
 }
-.me-input{
-    width: 100px;
+
+.tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-bottom: 2px solid transparent;
+}
+
+.tab.active {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.label {
+    margin: 10px 0 5px;
+    font-size: 14px;
+}
+
+input[type="text"] {
+    width: calc(100% - 12px);
+    padding: 5px;
+    margin-bottom: 10px;
+    background: #444;
+    border: none;
+    color: white;
+}
+
+.row {
+    display: flex;
+    gap: 5px;
+}
+
+.row input {
+    flex: 1;
+}
+
+.toggle {
+    display: flex;
+    align-items: center;
+    margin: 10px 0;
+    font-size: 14px;
+}
+
+.toggle input {
+    margin-right: 8px;
 }
 </style>

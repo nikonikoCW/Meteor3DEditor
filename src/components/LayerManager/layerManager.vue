@@ -19,8 +19,8 @@
 <script setup>
 import { ref, onMounted, toRaw, computed } from 'vue'
 import FileNode from './FileNode.vue'
-import { sceneConfigStore } from "/src/store/layer.js"
 import { focusOnObject } from "../../commonjs/camera.js"
+import { sceneConfigStore } from "/src/store/layer.js"
 const store = sceneConfigStore()
 
 function log2() {
