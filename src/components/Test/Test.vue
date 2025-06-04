@@ -6,14 +6,14 @@
 <script setup>
 import * as THREE from 'three';
 import { ref, onMounted } from 'vue';
-import SceneManager from "../../commonjs/Meteor3d.js"
+import Meteor3D from "../../commonjs/index.js"
 
 const mains = ref(null);
 let sceneManager = null
 
 onMounted(() => {
   let container = mains.value
-  sceneManager = new SceneManager({
+  sceneManager = new Meteor3D({
     container
   });
   if (sceneManager) {

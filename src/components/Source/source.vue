@@ -47,6 +47,7 @@ let vectorList = ref([
 let labelList = ref([
     { name: '弹窗', img: 'https://picsum.photos/80/80?random=1' },
     { name: '特效点', img: 'https://picsum.photos/80/80?random=1' },
+    { name: '光圈', img: 'https://picsum.photos/80/80?random=9' },
 ])
 let modelList = ref([
     { name: '车', img: 'https://picsum.photos/80/80?random=3' },
@@ -126,6 +127,13 @@ window.addEventListener('drop', async (event) => {
             putData = {
                 type: 'land',
                 name: '平板',
+            }
+            break;
+        case '光圈':
+            uuid = meteor3D.addAperture(leftPosition)
+            putData = {
+                type: 'land',
+                name: '光圈',
             }
             break;
         case '车':

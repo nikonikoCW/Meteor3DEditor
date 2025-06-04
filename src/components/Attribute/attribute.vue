@@ -31,11 +31,11 @@
             <input type="text" value="1.000">
         </div>
 
-        <div class="toggle"><el-switch v-model="models.visible" size="small"  @change="updateObejct('visible')"/> 可见性
+        <div class="toggle"><el-switch v-model="models.visible" size="small"  @change="updateObejct('visible')" class="mr-12"/> 可见性
         </div>
-        <div class="toggle"><input type="checkbox"> 投射阴影</div>
-        <div class="toggle"><input type="checkbox" checked> 接收阴影</div>
-        <div class="toggle"><input type="checkbox" checked> 视锥体裁剪</div>
+        <div class="toggle"><el-switch v-model="models.visible" size="small"  @change="updateObejct('visible')" class="mr-12"/> 投射阴影</div>
+        <div class="toggle"><el-switch v-model="models.visible" size="small"  @change="updateObejct('visible')" class="mr-12"/> 接收阴影</div>
+        <div class="toggle"><el-switch v-model="models.visible" size="small"  @change="updateObejct('visible')" class="mr-12"/> 视锥体裁剪</div>
     </div>
 </template>
 
@@ -78,6 +78,9 @@ watch(UpdateVersion, (newVal, oldVal) => {
 </script>
 
 <style scoped>
+.mr-12{
+    margin-right: 12px;
+}
 .panel {
     width: 300px;
     background-color: rgba(0, 0, 0, 0);

@@ -10,6 +10,8 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { sceneConfigStore } from "/src/store/layer.js"
 const store = sceneConfigStore()
 
+import Aperture from "./effect/ef1.js"
+
 class Meteor3D {
     constructor(config) {
         // 构造函数
@@ -252,6 +254,13 @@ class Meteor3D {
     }
     loadHrd(){
         new HRDManager(this.scene,'./assets/day2.hdr')
+    }
+    addAperture(position){
+        let aperture = new Aperture({
+            position:position,
+            scale:3
+        })
+        this.addAnimationCallback(aperture.updateAnimate())
     }
 }
 
