@@ -48,6 +48,7 @@ let labelList = ref([
     { name: '弹窗', img: 'https://picsum.photos/80/80?random=1' },
     { name: '特效点', img: 'https://picsum.photos/80/80?random=1' },
     { name: '光圈', img: 'https://picsum.photos/80/80?random=9' },
+    { name: '魔法阵', img: 'https://picsum.photos/80/80?random=19' },
 ])
 let modelList = ref([
     { name: '车', img: 'https://picsum.photos/80/80?random=3' },
@@ -134,6 +135,13 @@ window.addEventListener('drop', async (event) => {
             putData = {
                 type: 'land',
                 name: '光圈',
+            }
+            break;
+        case '魔法阵':
+            uuid = meteor3D.addMagicFormation(leftPosition)
+            putData = {
+                type: 'land',
+                name: '魔法阵',
             }
             break;
         case '车':

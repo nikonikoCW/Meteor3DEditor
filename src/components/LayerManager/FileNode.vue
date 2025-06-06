@@ -5,7 +5,7 @@
       {{ node.name }}
     </div>
 
-    <div class="node-file hoverable" @click="focus(node)"  @contextmenu.prevent="(e) => handleContextMenu(e, node)" v-else>
+    <div class="node-file hoverable"  @contextmenu.prevent="(e) => handleContextMenu(e, node)" v-else>
       <span class="me-moxing iconfont" style="color:white;"></span> {{ node.name }}
     </div>
 

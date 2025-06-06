@@ -18,7 +18,7 @@ class Label {
             id: 'tag',
             style: 'background-color: red; pointer-events: none; font-size: 1px;',
             textContent: '标签内容'
-          });
+        });
         // HTML元素转化为threejs的CSS2模型对象
         const tag = new CSS3DObject(div);
         tag.position.copy(this.position);
@@ -32,27 +32,31 @@ class Label {
         this.css2Renderer.domElement.style.top = '0px';
         this.css2Renderer.domElement.style.pointerEvents = 'none';
         document.body.appendChild(this.css2Renderer.domElement);
-          
+
         meteor3D.addAnimationCallback(() => {
             this.css2Renderer.render(scene, camera)
         })
     }
     createSprite() {
-        const texLoader= new THREE.TextureLoader();
+        const texLoader = new THREE.TextureLoader();
         let texture = null;
-        texture= texLoader.load("assets/images/警告.png");
+        texture = texLoader.load("assets/images/警告.png");
         const spriteMaterial = new THREE.SpriteMaterial({
             map: texture,
-            transparent:true
+            transparent: true,
+            depthWrite: false,            // 不写入深度缓冲
+            depthTest: true,              // 可根据情况关闭
+            blending: THREE.NormalBlending
         });
         const sprite = new THREE.Sprite(spriteMaterial);
+        sprite.renderOrder = 999;
         // 控制精灵大小
         sprite.position.copy(this.position);
         sprite.name = this.name
         // sprite.position.y = 5 / 2; //标签底部箭头和空对象标注点重合  
         scene.add(sprite);
     }
-    
+
 }
 
 export default Label

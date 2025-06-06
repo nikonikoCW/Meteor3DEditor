@@ -10,7 +10,8 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { sceneConfigStore } from "/src/store/layer.js"
 const store = sceneConfigStore()
 
-import Aperture from "./effect/ef1.js"
+import Aperture from "./effect/Aperture.js"
+import MagicFormation from "./effect/MagicFormation.js"
 
 class Meteor3D {
     constructor(config) {
@@ -261,6 +262,14 @@ class Meteor3D {
             scale:3
         })
         this.addAnimationCallback(aperture.updateAnimate())
+    }
+    addMagicFormation(position){
+        let magicFormation = new MagicFormation({
+            position:position,
+        })
+        this.addAnimationCallback(magicFormation.updateCircle)
+        this.addAnimationCallback(magicFormation.updateRing)
+        this.addAnimationCallback(magicFormation.updatePartical)
     }
 }
 

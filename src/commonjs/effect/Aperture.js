@@ -16,6 +16,8 @@ class Aperture {
         this.material = new THREE.ShaderMaterial({
             side: THREE.DoubleSide,
             transparent: true,
+            depthWrite: false,            // 不写入深度缓冲
+            depthTest: true,  
             blending: THREE.AdditiveBlending, // 添加混合模式让效果更亮
             uniforms: {
                 uTime: { value: 0.0 },
@@ -95,6 +97,7 @@ class Aperture {
     }
     addGeo() {
         const mesh = new THREE.Mesh(this.geometry, this.material);
+        mesh.renderOrder = 999;
         mesh.rotation.x = Math.PI / 2
         mesh.position.copy(this.position)
         mesh.name = '蓝色光圈'
