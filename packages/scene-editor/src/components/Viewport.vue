@@ -13,11 +13,10 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import * as THREE from 'three';
-import { SceneManager } from '../core/SceneManager';
+import { SceneManager, PersistenceManager, DBManager } from '@meteor3d/core';
 import { InputManager } from '../core/InputManager';
 import { TransformManager } from '../core/TransformManager';
 import { HistoryManager } from '../core/HistoryManager';
-import { PersistenceManager } from '../core/PersistenceManager';
 import { AddObjectCommand } from '../core/CommandFactory';
 import { useEditorStore } from '../stores/editorStore';
 import { storeToRefs } from 'pinia';
@@ -33,10 +32,12 @@ let inputManager = null;
 let transformManager = null;
 let historyManager = null;
 let persistenceManager = null;
+let dbManager = null;
 
 // Expose managers to parent/global if needed, or use a composable/provide-inject
 // For now, we attach them to the window for debugging or simple access
 window.editor = {};
+
 
 const onDrop = async (event) => {
   debugger
@@ -126,7 +127,8 @@ const onDrop = async (event) => {
 onMounted(async () => {
   sceneManager = new SceneManager(canvas.value);
   historyManager = new HistoryManager();
-  persistenceManager = new PersistenceManager(sceneManager, editorStore);
+  dbManager = new DBManager();
+  persistenceManager = new PersistenceManager(sceneManager, editorStore, dbManager);
   
   // Initialize IndexedDB and load saved scene
   const sceneId = route.params.sceneId || 'default';
@@ -140,7 +142,8 @@ onMounted(async () => {
     historyManager,
     transformManager,
     inputManager,
-    persistenceManager
+    persistenceManager,
+    dbManager
   };
 
   // Watch for selection changes to attach transform controls

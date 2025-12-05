@@ -1,0 +1,12 @@
+{
+    "name": "meteor3d-monorepo",
+    "private": true,
+    "scripts": {
+        "dev:scene": "pnpm --filter @meteor3d/scene-editor dev",
+        "dev:app": "pnpm --filter @meteor3d/app-editor dev",
+        "build:all": "pnpm -r build"
+    },
+    "devDependencies": {
+        "pnpm": "^10.2.0"
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "name": "@meteor3d/core",
+    "version": "1.0.0",
+    "main": "index.js",
+    "type": "module",
+    "exports": {
+        ".": "./index.js"
+    },
+    "dependencies": {
+        "three": "^0.181.2"
+    }
+}

@@ -2,8 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
-import { DBManager } from './DBManager.js';
-import { message } from '../utils/message.js';
+import { message } from './utils/message.js';
 
 /**
  * 持久化管理器
@@ -15,11 +14,12 @@ export class PersistenceManager {
      * 构造函数
      * @param {SceneManager} sceneManager - 场景管理器实例
      * @param {EditorStore} editorStore - 编辑器状态存储实例
+     * @param {Object} dbManager - 数据库管理器实例 (依赖注入)
      */
-    constructor(sceneManager, editorStore) {
+    constructor(sceneManager, editorStore, dbManager) {
         this.sceneManager = sceneManager;
         this.editorStore = editorStore;
-        this.dbManager = new DBManager();
+        this.dbManager = dbManager;
         this.objectMap = new Map();
 
         // 设置 DRACO 解码器
