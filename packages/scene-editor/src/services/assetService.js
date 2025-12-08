@@ -2,7 +2,8 @@
  * 资产管理 API 服务
  */
 
-const API_BASE_URL = 'http://localhost:3000/api';
+import { API_BASE_URL, ASSET_BASE_URL } from '../config';
+
 
 /**
  * 上传资产
@@ -122,5 +123,5 @@ export function downloadAsset(id, filename) {
  * @returns {string}
  */
 export function getAssetUrl(asset) {
-    return `http://localhost:3000${asset.url}`;
+    return `${ASSET_BASE_URL}${asset.url}`;
 }

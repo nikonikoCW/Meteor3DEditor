@@ -2,7 +2,8 @@
  * 场景管理 API 服务
  */
 
-const API_BASE_URL = 'http://localhost:3000/api';
+import { API_BASE_URL } from '../config';
+
 
 /**
  * 获取场景列表

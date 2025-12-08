@@ -14,6 +14,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import * as THREE from 'three';
 import { SceneManager, PersistenceManager, DBManager } from '@meteor3d/core';
+import { API_BASE_URL } from '../config';
 import { InputManager } from '../core/InputManager';
 import { TransformManager } from '../core/TransformManager';
 import { HistoryManager } from '../core/HistoryManager';
@@ -40,7 +41,6 @@ window.editor = {};
 
 
 const onDrop = async (event) => {
-  debugger
   // ... (onDrop implementation remains the same)
   const type = event.dataTransfer.getData('type');
   if (!type) return;
@@ -127,12 +127,15 @@ const onDrop = async (event) => {
 onMounted(async () => {
   sceneManager = new SceneManager(canvas.value);
   historyManager = new HistoryManager();
-  dbManager = new DBManager();
+  dbManager = new DBManager({ apiBaseUrl: API_BASE_URL });
   persistenceManager = new PersistenceManager(sceneManager, editorStore, dbManager);
   
   // Initialize IndexedDB and load saved scene
   const sceneId = route.params.sceneId || 'default';
   await persistenceManager.init(sceneId);
+  
+  // 在加载完成后聚焦相机
+  sceneManager.fitCameraToScene();
   
   transformManager = new TransformManager(sceneManager, historyManager, persistenceManager);
   inputManager = new InputManager(sceneManager, editorStore, transformManager);
@@ -154,6 +157,19 @@ onMounted(async () => {
       transformManager.detach();
     }
   });
+
+  const observer = new ResizeObserver((entries) => {
+      if (sceneManager && sceneManager.renderer) {
+          const entry = entries[0];
+          if (entry && entry.contentRect) {
+             const { width, height } = entry.contentRect;
+             sceneManager.onWindowResize(width, height);
+          } else {
+             sceneManager.onWindowResize();
+          }
+      }
+  });
+  observer.observe(container.value);
 });
 
 

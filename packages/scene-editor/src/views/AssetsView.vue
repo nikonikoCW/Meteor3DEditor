@@ -49,7 +49,7 @@
         class="asset-card"
       >
             <div class="asset-preview">
-          <img v-if="asset.thumbnail" :src="'http://localhost:3000' + asset.thumbnail" :alt="asset.name" class="asset-thumb">
+          <img v-if="asset.thumbnail" :src="ASSET_BASE_URL + asset.thumbnail" :alt="asset.name" class="asset-thumb">
           <span v-else class="asset-icon">{{ getAssetIcon(asset.type) }}</span>
         </div>
         <div class="asset-info">
@@ -99,6 +99,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { uploadAsset, getAssets, deleteAsset, downloadAsset } from '../services/assetService';
+import { ASSET_BASE_URL } from '../config';
 import { ThumbnailGenerator } from '../utils/ThumbnailGenerator';
 import { message } from '../utils/message';
 

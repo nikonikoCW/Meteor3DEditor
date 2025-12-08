@@ -9,10 +9,6 @@
           <label>类型</label>
           <span class="readonly">{{ selectedWidget.type }}</span>
       </div>
-      <div class="field">
-          <label>ID</label>
-          <span class="readonly sm">{{ selectedWidget.id.slice(0,8) }}...</span>
-      </div>
     </div>
 
     <!-- 布局属性 -->
@@ -40,26 +36,37 @@
       </div>
     </div>
 
-    <!-- 场景组件特有属性 -->
-    <div class="section" v-if="selectedWidget.type === 'Scene'">
-      <h4>场景配置</h4>
-      <div class="field">
-        <label>选择场景</label>
-        <select v-model="selectedWidget.data.sceneId" @change="onSceneChange">
-          <option value="" disabled>请选择场景</option>
-          <option v-for="scene in sceneList" :key="scene.id" :value="scene.id">
-            {{ scene.name }}
-          </option>
+    <!-- 动态渲染的特有属性 -->
+    <div class="section" v-if="widgetProps.length > 0">
+      <h4>组件配置</h4>
+      <div v-for="prop in widgetProps" :key="prop.name" class="field">
+        <label>{{ prop.label }}</label>
+        
+        <!-- Select 输入 -->
+        <select 
+            v-if="prop.type === 'select'" 
+            v-model="selectedWidget.data[prop.name]"
+        >
+            <option v-for="opt in prop.options" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+            </option>
         </select>
-      </div>
-    </div>
 
-    <!-- 图表组件特有属性 -->
-    <div class="section" v-if="selectedWidget.type === 'Chart'">
-      <h4>图表配置</h4>
-      <div class="field">
-        <label>标题</label>
-        <input type="text" v-model="selectedWidget.data.title" placeholder="输入标题">
+        <!-- Color 输入 -->
+        <div v-else-if="prop.type === 'color'" class="color-input-wrapper">
+             <input 
+                type="color" 
+                v-model="selectedWidget.data[prop.name]"
+             >
+             <span>{{ selectedWidget.data[prop.name] }}</span>
+        </div>
+
+        <!-- Text/Number 输入 -->
+        <input 
+            v-else 
+            :type="prop.type === 'number' ? 'number' : 'text'"
+            v-model="selectedWidget.data[prop.name]"
+        >
       </div>
     </div>
 
@@ -70,34 +77,52 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { computed, watch, ref } from 'vue';
 import { useAppStore } from '../stores/appStore';
 import { storeToRefs } from 'pinia';
+import { getWidgetDefinition } from '../core/widgetRegistry';
 
 const appStore = useAppStore();
 const { selectedWidget } = storeToRefs(appStore);
-const sceneList = ref([]);
 
-// 获取可用场景列表
-const fetchScenes = async () => {
-  try {
-    const response = await fetch('http://localhost:3000/api/scene/list');
-    const data = await response.json();
-    if (data.success) {
-      sceneList.value = data.scenes;
+// 当前组件的动态属性配置
+const widgetProps = ref([]);
+
+// 当选中的组件改变时，更新配置表
+watch(selectedWidget, async (newWidget) => {
+    if (!newWidget) {
+        widgetProps.value = [];
+        return;
     }
-  } catch (error) {
-    console.error('Failed to fetch scenes:', error);
-  }
-};
 
-onMounted(() => {
-  fetchScenes();
-});
+    const def = getWidgetDefinition(newWidget.type);
+    if (def && def.config.props) {
+        // 深拷贝配置，避免污染原始定义
+        const props = JSON.parse(JSON.stringify(def.config.props));
+        
+        // 处理需要异步获取选项的字段
+        for (const prop of props) {
+            // 如果定义里有 fetchOptions 方法（注意 JSON.stringify 会丢弃函数，所以我们需要回溯到 def.config）
+            const originalProp = def.config.props.find(p => p.name === prop.name);
+            if (originalProp && originalProp.fetchOptions) {
+                // 执行异步加载
+                console.log('Fetching options for', prop.name); // Debug log
+                prop.options = await originalProp.fetchOptions();
+                console.log('Options fetched:', prop.options); // Debug log
+            }
+            
+            // 确保 data 中有默认值
+            if (newWidget.data[prop.name] === undefined && prop.defaultValue !== undefined) {
+                newWidget.data[prop.name] = prop.defaultValue;
+            }
+        }
+        
+        widgetProps.value = props;
+    } else {
+        widgetProps.value = [];
+    }
+}, { immediate: true });
 
-const onSceneChange = () => {
-  // 触发更新可能需要的逻辑
-};
 </script>
 
 <style scoped>
@@ -173,12 +198,21 @@ input:focus, select:focus {
   border-color: #42b983;
 }
 
+.color-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.color-input-wrapper input[type="color"] {
+    width: 40px;
+    height: 25px;
+    padding: 0;
+    border: none;
+}
+
 .readonly {
   color: #888;
   font-size: 13px;
-}
-
-.readonly.sm {
-  font-size: 11px;
 }
 </style>

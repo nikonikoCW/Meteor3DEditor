@@ -1,8 +1,8 @@
 // Meteor3D 的数据管理器
 // 使用后端 API 进行数据持久化
 export class DBManager {
-    constructor() {
-        this.apiBaseUrl = 'http://localhost:3000/api';
+    constructor(config = {}) {
+        this.apiBaseUrl = config.apiBaseUrl || 'http://localhost:3001/api';
     }
 
     /**

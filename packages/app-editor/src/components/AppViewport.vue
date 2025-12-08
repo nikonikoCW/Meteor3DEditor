@@ -9,7 +9,6 @@
     @mousedown="onMouseDown"
   >
     <div class="canvas-area">
-       <!-- 网格背景，方便对齐 -->
        <div class="grid-background"></div>
 
        <!-- Widget Layer -->
@@ -27,9 +26,15 @@
             @mousedown.stop="onWidgetMouseDown($event, widget)"
             :class="{ selected: selectedWidget && selectedWidget.id === widget.id }"
         >
-            <component :is="getWidgetComponent(widget.type)" :data="widget.data" />
+            <!-- 动态组件加载 -->
+            <component 
+                v-if="getComponent(widget.type)"
+                :is="getComponent(widget.type)" 
+                :data="widget.data" 
+                class="widget-content"
+            />
+            <div v-else class="error-widget">Unknown Widget: {{ widget.type }}</div>
             
-            <!-- 简单的缩放手柄 (可选实现) -->
             <div v-if="selectedWidget && selectedWidget.id === widget.id" class="resize-handle"></div>
         </div>
     </div>
@@ -40,21 +45,16 @@
 import { ref } from 'vue';
 import { useAppStore } from '../stores/appStore';
 import { storeToRefs } from 'pinia';
-
-import ChartWidget from './widgets/ChartWidget.vue';
-import ButtonWidget from './widgets/ButtonWidget.vue';
-import SceneWidget from './widgets/SceneWidget.vue';
+import { getWidgetDefinition } from '../core/widgetRegistry';
 
 const container = ref(null);
 const appStore = useAppStore();
 const { widgets, selectedWidget } = storeToRefs(appStore);
 
-// 拖拽移动状态
 const isDragging = ref(false);
 const dragOffset = ref({ x: 0, y: 0 });
 const activeWidget = ref(null);
 
-// 处理从左侧面板拖入新组件
 const onDrop = (event) => {
     const type = event.dataTransfer.getData('widgetType');
     if (!type) return;
@@ -63,32 +63,26 @@ const onDrop = (event) => {
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
 
-    // 根据类型设置默认尺寸
-    let defaultSize = { width: 200, height: 150 };
-    if (type === 'Scene') defaultSize = { width: 600, height: 400 };
-    if (type === 'Button') defaultSize = { width: 100, height: 40 };
+    // 获取组件默认配置
+    const def = getWidgetDefinition(type);
+    const defaultSize = def?.config.defaultSize || { width: 200, height: 150 };
 
     const newWidget = {
         id: crypto.randomUUID(),
         type: type,
         position: { x, y },
-        size: defaultSize,
-        data: {} // 存储组件特有数据 (如 sceneId, chartTitle)
+        size: { ...defaultSize },
+        data: {} 
     };
-    
-    // 重要：通过 markRaw 标记组件数据，但 position 需要是响应式的
-    // Pinia 的 state 是响应式的，所以这里不用 ref 包裹
+
     appStore.addWidget(newWidget);
     appStore.selectWidget(newWidget);
 };
 
-// 开始拖拽已有组件
 const onWidgetMouseDown = (event, widget) => {
   appStore.selectWidget(widget);
   isDragging.value = true;
   activeWidget.value = widget;
-  
-  // 计算鼠标相对于组件左上角的偏移
   dragOffset.value = {
     x: event.clientX - widget.position.x,
     y: event.clientY - widget.position.y
@@ -97,9 +91,6 @@ const onWidgetMouseDown = (event, widget) => {
 
 const onMouseMove = (event) => {
   if (isDragging.value && activeWidget.value) {
-    // 更新组件位置
-    // 注意：这里直接修改的是 store 中的对象引用 (Pinia ref)
-    // 在实际生产中，可能建议使用 action 来修改
     activeWidget.value.position.x = event.clientX - dragOffset.value.x;
     activeWidget.value.position.y = event.clientY - dragOffset.value.y;
   }
@@ -110,20 +101,16 @@ const onMouseUp = () => {
   activeWidget.value = null;
 };
 
-// 点击空白处取消选择
 const onMouseDown = (event) => {
   if (event.target === container.value || event.target.classList.contains('grid-background')) {
     appStore.clearSelection();
   }
 };
 
-const getWidgetComponent = (type) => {
-    switch(type) {
-        case 'Chart': return ChartWidget;
-        case 'Button': return ButtonWidget;
-        case 'Scene': return SceneWidget;
-        default: return 'div';
-    }
+// 获取组件实现
+const getComponent = (type) => {
+    const def = getWidgetDefinition(type);
+    return def ? def.component : null;
 };
 
 </script>
@@ -159,11 +146,11 @@ const getWidgetComponent = (type) => {
     position: absolute;
     background: #252525;
     border: 1px solid #333;
-    user-select: none; /* 防止拖拽时选中文本 */
+    user-select: none;
     box-shadow: 0 2px 10px rgba(0,0,0,0.3);
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* 防止内容溢出 */
+    overflow: hidden;
 }
 
 .widget-container.selected {
@@ -172,7 +159,18 @@ const getWidgetComponent = (type) => {
     z-index: 100;
 }
 
-/* 简单的缩放手柄 */
+.widget-content {
+    width: 100%;
+    height: 100%;
+    flex: 1;
+}
+
+.error-widget {
+    padding: 10px;
+    color: red;
+    background: #ffdce0;
+}
+
 .resize-handle {
   position: absolute;
   bottom: 0;

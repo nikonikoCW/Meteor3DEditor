@@ -1,8 +1,17 @@
 <template>
-  <button class="btn-widget">
-    Click Me
+  <button class="btn-widget" :style="{ backgroundColor: data.color }">
+    {{ data.label || 'Button' }}
   </button>
 </template>
+
+<script setup>
+defineProps({
+  data: {
+    type: Object,
+    default: () => ({})
+  }
+});
+</script>
 
 <style scoped>
 .btn-widget {
@@ -12,6 +21,9 @@
     border: none;
     color: white;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
 }
 </style>
-
