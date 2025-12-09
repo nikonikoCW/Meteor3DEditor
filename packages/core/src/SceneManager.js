@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
+import { GisProjection } from './GisProjection.js';
 
 /**
  * 场景管理器
@@ -13,8 +14,8 @@ export class SceneManager {
         this.scene.background = new THREE.Color(0x333333); // 深灰色背景，便于观察
 
         // 网格辅助线
-        const gridHelper = new THREE.GridHelper(20, 20);
-        this.scene.add(gridHelper);
+        // const gridHelper = new THREE.GridHelper(500, 30);
+        // this.scene.add(gridHelper);
 
         // 环境光
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // 增强环境光
@@ -48,6 +49,12 @@ export class SceneManager {
 
         this.objects = []; // 跟踪所有可交互的对象
         this.environmentUrl = null; // 当前环境贴图 URL
+        this.gisProjection = null;
+        this.gisConfig = null;
+        this.gridHelper = null; // now used as custom plane grid
+        this.gridVisible = false;
+        this.gisConfig = null;
+        this.gisProjection = null;
 
         this.animate = this.animate.bind(this);
         this.animate();
@@ -166,5 +173,97 @@ export class SceneManager {
         this.camera.lookAt(center);
         this.controls.target.copy(center);
         this.controls.update();
+    }
+
+    /**
+     * 设置网格辅助线可见性
+     * @param {boolean} visible - 是否可见
+     * @param {number} size - 网格大小（米）
+     * @param {number} divisions - 分段数
+     */
+    setGridHelper(visible, length = 30, width = 30, widthSegments, lengthSegments) {
+        this.gridVisible = visible;
+        if (this.gisConfig) {
+            this.gisConfig.gridVisible = visible;
+        }
+        // 先移除旧的网格
+        if (this.gridHelper) {
+            this.scene.remove(this.gridHelper);
+            this.gridHelper = null;
+        }
+
+        if (visible) {
+            const resolvedLength = Math.max(1, length);
+            const resolvedWidth = Math.max(1, width);
+            const segW = Math.max(1, widthSegments ?? Math.round(resolvedWidth / 10));
+            const segL = Math.max(1, lengthSegments ?? Math.round(resolvedLength / 10));
+
+            // 使用 PlaneGeometry 构建可分段网格（wireframe 方式）
+            const geometry = new THREE.PlaneGeometry(resolvedWidth, resolvedLength, segW, segL);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x555555,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide
+            });
+            const gridPlane = new THREE.Mesh(geometry, material);
+            gridPlane.rotation.x = -Math.PI / 2; // 放置到 XZ 平面
+            this.gridHelper = gridPlane;
+            this.scene.add(gridPlane);
+        }
+
+        this.emitGisConfigUpdated();
+    }
+
+    /**
+     * 配置 GIS 投影：中心锚定在 (0,0,0)
+     * @param {{center:{lng:number,lat:number},range:{length:number,width:number},projection:string}} config
+     */
+    setGisConfig(config) {
+        if (!config || !config.center) return;
+        this.gisConfig = { ...config, gridVisible: config.gridVisible ?? this.gridVisible };
+        this.gisProjection = new GisProjection({
+            center: config.center,
+            projection: config.projection || 'WGS84',
+        });
+
+        const length = config.range?.length || 30;
+        const width = config.range?.width || 30;
+        const widthSegments = Math.max(1, Math.round(width / 10));
+        const lengthSegments = Math.max(1, Math.round(length / 10));
+        this.setGridHelper(this.gisConfig.gridVisible, length, width, widthSegments, lengthSegments);
+    }
+
+    emitGisConfigUpdated() {
+        if (typeof window !== 'undefined') {
+            const detail = this.gisConfig ? { ...this.gisConfig } : null;
+            window.dispatchEvent(new CustomEvent('gis-config-updated', { detail }));
+        }
+    }
+
+    /**
+     * 经纬度 -> Three.js 世界坐标
+     * east -> +X, north -> +Z, up -> +Y
+     */
+    lngLatToWorld(lng, lat, height = 0) {
+        if (!this.gisProjection) return new THREE.Vector3(0, 0, 0);
+        const { east, north, up } = this.gisProjection.lngLatToEnu(lng, lat, height);
+        return new THREE.Vector3(east, up, north);
+    }
+
+    /**
+     * 世界坐标 -> 经纬度/高度
+     * 假设 X 为东向（east），Z 为北向（north），Y 为高度（up）
+     * @param {THREE.Vector3} worldPos
+     * @returns {{lng:number,lat:number,height:number}|null}
+     */
+    worldToLngLat(worldPos) {
+        if (!this.gisProjection || !worldPos) return null;
+        const east = worldPos.x;
+        const north = worldPos.z;
+        const up = worldPos.y;
+        const { lng, lat } = this.gisProjection.offsetMetersToLngLat(east, north);
+        return { lng, lat, height: up };
     }
 }

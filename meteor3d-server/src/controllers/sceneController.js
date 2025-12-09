@@ -119,6 +119,7 @@ exports.saveScene = async (req, res) => {
         if (metadata.description) sceneData.description = metadata.description;
         if (metadata.thumbnail) sceneData.thumbnail = metadata.thumbnail;
         if (metadata.environmentUrl !== undefined) sceneData.environmentUrl = metadata.environmentUrl; // 保存环境贴图 URL
+        if (metadata.gisConfig !== undefined) sceneData.gisConfig = metadata.gisConfig; // 保存 GIS 配置
 
         await Scene.findOneAndUpdate(
             { sceneId: sceneId },

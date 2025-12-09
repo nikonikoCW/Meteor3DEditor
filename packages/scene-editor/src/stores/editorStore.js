@@ -24,12 +24,18 @@ export const useEditorStore = defineStore('editor', () => {
         }
     }
 
+    function resetObjects(objects = []) {
+        // Replace with fresh array to avoid residue across scene loads
+        sceneObjects.value = objects.map(obj => markRaw(obj));
+    }
+
     return {
         selectedObject,
         sceneObjects,
         selectObject,
         clearSelection,
         addObject,
-        removeObject
+        removeObject,
+        resetObjects
     };
 });

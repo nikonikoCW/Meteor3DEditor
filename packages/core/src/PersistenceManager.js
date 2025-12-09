@@ -356,7 +356,9 @@ export class PersistenceManager {
         // 清空当前场景
         this.sceneManager.clearScene();
         this.editorStore.clearSelection();
-        this.editorStore.objects = [];
+        if (typeof this.editorStore.resetObjects === 'function') {
+            this.editorStore.resetObjects();
+        }
 
         // 恢复环境贴图
         if (sceneData.metadata && sceneData.metadata.environmentUrl) {
@@ -366,6 +368,12 @@ export class PersistenceManager {
                 console.warn('加载环境贴图失败:', error);
             }
         }
+
+        // 恢复 GIS 配置
+        if (sceneData.metadata && sceneData.metadata.gisConfig) {
+            this.sceneManager.setGisConfig(sceneData.metadata.gisConfig);
+        }
+        this.sceneManager.emitGisConfigUpdated();
 
         const objects = sceneData.objects || [];
         let successCount = 0;
@@ -422,6 +430,9 @@ export class PersistenceManager {
 
         // 获取当前环境贴图 URL (需要 SceneManager 支持获取)
         const environmentUrl = this.sceneManager.environmentUrl || null;
+        const gisConfig = this.sceneManager.gisConfig
+            ? { ...this.sceneManager.gisConfig, gridVisible: this.sceneManager.gridVisible }
+            : null;
 
         // 批量保存到后端
         await this.dbManager.saveScene({
@@ -429,7 +440,8 @@ export class PersistenceManager {
             id: this.currentSceneId,
             lastModified: Date.now(),
             objectCount: this.sceneManager.objects.length,
-            environmentUrl: environmentUrl // 保存环境贴图 URL
+            environmentUrl: environmentUrl, // 保存环境贴图 URL
+            gisConfig
         });
 
         // 更新 objectMap

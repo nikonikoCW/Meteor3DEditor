@@ -17,6 +17,22 @@ const SceneSchema = new mongoose.Schema({
     description: String,
     thumbnail: String,
     environmentUrl: String, // 新增：环境贴图 URL
+    // GIS 配置
+    gisConfig: {
+        center: {
+            lng: Number,
+            lat: Number
+        },
+        range: {
+            length: Number,
+            width: Number
+        },
+        projection: String,
+        gridVisible: {
+            type: Boolean,
+            default: false
+        }
+    },
     lastModified: {
         type: Date,
         default: Date.now

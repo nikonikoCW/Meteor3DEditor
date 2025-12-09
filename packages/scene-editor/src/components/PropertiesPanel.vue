@@ -36,6 +36,23 @@
       </div>
     </div>
 
+    <!-- Geographic Coordinates -->
+    <div class="section" v-if="latLngAlt">
+      <h4>地理坐标 (Lat/Lng/Height)</h4>
+      <div class="prop-row">
+        <label>经度</label>
+        <span class="readonly-val">{{ latLngAlt.lng.toFixed(6) }}°</span>
+      </div>
+      <div class="prop-row">
+        <label>纬度</label>
+        <span class="readonly-val">{{ latLngAlt.lat.toFixed(6) }}°</span>
+      </div>
+      <div class="prop-row">
+        <label>高度</label>
+        <span class="readonly-val">{{ latLngAlt.height.toFixed(2) }} m</span>
+      </div>
+    </div>
+
     <!-- Rotation -->
     <div class="section">
       <h4>旋转 (Rotation)</h4>
@@ -153,6 +170,7 @@ import { useEditorStore } from '../stores/editorStore';
 import { storeToRefs } from 'pinia';
 import * as THREE from 'three';
 import { TransformCommand } from '../core/CommandFactory';
+import { computed } from 'vue';
 
 const editorStore = useEditorStore();
 const { selectedObject } = storeToRefs(editorStore);
@@ -225,6 +243,15 @@ const onMaterialChange = () => {
       selectedObject.value.material.needsUpdate = true;
   }
 };
+
+// Geographic coordinates (lat/lng/height) derived from scene GIS config
+const latLngAlt = computed(() => {
+  if (!selectedObject.value) return null;
+  const sm = window.editor?.sceneManager;
+  if (!sm || !sm.worldToLngLat) return null;
+  const res = sm.worldToLngLat(selectedObject.value.position);
+  return res || null;
+});
 </script>
 
 <style scoped>

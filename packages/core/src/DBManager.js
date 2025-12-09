@@ -110,7 +110,8 @@ export class DBManager {
                         description: sceneData.description,
                         lastModified: sceneData.lastModified || Date.now(),
                         objectCount: sceneData.objectCount || 0,
-                        environmentUrl: sceneData.environmentUrl || null // 保存环境贴图 URL
+                        environmentUrl: sceneData.environmentUrl || null, // 保存环境贴图 URL
+                        gisConfig: sceneData.gisConfig || null
                     }
                 })
             });

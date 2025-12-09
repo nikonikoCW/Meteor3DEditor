@@ -120,7 +120,8 @@ onMounted(() => {
 
 <style scoped>
 .library-panel {
-  width: 200px;
+  width: 100%;
+  height: 100%;
   background: #222;
   color: white;
   padding: 10px;
@@ -136,9 +137,13 @@ h3 {
 
 .section {
   margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .section-header {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -146,6 +151,7 @@ h3 {
 }
 
 h4 {
+  width: 100%;
   margin: 0;
   font-size: 12px;
   color: #888;
@@ -167,9 +173,9 @@ h4 {
 }
 
 .item {
+  width: 140px;
   padding: 10px;
   background: #2a2a2a;
-  margin-bottom: 5px;
   cursor: grab;
   border-radius: 4px;
   font-size: 13px;
@@ -189,6 +195,7 @@ h4 {
 
 .loading,
 .empty {
+  width: 100%;
   padding: 10px;
   text-align: center;
   font-size: 12px;

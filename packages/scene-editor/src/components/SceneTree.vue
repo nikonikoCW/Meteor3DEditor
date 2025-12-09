@@ -26,6 +26,8 @@ import TreeNode from './TreeNode.vue';
 
 const editorStore = useEditorStore();
 const { sceneObjects, selectedObject } = storeToRefs(editorStore);
+console.log(sceneObjects);
+
 
 const selectObject = (obj) => {
   editorStore.selectObject(obj);

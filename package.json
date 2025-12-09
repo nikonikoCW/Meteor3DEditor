@@ -8,5 +8,8 @@
     },
     "devDependencies": {
         "pnpm": "^10.2.0"
+    },
+    "dependencies": {
+        "proj4": "^2.20.2"
     }
 }
