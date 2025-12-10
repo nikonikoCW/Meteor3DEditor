@@ -25,6 +25,23 @@
         <input type="number" v-model.number="sceneConfig.ambientIntensity" step="0.1" min="0" max="5">
       </div>
     </div>
+
+    <div class="section">
+      <h4>调试设置</h4>
+      <div class="prop-row switch-row">
+        <label>性能监视器</label>
+        <div class="switch-container">
+          <label class="switch">
+            <input type="checkbox" v-model="showStats" @change="onStatsToggle">
+            <span class="slider"></span>
+          </label>
+          <span class="switch-label">{{ showStats ? '开启' : '关闭' }}</span>
+        </div>
+      </div>
+      <div class="hint" v-if="showStats">
+        在场景右上角显示 FPS 和渲染延迟
+      </div>
+    </div>
     
     <div class="debug-info">
       <small>这里是场景级别的全局配置</small>
@@ -42,6 +59,16 @@ const sceneConfig = reactive({
   backgroundColor: '#000000',
   ambientIntensity: 1.0
 });
+
+// 性能监视器开关状态
+const showStats = ref(false);
+
+// 切换性能监视器
+const onStatsToggle = () => {
+  if (window.editor && window.editor.sceneManager) {
+    window.editor.sceneManager.toggleStats(showStats.value);
+  }
+};
 </script>
 
 <style scoped>
@@ -124,5 +151,80 @@ input[type="color"] {
   color: #444;
   font-size: 10px;
   text-align: center;
+}
+
+/* Switch 开关样式 */
+.switch-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.switch-row > label {
+  margin-bottom: 0;
+}
+
+.switch-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #444;
+  transition: 0.3s;
+  border-radius: 20px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #4CAF50;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.switch-label {
+  font-size: 11px;
+  color: #888;
+  min-width: 30px;
+}
+
+.hint {
+  font-size: 10px;
+  color: #666;
+  margin-top: 4px;
+  padding-left: 4px;
 }
 </style>

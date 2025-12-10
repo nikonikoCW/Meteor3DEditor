@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { GisProjection } from './GisProjection.js';
+import { StatsManager } from './StatsManager.js';
 
 /**
  * 场景管理器
@@ -56,6 +57,12 @@ export class SceneManager {
         this.gisConfig = null;
         this.gisProjection = null;
 
+        // 性能监视器
+        this.statsManager = new StatsManager({
+            container: canvas.parentElement || document.body,
+            position: 'top-right'
+        });
+
         this.animate = this.animate.bind(this);
         this.animate();
     }
@@ -66,8 +73,41 @@ export class SceneManager {
      */
     animate() {
         requestAnimationFrame(this.animate);
+        this.statsManager.begin();
         this.controls.update();
         this.renderer.render(this.scene, this.camera);
+        this.statsManager.end();
+    }
+
+    /**
+     * 启用性能监视器
+     * 在场景右上角显示 FPS 和 ms 延迟
+     */
+    enableStats() {
+        this.statsManager.enable();
+    }
+
+    /**
+     * 禁用性能监视器
+     */
+    disableStats() {
+        this.statsManager.disable();
+    }
+
+    /**
+     * 切换性能监视器显示状态
+     * @param {boolean} show - true 显示，false 隐藏
+     */
+    toggleStats(show) {
+        this.statsManager.toggle(show);
+    }
+
+    /**
+     * 获取性能监视器是否启用
+     * @returns {boolean}
+     */
+    isStatsEnabled() {
+        return this.statsManager.isEnabled();
     }
 
     /**
@@ -79,7 +119,7 @@ export class SceneManager {
         // 优先使用传入的宽高，否则尝试读取 canvas 的 clientWidth/clientHeight
         const w = width || this.canvas.clientWidth || 1;
         const h = height || this.canvas.clientHeight || 1;
-        
+
         this.camera.aspect = w / h;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(w, h, false); // false: 不设置 canvas 的 style 宽高，只设置 buffer 宽高
@@ -148,7 +188,7 @@ export class SceneManager {
         if (this.objects.length === 0) return;
 
         const box = new THREE.Box3();
-        
+
         // 计算所有对象的包围盒
         this.objects.forEach(obj => {
             box.expandByObject(obj);
@@ -159,7 +199,7 @@ export class SceneManager {
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
-        
+
         // 调整 FOV 距离
         const fov = this.camera.fov * (Math.PI / 180);
         let cameraZ = Math.abs(maxDim / 2 * Math.tan(fov * 2));
@@ -168,7 +208,7 @@ export class SceneManager {
         // 设置相机位置
         const direction = this.camera.position.clone().sub(this.controls.target).normalize();
         const newPos = direction.multiplyScalar(cameraZ).add(center);
-        
+
         this.camera.position.copy(newPos);
         this.camera.lookAt(center);
         this.controls.target.copy(center);
