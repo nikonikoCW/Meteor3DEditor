@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { GisProjection } from './GisProjection.js';
 import { StatsManager } from './StatsManager.js';
+import { TriangleStatsManager } from './TriangleStatsManager.js';
 
 /**
  * 场景管理器
@@ -63,6 +64,9 @@ export class SceneManager {
             position: 'top-right'
         });
 
+        // 三角形统计管理器
+        this.triangleStatsManager = new TriangleStatsManager(this.renderer, this.scene);
+
         this.animate = this.animate.bind(this);
         this.animate();
     }
@@ -108,6 +112,49 @@ export class SceneManager {
      */
     isStatsEnabled() {
         return this.statsManager.isEnabled();
+    }
+
+    /**
+     * 切换三角形统计显示状态
+     * @param {boolean} show - true 启用，false 禁用
+     * @param {function} callback - 回调函数，接收统计数据 {rendered, total}
+     * @param {number} interval - 更新间隔（毫秒），默认 100ms
+     */
+    toggleTriangleStats(show, callback, interval = 100) {
+        this.triangleStatsManager.toggle(show, callback, interval);
+    }
+
+    /**
+     * 设置三角形统计回调函数（并启用实时更新）
+     * @param {function} callback - 回调函数
+     * @param {number} interval - 更新间隔（毫秒）
+     */
+    setTriangleStatsCallback(callback, interval = 100) {
+        this.triangleStatsManager.startLiveUpdate(callback, interval);
+    }
+
+    /**
+     * 获取三角形统计数据（单次获取）
+     * @returns {{rendered: number, total: number}}
+     */
+    getTriangleStats() {
+        return this.triangleStatsManager.getStats();
+    }
+
+    /**
+     * 获取三角形统计是否启用
+     * @returns {boolean}
+     */
+    isTriangleStatsEnabled() {
+        return this.triangleStatsManager.isEnabled();
+    }
+
+    /**
+     * 标记三角形统计缓存为脏，下次获取时重新计算
+     * 在添加/删除对象时自动调用
+     */
+    markTriangleStatsDirty() {
+        this.triangleStatsManager.markDirty();
     }
 
     /**
@@ -157,6 +204,7 @@ export class SceneManager {
     addObject(object) {
         this.scene.add(object);
         this.objects.push(object);
+        this.markTriangleStatsDirty();
     }
 
     /**
@@ -166,6 +214,7 @@ export class SceneManager {
     removeObject(object) {
         this.scene.remove(object);
         this.objects = this.objects.filter(obj => obj !== object);
+        this.markTriangleStatsDirty();
     }
 
     /**
@@ -178,6 +227,7 @@ export class SceneManager {
             this.scene.remove(object);
         });
         this.objects = [];
+        this.markTriangleStatsDirty();
     }
 
     /**

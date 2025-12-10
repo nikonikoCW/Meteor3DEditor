@@ -41,6 +41,27 @@
       <div class="hint" v-if="showStats">
         在场景右上角显示 FPS 和渲染延迟
       </div>
+
+      <div class="prop-row switch-row" style="margin-top: 12px;">
+        <label>三角形统计</label>
+        <div class="switch-container">
+          <label class="switch">
+            <input type="checkbox" v-model="showTriangleStats" @change="onTriangleStatsToggle">
+            <span class="slider"></span>
+          </label>
+          <span class="switch-label">{{ showTriangleStats ? '开启' : '关闭' }}</span>
+        </div>
+      </div>
+      <div class="stats-display" v-if="showTriangleStats">
+        <div class="stats-row">
+          <span class="stats-label">GPU 渲染三角形</span>
+          <span class="stats-value">{{ triangleStats.rendered.toLocaleString() }}</span>
+        </div>
+        <div class="stats-row">
+          <span class="stats-label">场景总三角形</span>
+          <span class="stats-value">{{ triangleStats.total.toLocaleString() }}</span>
+        </div>
+      </div>
     </div>
     
     <div class="debug-info">
@@ -50,7 +71,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, onBeforeUnmount } from 'vue';
 
 // 模拟的场景配置数据，未来应该连接到 Store
 const sceneConfig = reactive({
@@ -63,12 +84,42 @@ const sceneConfig = reactive({
 // 性能监视器开关状态
 const showStats = ref(false);
 
+// 三角形统计开关状态
+const showTriangleStats = ref(false);
+
+// 三角形统计数据
+const triangleStats = reactive({
+  rendered: 0,
+  total: 0
+});
+
 // 切换性能监视器
 const onStatsToggle = () => {
   if (window.editor && window.editor.sceneManager) {
     window.editor.sceneManager.toggleStats(showStats.value);
   }
 };
+
+// 切换三角形统计
+const onTriangleStatsToggle = () => {
+  if (window.editor && window.editor.sceneManager) {
+    window.editor.sceneManager.toggleTriangleStats(
+      showTriangleStats.value,
+      (stats) => {
+        triangleStats.rendered = stats.rendered;
+        triangleStats.total = stats.total;
+      },
+      100
+    );
+  }
+};
+
+// 组件卸载时关闭统计
+onBeforeUnmount(() => {
+  if (window.editor && window.editor.sceneManager) {
+    window.editor.sceneManager.toggleTriangleStats(false);
+  }
+});
 </script>
 
 <style scoped>
@@ -226,5 +277,37 @@ input:checked + .slider:before {
   color: #666;
   margin-top: 4px;
   padding-left: 4px;
+}
+
+/* 三角形统计显示样式 */
+.stats-display {
+  margin-top: 8px;
+  padding: 8px;
+  background: #1a1a1a;
+  border-radius: 4px;
+  border: 1px solid #333;
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.stats-row:not(:last-child) {
+  border-bottom: 1px solid #333;
+}
+
+.stats-label {
+  font-size: 11px;
+  color: #888;
+}
+
+.stats-value {
+  font-size: 12px;
+  color: #4CAF50;
+  font-weight: 500;
+  font-family: 'Consolas', 'Monaco', monospace;
 }
 </style>
