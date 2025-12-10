@@ -61,6 +61,14 @@
           <span class="stats-label">场景总三角形</span>
           <span class="stats-value">{{ triangleStats.total.toLocaleString() }}</span>
         </div>
+        <div class="stats-row">
+          <span class="stats-label">Draw Calls</span>
+          <span class="stats-value">{{ triangleStats.drawCalls.toLocaleString() }}</span>
+        </div>
+        <div class="stats-row">
+          <span class="stats-label">纹理数量</span>
+          <span class="stats-value">{{ triangleStats.textureCount.toLocaleString() }}</span>
+        </div>
       </div>
     </div>
     
@@ -90,7 +98,9 @@ const showTriangleStats = ref(false);
 // 三角形统计数据
 const triangleStats = reactive({
   rendered: 0,
-  total: 0
+  total: 0,
+  drawCalls: 0,
+  textureCount: 0
 });
 
 // 切换性能监视器
@@ -108,6 +118,8 @@ const onTriangleStatsToggle = () => {
       (stats) => {
         triangleStats.rendered = stats.rendered;
         triangleStats.total = stats.total;
+        triangleStats.drawCalls = stats.drawCalls;
+        triangleStats.textureCount = stats.textureCount;
       },
       100
     );

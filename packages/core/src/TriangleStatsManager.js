@@ -106,13 +106,52 @@ export class TriangleStatsManager {
     }
 
     /**
-     * 获取三角形统计数据
-     * @returns {{rendered: number, total: number}}
+     * 获取 Draw Calls 数量
+     * 此值来自 renderer.info.render.calls，反映每帧的绘制调用次数
+     * @returns {number}
+     */
+    getDrawCalls() {
+        if (!this.renderer || !this.renderer.info) {
+            return 0;
+        }
+        return this.renderer.info.render.calls || 0;
+    }
+
+    /**
+     * 获取 GPU 中纹理数量
+     * 此值来自 renderer.info.memory.textures
+     * @returns {number}
+     */
+    getTextureCount() {
+        if (!this.renderer || !this.renderer.info) {
+            return 0;
+        }
+        return this.renderer.info.memory.textures || 0;
+    }
+
+    /**
+     * 获取 GPU 中几何体数量
+     * 此值来自 renderer.info.memory.geometries
+     * @returns {number}
+     */
+    getGeometryCount() {
+        if (!this.renderer || !this.renderer.info) {
+            return 0;
+        }
+        return this.renderer.info.memory.geometries || 0;
+    }
+
+    /**
+     * 获取三角形及渲染统计数据
+     * @returns {{rendered: number, total: number, drawCalls: number, textureCount: number, geometryCount: number}}
      */
     getStats() {
         return {
             rendered: this.getRenderedTriangles(),
-            total: this.getTotalTriangles()
+            total: this.getTotalTriangles(),
+            drawCalls: this.getDrawCalls(),
+            textureCount: this.getTextureCount(),
+            geometryCount: this.getGeometryCount()
         };
     }
 
