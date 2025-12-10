@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      proj4:
+        specifier: ^2.20.2
+        version: 2.20.2
     devDependencies:
       pnpm:
         specifier: ^10.2.0
@@ -30,6 +34,28 @@ importers:
       vite:
         specifier: ^7.2.4
         version: 7.2.6
+
+  packages/asset-manager:
+    dependencies:
+      pinia:
+        specifier: ^3.0.4
+        version: 3.0.4(vue@3.5.25)
+      three:
+        specifier: ^0.181.2
+        version: 0.181.2
+      vue:
+        specifier: ^3.5.25
+        version: 3.5.25
+    devDependencies:
+      '@vitejs/plugin-vue':
+        specifier: ^6.0.2
+        version: 6.0.2(vite@7.2.6)(vue@3.5.25)
+      vite:
+        specifier: ^7.2.4
+        version: 7.2.6
+      vite-plugin-vue-devtools:
+        specifier: ^8.0.5
+        version: 8.0.5(vite@7.2.6)(vue@3.5.25)
 
   packages/core:
     dependencies:
@@ -710,6 +736,9 @@ packages:
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
+  mgrs@1.0.0:
+    resolution: {integrity: sha512-awNbTOqCxK1DBGjalK3xqWIstBZgN6fxsMSiXLs9/spqWkF2pAhb2rrYCFSsr1/tT7PhcDGjZndG8SWYn0byYA==}
+
   mitt@3.0.1:
     resolution: {integrity: sha512-vKivATfr97l2/QBCYAkXYDbrIWPM2IIKEl7YPhjCvKlG3kE2gm+uBo6nEXK3M5/Ffh/FLpKExzOQ3JJoJGFKBw==}
 
@@ -773,6 +802,9 @@ packages:
   postcss@8.5.6:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
+
+  proj4@2.20.2:
+    resolution: {integrity: sha512-ipfBRfQly0HhHTO7hnC1GfaX8bvroO7VV4KH889ehmADSE8C/qzp2j+Jj6783S9Tj6c2qX/hhYm7oH0kgXzBAA==}
 
   rfdc@1.4.1:
     resolution: {integrity: sha512-q1b3N5QkRUWUl7iyylaaj3kOpIT0N2i9MqIEQXP73GVsN9cw3fdx8X63cEmWhJGi2PPCF23Ijp7ktmd39rawIA==}
@@ -910,6 +942,9 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  wkt-parser@1.5.2:
+    resolution: {integrity: sha512-1ZUiV1FTwSiSrgWzV9KXJuOF2BVW91KY/mau04BhnmgOdroRQea7Q0s5TVqwGLm0D2tZwObd/tBYXW49sSxp3Q==}
 
   wsl-utils@0.1.0:
     resolution: {integrity: sha512-h3Fbisa2nKGPxCpm89Hk33lBLsnaGBvctQopaBSOW/uIs6FTe1ATyAnKFJrzVs9vpGdsTe73WF3V4lIsk4Gacw==}
@@ -1534,6 +1569,8 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  mgrs@1.0.0: {}
+
   mitt@3.0.1: {}
 
   mrmime@2.0.1: {}
@@ -1577,6 +1614,11 @@ snapshots:
       nanoid: 3.3.11
       picocolors: 1.1.1
       source-map-js: 1.2.1
+
+  proj4@2.20.2:
+    dependencies:
+      mgrs: 1.0.0
+      wkt-parser: 1.5.2
 
   rfdc@1.4.1: {}
 
@@ -1723,6 +1765,8 @@ snapshots:
       '@vue/runtime-dom': 3.5.25
       '@vue/server-renderer': 3.5.25(vue@3.5.25)
       '@vue/shared': 3.5.25
+
+  wkt-parser@1.5.2: {}
 
   wsl-utils@0.1.0:
     dependencies:

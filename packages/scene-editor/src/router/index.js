@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import EditorView from '../views/EditorView.vue'
-import AssetsView from '../views/AssetsView.vue'
 import ScenesView from '../views/ScenesView.vue'
 
 const router = createRouter({
@@ -22,12 +21,8 @@ const router = createRouter({
       name: 'editor',
       component: EditorView,
     },
-    {
-      path: '/assets',
-      name: 'assets',
-      component: AssetsView,
-    },
   ],
 })
 
 export default router
+
