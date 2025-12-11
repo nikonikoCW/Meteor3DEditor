@@ -82,12 +82,19 @@ meteor3d-server/
 
 1.  **Upload**: 文件上传至 `uploads/raw` (或 `uploads/models`)，状态标记为 `pending`，加入 Bull 队列。
 2.  **Queue Process**: `src/pipeline/index.js` 接收任务。
-3.  **Step 0: ZIP Extract**: 如果是 ZIP，解压并自动寻找主模型文件 (.gltf/.glb/.fbx/.obj)。
+3.  **Step 0: ZIP Extract**: 如果是 ZIP，解压并自动寻找主模型文件。
+    *   **查找优先级**: `.gltf` > `.glb` > `.fbx` > `.obj` > `.stl`
+    *   **注意**: ZIP 包内应包含模型引用的所有资源（如 `.bin`, 纹理图片），否则后续转换可能失败。
 4.  **Step 1: Convert**: 将非 glTF 格式 (FBX, OBJ) 转换为 GLB。
+    *   **FBX**: 使用 `FBX2glTF` (强制 `--binary` 输出单文件)。
+    *   **OBJ**: 使用 `obj2gltf`。
 5.  **Step 2: Sanitize**: 移除场景中的相机、灯光和无用节点。
 6.  **Step 3: Draco**: 应用 Draco 压缩，大幅减小体积。
 7.  **Step 4: Texture**: 提取纹理，生成多分辨率 (2k/1k/512) 和 KTX2 格式（如果配置支持）。
+    *   **策略**: 纹理独立输出到 `uploads/processed/textures`，**不**直接替换 GLB 内部纹理。
+    *   **目的**: 支持前端按需加载（"几何与纹理分离"策略）。
 8.  **Step 5: LOD**: 生成 3 个级别的细节模型 (LOD0, LOD1, LOD2)。
+    *   **说明**: LOD 模型仅简化网格，内部仍引用原始纹理。前端需配合 Step 4 的输出进行动态材质替换。
 9.  **Step 6: Bounds**: 计算模型的 AABB 边界盒、包围球及面数统计。
 10. **Finish**: 更新数据库状态为 `ready`，保存所有生成文件的路径和统计信息。
 11. **Cleanup**: 清理临时解压目录。

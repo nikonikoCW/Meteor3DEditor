@@ -80,7 +80,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { getAssets, getAssetUrl as _getAssetUrl } from '../services/assetService';
+import { getAssets, getAssetUrl as _getAssetUrl, getCompressedAssetUrl } from '../services/assetService';
 
 const models = ref([]);
 const environments = ref([]);
@@ -94,6 +94,10 @@ const onDragStart = (event, type, url = null) => {
 };
 
 const getAssetUrl = (asset) => {
+  // 对模型类型，优先使用压缩版本
+  if (asset.type === 'model') {
+    return getCompressedAssetUrl(asset);
+  }
   return _getAssetUrl(asset);
 };
 

@@ -118,10 +118,124 @@ export function downloadAsset(id, filename) {
 }
 
 /**
- * 获取资产 URL
+ * 获取资产处理状态
+ * @param {string} id - 资产 ID
+ * @returns {Promise<Object>}
+ */
+export async function getProcessingStatus(id) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/assets/${id}/status`);
+        const data = await response.json();
+
+        if (data.success) {
+            return {
+                status: data.processingStatus,
+                error: data.processingError,
+                processedFiles: data.processedFiles,
+                bounds: data.bounds,
+                stats: data.stats
+            };
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error('获取处理状态失败:', error);
+        throw error;
+    }
+}
+
+/**
+ * 轮询等待资产处理完成
+ * @param {string} id - 资产 ID
+ * @param {number} interval - 轮询间隔（毫秒）
+ * @param {number} maxAttempts - 最大尝试次数
+ * @returns {Promise<Object>}
+ */
+export async function waitForProcessing(id, interval = 2000, maxAttempts = 60) {
+    return new Promise((resolve, reject) => {
+        let attempts = 0;
+
+        const check = async () => {
+            attempts++;
+            try {
+                const result = await getProcessingStatus(id);
+                if (result.status === 'ready') {
+                    resolve(result);
+                } else if (result.status === 'failed') {
+                    reject(new Error(result.error || '资产处理失败'));
+                } else if (attempts >= maxAttempts) {
+                    reject(new Error('资产处理超时'));
+                } else {
+                    setTimeout(check, interval);
+                }
+            } catch (error) {
+                reject(error);
+            }
+        };
+
+        check();
+    });
+}
+
+/**
+ * 获取资产 URL（原始版本）
  * @param {Object} asset - 资产对象
  * @returns {string}
  */
 export function getAssetUrl(asset) {
     return `${ASSET_BASE_URL}${asset.url}`;
+}
+
+/**
+ * 获取压缩后的资产 URL（优先使用 compressed 版本）
+ * 如果资产已处理完成且有 compressed 版本，返回压缩版本 URL
+ * 否则返回原始 URL
+ * @param {Object} asset - 资产对象
+ * @returns {string}
+ */
+export function getCompressedAssetUrl(asset) {
+    // 检查是否有处理后的压缩版本
+    if (asset.processingStatus === 'ready' &&
+        asset.processedFiles &&
+        asset.processedFiles.compressed) {
+        // processedFiles.compressed 存储的是相对路径，如 'uploads/processed/models/xxx_compressed.glb'
+        return `${ASSET_BASE_URL}/${asset.processedFiles.compressed}`;
+    }
+
+    // 没有压缩版本，返回原始 URL
+    return `${ASSET_BASE_URL}${asset.url}`;
+}
+
+/**
+ * 获取模型的最佳加载 URL
+ * 对于模型类型，优先使用 compressed 版本
+ * @param {Object} asset - 资产对象
+ * @returns {string}
+ */
+export function getModelUrl(asset) {
+    if (asset.type === 'model') {
+        return getCompressedAssetUrl(asset);
+    }
+    return getAssetUrl(asset);
+}
+
+/**
+ * 获取指定 LOD 级别的模型 URL
+ * @param {Object} asset - 资产对象
+ * @param {number} level - LOD 级别 (0, 1, 2)
+ * @returns {string|null}
+ */
+export function getLodUrl(asset, level = 0) {
+    if (asset.processingStatus !== 'ready' || !asset.processedFiles) {
+        return null;
+    }
+
+    const lodKey = `lod${level}`;
+    const lodPath = asset.processedFiles[lodKey];
+
+    if (lodPath) {
+        return `${ASSET_BASE_URL}/${lodPath}`;
+    }
+
+    return null;
 }
