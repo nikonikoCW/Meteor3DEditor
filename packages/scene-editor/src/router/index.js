@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
 import EditorView from '../views/EditorView.vue'
 import ScenesView from '../views/ScenesView.vue'
 
@@ -8,8 +7,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: HomeView,
+      redirect: '/scenes'
     },
     {
       path: '/scenes',
@@ -25,4 +23,5 @@ const router = createRouter({
 })
 
 export default router
+
 

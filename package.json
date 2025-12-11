@@ -5,6 +5,7 @@
         "dev:scene": "pnpm --filter @meteor3d/scene-editor dev",
         "dev:app": "pnpm --filter @meteor3d/app-editor dev",
         "dev:asset": "pnpm --filter @meteor3d/asset-manager dev",
+        "dev:dashboard": "pnpm --filter @meteor3d/dashboard dev",
         "build:all": "pnpm -r build"
     },
     "devDependencies": {

@@ -63,6 +63,25 @@ importers:
         specifier: ^0.181.2
         version: 0.181.2
 
+  packages/dashboard:
+    dependencies:
+      pinia:
+        specifier: ^3.0.4
+        version: 3.0.4(vue@3.5.25)
+      vue:
+        specifier: ^3.5.25
+        version: 3.5.25
+      vue-router:
+        specifier: ^4.6.3
+        version: 4.6.3(vue@3.5.25)
+    devDependencies:
+      '@vitejs/plugin-vue':
+        specifier: ^5.2.3
+        version: 5.2.4(vite@7.2.6)(vue@3.5.25)
+      vite:
+        specifier: ^7.2.4
+        version: 7.2.6
+
   packages/scene-editor:
     dependencies:
       '@meteor3d/core':
@@ -523,6 +542,13 @@ packages:
 
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
+
+  '@vitejs/plugin-vue@5.2.4':
+    resolution: {integrity: sha512-7Yx/SXSOcQq5HiiV3orevHUFn+pmMB4cgbEkDYgnkUWb0WfeQ/wa2yFv6D5ICiCQOVpjA7vYDXrC7AGO8yjDHA==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    peerDependencies:
+      vite: ^5.0.0 || ^6.0.0
+      vue: ^3.2.25
 
   '@vitejs/plugin-vue@6.0.2':
     resolution: {integrity: sha512-iHmwV3QcVGGvSC1BG5bZ4z6iwa1SOpAPWmnjOErd4Ske+lZua5K9TtAVdx0gMBClJ28DViCbSmZitjWZsWO3LA==}
@@ -1314,6 +1340,11 @@ snapshots:
     optional: true
 
   '@types/estree@1.0.8': {}
+
+  '@vitejs/plugin-vue@5.2.4(vite@7.2.6)(vue@3.5.25)':
+    dependencies:
+      vite: 7.2.6
+      vue: 3.5.25
 
   '@vitejs/plugin-vue@6.0.2(vite@7.2.6)(vue@3.5.25)':
     dependencies:
