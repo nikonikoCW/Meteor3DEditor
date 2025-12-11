@@ -25,4 +25,10 @@ router.delete('/:id', assetController.deleteAsset);
 // GET /api/assets/:id/download - 下载资产
 router.get('/:id/download', assetController.downloadAsset);
 
+// GET /api/assets/:id/status - 获取处理状态
+router.get('/:id/status', assetController.getProcessingStatus);
+
+// POST /api/assets/:id/reprocess - 重新处理资产
+router.post('/:id/reprocess', assetController.reprocessAsset);
+
 module.exports = router;

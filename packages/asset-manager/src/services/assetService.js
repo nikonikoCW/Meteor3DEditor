@@ -125,3 +125,78 @@ export function downloadAsset(id, filename) {
 export function getAssetUrl(asset) {
     return `${ASSET_BASE_URL}${asset.url}`;
 }
+
+/**
+ * 获取资产处理状态
+ * @param {string} id - 资产 ID
+ * @returns {Promise<Object>}
+ */
+export async function getProcessingStatus(id) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/assets/${id}/status`);
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('获取处理状态失败:', error);
+        throw error;
+    }
+}
+
+/**
+ * 重新处理资产
+ * @param {string} id - 资产 ID
+ * @returns {Promise<void>}
+ */
+export async function reprocessAsset(id) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/assets/${id}/reprocess`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error('重新处理请求失败:', error);
+        throw error;
+    }
+}
+
+/**
+ * 轮询等待处理完成
+ * @param {string} assetId - 资产 ID
+ * @param {number} interval - 轮询间隔 (ms)
+ * @param {number} timeout - 超时时间 (ms)
+ * @returns {Promise<Object>}
+ */
+export async function waitForProcessing(assetId, interval = 2000, timeout = 300000) {
+    const startTime = Date.now();
+
+    return new Promise((resolve, reject) => {
+        const check = async () => {
+            if (Date.now() - startTime > timeout) {
+                reject(new Error('处理超时'));
+                return;
+            }
+
+            try {
+                const result = await getProcessingStatus(assetId);
+
+                if (result.processingStatus === 'ready') {
+                    resolve(result);
+                } else if (result.processingStatus === 'failed') {
+                    reject(new Error(result.processingError || '处理失败'));
+                } else {
+                    // pending 或 processing 状态，继续轮询
+                    setTimeout(check, interval);
+                }
+            } catch (error) {
+                // 网络错误等，稍后重试
+                console.warn('轮询状态出错:', error);
+                setTimeout(check, interval);
+            }
+        };
+        check();
+    });
+}

@@ -1,6 +1,6 @@
 
 // 生产环境
-// const BASE_URL = 'http://pro-server.meteor3d.cn';
+// const BASE_URL = 'https://pro-server.meteor3d.cn';
 
 // 开发环境
 const BASE_URL = 'http://localhost:3001';

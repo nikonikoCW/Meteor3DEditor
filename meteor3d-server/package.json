@@ -13,11 +13,19 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@gltf-transform/core": "^4.2.1",
+    "@gltf-transform/extensions": "^4.2.1",
+    "@gltf-transform/functions": "^4.2.1",
+    "adm-zip": "^0.5.16",
     "body-parser": "^2.2.1",
+    "bull": "^4.16.5",
     "cors": "^2.8.5",
+    "draco3dgltf": "^1.5.7",
     "express": "^5.2.1",
+    "meshoptimizer": "^1.0.0",
     "mongoose": "^9.0.0",
     "multer": "^2.0.2",
+    "sharp": "^0.34.5",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

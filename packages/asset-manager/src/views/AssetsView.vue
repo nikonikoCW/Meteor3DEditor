@@ -58,6 +58,10 @@
           <div class="asset-meta">
             <span>{{ asset.format.toUpperCase() }}</span>
             <span>{{ formatFileSize(asset.fileSize) }}</span>
+            <span v-if="asset.processingStatus && asset.processingStatus !== 'skipped'" 
+                  :class="['status-tag', asset.processingStatus]">
+              {{ getStatusLabel(asset.processingStatus) }}
+            </span>
           </div>
         </div>
         <div class="asset-actions">
@@ -67,6 +71,14 @@
             title="下载"
           >
             ⬇️
+          </button>
+          <button 
+            v-if="asset.processingStatus === 'failed'"
+            class="action-btn retry-btn" 
+            @click="handleReprocess(asset)"
+            title="重试处理"
+          >
+            🔄
           </button>
           <button 
             class="action-btn delete-btn" 
@@ -97,7 +109,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { uploadAsset, getAssets, deleteAsset, downloadAsset } from '../services/assetService';
+import { uploadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset } from '../services/assetService';
 import { ASSET_BASE_URL } from '../config';
 import { ThumbnailGenerator } from '../utils/ThumbnailGenerator';
 import { message } from '../utils/message';
@@ -151,7 +163,25 @@ const handleFileSelect = async (event) => {
     const result = await uploadAsset(file, thumbnail);
     
     if (result.success) {
-      message.success('上传成功！');
+      // 如果是模型，开始轮询处理状态
+      if (result.asset.type === 'model') {
+        uploadStatus.value = '正在服务器端处理...';
+        // 不阻塞 UI，后台轮询
+        waitForProcessing(result.asset._id)
+          .then(() => {
+            message.success(`资产 "${result.asset.name}" 处理完成`);
+            loadAssets(); // 刷新列表显示最新状态
+          })
+          .catch(err => {
+            console.error('处理失败:', err);
+            message.error(`资产 "${result.asset.name}" 处理失败: ${err.message}`);
+            loadAssets(); // 刷新列表显示失败状态
+          });
+          
+        message.success('上传成功，正在后台处理...');
+      } else {
+        message.success('上传成功！');
+      }
       await loadAssets();
     } else {
       message.error('上传失败: ' + result.message);
@@ -209,6 +239,38 @@ const formatFileSize = (bytes) => {
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+};
+
+const getStatusLabel = (status) => {
+  const labels = {
+    pending: '等待中',
+    processing: '处理中',
+    ready: '已就绪',
+    failed: '失败',
+    skipped: '已跳过'
+  };
+  return labels[status] || status;
+};
+
+const handleReprocess = async (asset) => {
+  try {
+    await reprocessAsset(asset._id);
+    message.success('已提交重新处理请求');
+    await loadAssets();
+    
+    // 开始轮询
+    waitForProcessing(asset._id)
+      .then(() => {
+        message.success(`资产 "${asset.name}" 处理完成`);
+        loadAssets();
+      })
+      .catch(err => {
+        message.error(`处理失败: ${err.message}`);
+        loadAssets();
+      });
+  } catch (error) {
+    message.error('请求失败: ' + error.message);
+  }
 };
 
 onMounted(() => {
@@ -441,5 +503,37 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.status-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #444;
+  color: #ccc;
+}
+
+.status-tag.processing {
+  background: #0066cc;
+  color: white;
+}
+
+.status-tag.ready {
+  background: #28a745;
+  color: white;
+}
+
+.status-tag.failed {
+  background: #dc3545;
+  color: white;
+}
+
+.retry-btn {
+  background: #ffc107;
+  color: #000;
+}
+
+.retry-btn:hover {
+  background: #e0a800;
 }
 </style>

@@ -12,6 +12,9 @@ const PORT = process.env.PORT || 3001;
 // 连接数据库
 connectDB();
 
+// 初始化资产处理流水线
+require('./src/pipeline');
+
 // 中间件
 app.use(cors()); // 允许跨域请求
 app.use(bodyParser.json({ limit: '50mb' })); // 解析 JSON 请求体，增加限制以支持大型场景

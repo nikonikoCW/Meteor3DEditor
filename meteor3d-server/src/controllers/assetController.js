@@ -27,6 +27,8 @@ exports.uploadAsset = async (req, res) => {
             assetType = 'texture';
         } else if (['.hdr', '.exr'].includes(ext)) {
             assetType = 'hdri';
+        } else if (ext === '.zip') {
+            assetType = 'model'; // ZIP 默认为模型包
         }
 
         // 创建资产记录
@@ -37,7 +39,9 @@ exports.uploadAsset = async (req, res) => {
             format: ext.substring(1), // 去掉点号
             filePath: mainFile.path,
             fileSize: mainFile.size,
-            url: `/uploads/models/${mainFile.filename}`
+            url: `/uploads/models/${mainFile.filename}`,
+            // 流水线处理状态
+            processingStatus: assetType === 'model' ? 'pending' : 'skipped'
         };
 
         // 如果有缩略图，添加缩略图路径
@@ -48,9 +52,16 @@ exports.uploadAsset = async (req, res) => {
         const asset = new Asset(assetData);
         await asset.save();
 
+        // 如果是模型类型，加入处理队列
+        if (assetType === 'model') {
+            const { assetQueue } = require('../pipeline');
+            await assetQueue.add('process', { assetId: asset._id.toString() });
+            console.log(`[Upload] 资产已加入处理队列: ${asset._id}`);
+        }
+
         res.status(201).json({
             success: true,
-            message: '文件上传成功',
+            message: assetType === 'model' ? '文件上传成功，正在处理中...' : '文件上传成功',
             asset: asset
         });
     } catch (error) {
@@ -179,6 +190,84 @@ exports.downloadAsset = async (req, res) => {
         res.status(500).json({
             success: false,
             message: '下载失败',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * 获取资产处理状态
+ */
+exports.getProcessingStatus = async (req, res) => {
+    try {
+        const asset = await Asset.findById(req.params.id)
+            .select('processingStatus processingError processedFiles bounds stats');
+
+        if (!asset) {
+            return res.status(404).json({
+                success: false,
+                message: '资产不存在'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            processingStatus: asset.processingStatus,
+            processingError: asset.processingError,
+            processedFiles: asset.processedFiles,
+            bounds: asset.bounds,
+            stats: asset.stats
+        });
+    } catch (error) {
+        console.error('获取处理状态失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '获取处理状态失败',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * 重新处理资产
+ */
+exports.reprocessAsset = async (req, res) => {
+    try {
+        const asset = await Asset.findById(req.params.id);
+
+        if (!asset) {
+            return res.status(404).json({
+                success: false,
+                message: '资产不存在'
+            });
+        }
+
+        if (asset.type !== 'model') {
+            return res.status(400).json({
+                success: false,
+                message: '只有模型类型资产可以重新处理'
+            });
+        }
+
+        // 重置状态
+        await Asset.findByIdAndUpdate(req.params.id, {
+            processingStatus: 'pending',
+            processingError: null
+        });
+
+        // 加入队列
+        const { assetQueue } = require('../pipeline');
+        await assetQueue.add('process', { assetId: asset._id.toString() });
+
+        res.status(200).json({
+            success: true,
+            message: '已加入处理队列'
+        });
+    } catch (error) {
+        console.error('重新处理资产失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '重新处理失败',
             error: error.message
         });
     }

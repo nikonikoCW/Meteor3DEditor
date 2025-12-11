@@ -7,3 +7,7 @@ meteor3d-server/uploads/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+#web 包
+dist/
+
