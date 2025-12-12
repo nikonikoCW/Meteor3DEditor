@@ -10,13 +10,20 @@
       <button @click="redo">重做</button>
     </div>
     <div class="group">
+      <button @click="showBatchLoader = true" title="批量导入">📥 批量导入</button>
       <button @click="save" class="save-btn">💾 保存</button>
     </div>
+    
+    <BatchLoaderDialog v-model:visible="showBatchLoader" />
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { message } from '../utils/message';
+import BatchLoaderDialog from './BatchLoaderDialog.vue';
+
+const showBatchLoader = ref(false);
 
 const setMode = (mode) => {
   if (window.editor && window.editor.transformManager) {
