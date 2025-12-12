@@ -25,10 +25,13 @@
     "meshoptimizer": "^1.0.0",
     "mongoose": "^9.0.0",
     "multer": "^2.0.2",
-    "sharp": "^0.34.5",
+    "sharp": "0.32.6",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
+  },
+  "overrides": {
+    "sharp": "0.32.6"
   }
 }

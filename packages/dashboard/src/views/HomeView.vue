@@ -186,9 +186,18 @@ const PORTS = {
 }
 
 const navigateTo = (app) => {
-  const port = PORTS[app]
-  if (port) {
-    window.location.href = `http://localhost:${port}`
+  switch (app) {
+    case 'scene-editor':
+      window.location.href = `https://editor.meteor3d.cn`
+      break;
+    case 'asset-manager':
+      window.location.href = `https://assets.meteor3d.cn`
+      break;
+    case 'app-editor':
+      window.location.href = `https://appeditor.meteor3d.cn`
+      break;
+    default:
+      break;
   }
 }
 

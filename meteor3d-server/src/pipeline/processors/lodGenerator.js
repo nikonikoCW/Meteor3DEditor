@@ -3,9 +3,19 @@
  * 生成多级细节模型
  */
 const { simplify, weld } = require('@gltf-transform/functions');
-const { MeshoptSimplifier } = require('meshoptimizer');
 const path = require('path');
 const { createNodeIO } = require('../utils/ioUtils');
+
+// 缓存动态导入的 MeshoptSimplifier
+let MeshoptSimplifier = null;
+
+async function getMeshoptSimplifier() {
+    if (!MeshoptSimplifier) {
+        const meshoptimizer = await import('meshoptimizer');
+        MeshoptSimplifier = meshoptimizer.MeshoptSimplifier;
+    }
+    return MeshoptSimplifier;
+}
 
 // LOD 比例配置
 const LOD_CONFIGS = [
@@ -20,8 +30,9 @@ const LOD_CONFIGS = [
  * @returns {Array} LOD 文件路径数组
  */
 async function generateLODs(context) {
-    // 等待 meshoptimizer 初始化
-    await MeshoptSimplifier.ready;
+    // 动态导入并等待 meshoptimizer 初始化
+    const simplifier = await getMeshoptSimplifier();
+    await simplifier.ready;
 
     const io = await createNodeIO();
     const lods = [];
@@ -39,7 +50,7 @@ async function generateLODs(context) {
                 await document.transform(
                     weld({ tolerance: 0.0001 }),  // 先焊接顶点
                     simplify({
-                        simplifier: MeshoptSimplifier,
+                        simplifier: simplifier,
                         ratio: config.ratio,
                         error: config.error
                     })

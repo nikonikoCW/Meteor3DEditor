@@ -24,6 +24,7 @@
 - **External Tools** (需预装):
   - `FBX2glTF`: FBX 转 glTF
   - `toktx` (KTX-Software): 纹理转 KTX2 (可选)
+  需要支持nodejs版本 16.20.2 & 22.13.0
 
 ## 3. 工程结构
 
