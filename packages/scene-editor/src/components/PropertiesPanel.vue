@@ -37,19 +37,22 @@
     </div>
 
     <!-- Geographic Coordinates -->
-    <div class="section" v-if="latLngAlt">
+    <div class="section" v-if="isGisEnabled">
       <h4>地理坐标 (Lat/Lng/Height)</h4>
       <div class="prop-row">
         <label>经度</label>
-        <span class="readonly-val">{{ latLngAlt.lng.toFixed(6) }}°</span>
+        <input type="number" step="0.000001" v-model.number="geoLng" @change="updatePositionFromGeo">
+        <span class="unit">°</span>
       </div>
       <div class="prop-row">
         <label>纬度</label>
-        <span class="readonly-val">{{ latLngAlt.lat.toFixed(6) }}°</span>
+        <input type="number" step="0.000001" v-model.number="geoLat" @change="updatePositionFromGeo">
+        <span class="unit">°</span>
       </div>
       <div class="prop-row">
         <label>高度</label>
-        <span class="readonly-val">{{ latLngAlt.height.toFixed(2) }} m</span>
+        <input type="number" step="0.01" v-model.number="geoHeight" @change="updatePositionFromGeo">
+        <span class="unit">m</span>
       </div>
     </div>
 
@@ -170,10 +173,67 @@ import { useEditorStore } from '../stores/editorStore';
 import { storeToRefs } from 'pinia';
 import * as THREE from 'three';
 import { TransformCommand } from '../core/CommandFactory';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const editorStore = useEditorStore();
 const { selectedObject } = storeToRefs(editorStore);
+
+// Geographic coordinate refs
+const geoLng = ref(null);
+const geoLat = ref(null);
+const geoHeight = ref(null);
+
+// Check if GIS is enabled
+const isGisEnabled = computed(() => {
+  const sm = window.editor?.sceneManager;
+  return sm && sm.gisProjection !== null;
+});
+
+// Sync geographic coordinates from current position
+const syncGeoFromPosition = () => {
+  if (!selectedObject.value || !isGisEnabled.value) {
+    geoLng.value = null;
+    geoLat.value = null;
+    geoHeight.value = null;
+    return;
+  }
+  const sm = window.editor?.sceneManager;
+  if (!sm || !sm.worldToLngLat) return;
+  const geo = sm.worldToLngLat(selectedObject.value.position);
+  if (geo) {
+    geoLng.value = parseFloat(geo.lng.toFixed(6));
+    geoLat.value = parseFloat(geo.lat.toFixed(6));
+    geoHeight.value = parseFloat(geo.height.toFixed(2));
+  }
+};
+
+// Sync geo coords when selected object or its position changes
+watch(
+  () => selectedObject.value?.position,
+  () => {
+    syncGeoFromPosition();
+  },
+  { deep: true, immediate: true }
+);
+
+watch(selectedObject, () => {
+  syncGeoFromPosition();
+});
+
+// Update XYZ position from geographic coordinates
+const updatePositionFromGeo = () => {
+  const sm = window.editor?.sceneManager;
+  if (!sm || !sm.lngLatToWorld || !selectedObject.value) return;
+  if (geoLng.value === null || geoLat.value === null || geoHeight.value === null) return;
+  
+  const newPos = sm.lngLatToWorld(geoLng.value, geoLat.value, geoHeight.value);
+  selectedObject.value.position.copy(newPos);
+  selectedObject.value.userData.positionModified = true;
+  
+  if (window.editor?.transformManager) {
+    window.editor.transformManager.updateSelection();
+  }
+};
 
 // Helper to convert radians to degrees
 const toDegrees = (radians) => {
@@ -243,15 +303,6 @@ const onMaterialChange = () => {
       selectedObject.value.material.needsUpdate = true;
   }
 };
-
-// Geographic coordinates (lat/lng/height) derived from scene GIS config
-const latLngAlt = computed(() => {
-  if (!selectedObject.value) return null;
-  const sm = window.editor?.sceneManager;
-  if (!sm || !sm.worldToLngLat) return null;
-  const res = sm.worldToLngLat(selectedObject.value.position);
-  return res || null;
-});
 </script>
 
 <style scoped>
@@ -329,6 +380,13 @@ input[type="color"] {
   text-align: center;
   margin-top: 40px;
   font-size: 13px;
+}
+
+.unit {
+  margin-left: 4px;
+  font-size: 12px;
+  color: #888;
+  min-width: 16px;
 }
 
 .debug-info {

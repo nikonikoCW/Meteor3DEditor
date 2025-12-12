@@ -2,21 +2,7 @@
   <div class="gis-settings-panel">
     <h3>GIS 配置</h3>
 
-    <div class="section">
-      <div class="prop-row switch-row">
-        <label>开启 GIS 坐标</label>
-        <div class="toggle-switch">
-          <input 
-            type="checkbox" 
-            id="gis-toggle" 
-            v-model="isEnabled" 
-            @change="handleToggleChange"
-          >
-          <label for="gis-toggle"></label>
-        </div>
-      </div>
-    </div>
-
+    <!-- 网格辅助线开关 -->
     <div class="section">
       <h4>辅助功能</h4>
       <div class="prop-row switch-row">
@@ -33,90 +19,83 @@
       </div>
       <p class="hint">说明：当前网格以 10m × 10m 为一个小格</p>
     </div>
-
-    <!-- GIS Info Display -->
-    <div v-if="isEnabled && hasValidConfig" class="section info-section">
-      <h4>配置信息</h4>
-      <div class="prop-row">
-        <label>中心经度</label>
-        <span class="value">{{ gisConfig.center.lng }}°</span>
-      </div>
-      <div class="prop-row">
-        <label>中心纬度</label>
-        <span class="value">{{ gisConfig.center.lat }}°</span>
-      </div>
-      <div class="prop-row">
-        <label>范围 (长/宽)</label>
-        <span class="value">{{ gisConfig.range.length }}m / {{ gisConfig.range.width }}m</span>
-      </div>
-      <div class="prop-row">
-        <label>投影坐标系</label>
-        <span class="value">{{ projectionLabel }}</span>
-      </div>
-      <button class="edit-btn" @click="openDialog">修改配置</button>
+    <!-- 未配置状态 -->
+    <div v-if="!isConfigured" class="section unconfigured-state">
+      <button class="enable-btn" @click="openMapSelector">
+        <span class="icon">+</span> 启用地理环境
+      </button>
+      <p v-if="hasCachedConfig" class="restore-hint">
+        检测到历史配置，点击后将自动恢复
+      </p>
     </div>
 
-    <div v-if="isEnabled && hasValidConfig" class="section bounds-section">
-      <h4>范围信息</h4>
-      <div class="bounds-grid">
-        <div class="bounds-cell north">
-          <div class="label">最大纬度</div>
-          <div class="value">{{ displayBounds.maxLat }}°</div>
+    <!-- 已配置状态 -->
+    <template v-else>
+      <div class="section info-section">
+        <div class="status-header">
+          <span class="status-icon">✓</span>
+          <span>地理环境已激活</span>
         </div>
-        <div class="bounds-cell west">
-          <div class="label">最小经度</div>
-          <div class="value">{{ displayBounds.minLng }}°</div>
-        </div>
-        <div class="bounds-cell east">
-          <div class="label">最大经度</div>
-          <div class="value">{{ displayBounds.maxLng }}°</div>
-        </div>
-        <div class="bounds-cell south">
-          <div class="label">最小纬度</div>
-          <div class="value">{{ displayBounds.minLat }}°</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="debug-info">
-      <small>GIS 坐标系统控制</small>
-    </div>
-
-    <!-- Config Dialog -->
-    <div v-if="showDialog" class="modal-overlay">
-      <div class="modal-content">
-        <h4>GIS 场景配置</h4>
         
-        <div class="form-group">
-          <label>中心点坐标 (经度/纬度)</label>
-          <div class="input-group">
-            <input type="number" v-model.number="tempConfig.center.lng" placeholder="经度" step="0.000001">
-            <input type="number" v-model.number="tempConfig.center.lat" placeholder="纬度" step="0.000001">
+        <div class="coord-grid">
+          <div class="coord-item">
+            <span class="label">中心经度</span>
+            <span class="value">{{ gisConfig.center.lng.toFixed(6) }}°</span>
+          </div>
+          <div class="coord-item">
+            <span class="label">中心纬度</span>
+            <span class="value">{{ gisConfig.center.lat.toFixed(6) }}°</span>
           </div>
         </div>
+      </div>
 
-        <div class="form-group">
-          <label>范围 (米)</label>
-          <div class="input-group">
-            <input type="number" v-model.number="tempConfig.range.length" placeholder="长度 (m)">
-            <input type="number" v-model.number="tempConfig.range.width" placeholder="宽度 (m)">
+      <div class="section bounds-section">
+        <h4>范围信息 ({{ gisConfig.size }}m × {{ gisConfig.size }}m)</h4>
+        <div class="bounds-grid">
+          <div class="bounds-cell north">
+            <div class="label">最大纬度</div>
+            <div class="value">{{ displayBounds.maxLat }}°</div>
+          </div>
+          <div class="bounds-cell west">
+            <div class="label">最小经度</div>
+            <div class="value">{{ displayBounds.minLng }}°</div>
+          </div>
+          <div class="bounds-cell east">
+            <div class="label">最大经度</div>
+            <div class="value">{{ displayBounds.maxLng }}°</div>
+          </div>
+          <div class="bounds-cell south">
+            <div class="label">最小纬度</div>
+            <div class="value">{{ displayBounds.minLat }}°</div>
           </div>
         </div>
+      </div>
 
-        <div class="form-group">
-          <label>投影坐标系</label>
-          <select v-model="tempConfig.projection">
-            <option value="WGS84">WGS84</option>
-            <option value="CGCS2000">CGCS2000 (大地2000)</option>
-            <option value="Xian80">Xi'an 80 (西安80)</option>
-          </select>
-        </div>
+      <div class="section action-section">
+        <button class="action-btn" @click="openAdjustDialog">调整范围</button>
+        <button class="action-btn danger" @click="showRemoveWarning = true">移除 GIS</button>
+      </div>
+    </template>
 
-        <div class="error-msg" v-if="errorMsg">{{ errorMsg }}</div>
+    <!-- 地图选择器弹窗 -->
+    <MapSelectorDialog 
+      v-if="showMapDialog"
+      :initial-center="dialogCenter"
+      :initial-size="dialogSize"
+      :lock-center="isAdjustMode"
+      @confirm="handleMapConfirm"
+      @cancel="handleMapCancel"
+    />
 
-        <div class="modal-actions">
-          <button @click="cancelEdit" class="btn-cancel">取消</button>
-          <button @click="confirmEdit" class="btn-confirm">确认</button>
+    <!-- 移除警告弹窗 -->
+    <div v-if="showRemoveWarning" class="warning-overlay">
+      <div class="warning-dialog">
+        <h4>⚠️ 高危操作警告</h4>
+        <p>移除地理信息后，所有基于经纬度的自动化逻辑将失效，但模型将保留在当前相对位置。</p>
+        <p class="confirm-text"><strong>是否继续？</strong></p>
+        <div class="actions">
+          <button class="btn-cancel" @click="showRemoveWarning = false">取消</button>
+          <button class="btn-danger" @click="confirmRemove">确认移除</button>
         </div>
       </div>
     </div>
@@ -126,71 +105,199 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue';
 import { GisProjection } from '@meteor3d/core';
+import MapSelectorDialog from './MapSelectorDialog.vue';
 
-const isEnabled = ref(false);
+// 状态
+const isConfigured = ref(false);
 const showGrid = ref(false);
-const showDialog = ref(false);
-const errorMsg = ref('');
-const hasValidConfig = ref(false);
+const showMapDialog = ref(false);
+const showRemoveWarning = ref(false);
+const isAdjustMode = ref(false);
 
+// 当前配置
 const gisConfig = reactive({
   center: { lng: 0, lat: 0 },
-  range: { length: 5000, width: 6000 },
-  projection: 'WGS84'
+  size: 1000,
+  bounds: null
 });
 
-const tempConfig = reactive({
-  center: { lng: null, lat: null },
-  range: { length: null, width: null },
-  projection: 'WGS84'
+// 缓存配置（用于移除后恢复）
+const cachedConfig = ref(null);
+
+// 是否有缓存配置
+const hasCachedConfig = computed(() => cachedConfig.value !== null);
+
+// 地图弹窗的初始参数
+const dialogCenter = computed(() => {
+  if (isAdjustMode.value && isConfigured.value) {
+    return { ...gisConfig.center };
+  }
+  if (hasCachedConfig.value) {
+    return { ...cachedConfig.value.center };
+  }
+  return null;
 });
 
-const projectionLabel = computed(() => {
-  const map = {
-    'WGS84': 'WGS84',
-    'CGCS2000': '大地2000',
-    'Xian80': '西安80'
-  };
-  return map[gisConfig.projection] || gisConfig.projection;
+const dialogSize = computed(() => {
+  if (isAdjustMode.value && isConfigured.value) {
+    return gisConfig.size;
+  }
+  if (hasCachedConfig.value) {
+    return cachedConfig.value.size;
+  }
+  return 1000;
 });
 
+// 边界显示
 const displayBounds = computed(() => {
-  if (!hasValidConfig.value) {
+  if (!isConfigured.value || !gisConfig.bounds) {
     return { maxLng: '-', minLng: '-', maxLat: '-', minLat: '-' };
   }
-
-  const bounds = computeBoundsWithCore(gisConfig.center, gisConfig.range, gisConfig.projection);
-  if (!bounds) {
-    return { maxLng: '-', minLng: '-', maxLat: '-', minLat: '-' };
-  }
-
-  const { maxLng, minLng, maxLat, minLat } = bounds;
+  const { maxLng, minLng, maxLat, minLat } = gisConfig.bounds;
   return {
     maxLng: Number(maxLng).toFixed(6),
     minLng: Number(minLng).toFixed(6),
     maxLat: Number(maxLat).toFixed(6),
-    minLat: Number(minLat).toFixed(6),
+    minLat: Number(minLat).toFixed(6)
   };
 });
 
+// 从 SceneManager 恢复状态
 const hydrateFromSceneManager = () => {
   const sm = window.editor?.sceneManager;
   if (sm && sm.gisConfig) {
     const cfg = sm.gisConfig;
     if (cfg.center) {
-      gisConfig.center.lng = cfg.center.lng ?? gisConfig.center.lng;
-      gisConfig.center.lat = cfg.center.lat ?? gisConfig.center.lat;
+      gisConfig.center.lng = cfg.center.lng ?? 0;
+      gisConfig.center.lat = cfg.center.lat ?? 0;
     }
+    // 兼容旧版 range 格式
     if (cfg.range) {
-      gisConfig.range.length = cfg.range.length ?? gisConfig.range.length;
-      gisConfig.range.width = cfg.range.width ?? gisConfig.range.width;
+      gisConfig.size = cfg.range.length ?? cfg.range.width ?? 1000;
     }
-    if (cfg.projection) {
-      gisConfig.projection = cfg.projection;
+    if (cfg.size) {
+      gisConfig.size = cfg.size;
+    }
+    if (cfg.bounds) {
+      gisConfig.bounds = { ...cfg.bounds };
+    } else {
+      // 计算边界
+      gisConfig.bounds = calculateBounds(gisConfig.center, gisConfig.size);
     }
     showGrid.value = cfg.gridVisible ?? false;
-    isEnabled.value = true;
-    hasValidConfig.value = true;
+    
+    // 检查 enable 状态：enable 为 false 时显示未配置状态，但缓存配置以便恢复
+    if (cfg.enable === false) {
+      isConfigured.value = false;
+      cachedConfig.value = {
+        center: { ...gisConfig.center },
+        size: gisConfig.size,
+        bounds: gisConfig.bounds ? { ...gisConfig.bounds } : null
+      };
+    } else {
+      isConfigured.value = true;
+    }
+  }
+};
+
+// 计算边界
+const calculateBounds = (center, size) => {
+  const latOffset = (size / 2) / 111320;
+  const lngOffset = (size / 2) / (111320 * Math.cos(center.lat * Math.PI / 180));
+  return {
+    maxLat: center.lat + latOffset,
+    minLat: center.lat - latOffset,
+    maxLng: center.lng + lngOffset,
+    minLng: center.lng - lngOffset
+  };
+};
+
+// 打开地图选择器（新建模式）
+const openMapSelector = () => {
+  isAdjustMode.value = false;
+  showMapDialog.value = true;
+};
+
+// 打开调整范围弹窗
+const openAdjustDialog = () => {
+  isAdjustMode.value = true;
+  showMapDialog.value = true;
+};
+
+// 地图确认回调
+const handleMapConfirm = (result) => {
+  gisConfig.center.lng = result.center.lng;
+  gisConfig.center.lat = result.center.lat;
+  gisConfig.size = result.size;
+  gisConfig.bounds = result.bounds;
+
+  isConfigured.value = true;
+  showMapDialog.value = false;
+  isAdjustMode.value = false;
+
+  // 同步到 SceneManager
+  syncToSceneManager();
+};
+
+// 地图取消回调
+const handleMapCancel = () => {
+  showMapDialog.value = false;
+  isAdjustMode.value = false;
+};
+
+// 确认移除 GIS（软删除）
+const confirmRemove = () => {
+  // 缓存当前配置（用于前端恢复）
+  cachedConfig.value = {
+    center: { ...gisConfig.center },
+    size: gisConfig.size,
+    bounds: gisConfig.bounds ? { ...gisConfig.bounds } : null
+  };
+
+  // 清除前端配置状态
+  isConfigured.value = false;
+  showRemoveWarning.value = false;
+
+  // 通知 SceneManager 软删除（设置 enable=false，保留数据）
+  if (window.editor?.sceneManager) {
+    window.editor.sceneManager.clearGisConfig();
+  }
+};
+
+// 同步到 SceneManager
+const syncToSceneManager = () => {
+  if (!window.editor?.sceneManager) return;
+
+  const sm = window.editor.sceneManager;
+  const gridSegments = Math.max(1, Math.round(gisConfig.size / 10));
+
+  sm.setGisConfig({
+    center: { ...gisConfig.center },
+    size: gisConfig.size,
+    bounds: gisConfig.bounds ? { ...gisConfig.bounds } : null,
+    enable: true, // 启用 GIS
+    projection: 'WGS84',
+    gridVisible: showGrid.value
+  });
+
+  sm.setGridHelper(showGrid.value, gisConfig.size, gisConfig.size, gridSegments, gridSegments);
+};
+
+// 网格切换
+const handleGridChange = () => {
+  if (!window.editor?.sceneManager) return;
+
+  if (isConfigured.value) {
+    const gridSegments = Math.max(1, Math.round(gisConfig.size / 10));
+    window.editor.sceneManager.setGridHelper(
+      showGrid.value, 
+      gisConfig.size, 
+      gisConfig.size, 
+      gridSegments, 
+      gridSegments
+    );
+  } else {
+    window.editor.sceneManager.setGridHelper(showGrid.value);
   }
 };
 
@@ -200,143 +307,49 @@ onMounted(() => {
     handleGridChange();
   }
 
-  // 监听 SceneManager 的 GIS 配置更新事件
+  // 监听 GIS 配置更新事件
   const handler = (e) => {
     if (!e?.detail) return;
     const cfg = e.detail;
 
+    // 更新本地配置
     if (cfg.center) {
       gisConfig.center.lng = cfg.center.lng ?? gisConfig.center.lng;
       gisConfig.center.lat = cfg.center.lat ?? gisConfig.center.lat;
     }
+    if (cfg.size) {
+      gisConfig.size = cfg.size;
+    }
+    // 兼容旧版
     if (cfg.range) {
-      gisConfig.range.length = cfg.range.length ?? gisConfig.range.length;
-      gisConfig.range.width = cfg.range.width ?? gisConfig.range.width;
+      gisConfig.size = cfg.range.length ?? cfg.range.width ?? gisConfig.size;
     }
-    if (cfg.projection) {
-      gisConfig.projection = cfg.projection;
+    if (cfg.bounds) {
+      gisConfig.bounds = { ...cfg.bounds };
     }
-
-    const prevShowGrid = showGrid.value;
     if (cfg.gridVisible !== undefined) {
       showGrid.value = cfg.gridVisible;
     }
 
-    isEnabled.value = true;
-    hasValidConfig.value = true;
-
-    // 只有当网格显示状态发生变化时才触发更新，避免事件循环
-    if (showGrid.value !== prevShowGrid) {
-      handleGridChange();
+    // 根据 enable 状态更新 UI
+    if (cfg.enable === false) {
+      isConfigured.value = false;
+      // 缓存配置以便恢复
+      cachedConfig.value = {
+        center: { ...gisConfig.center },
+        size: gisConfig.size,
+        bounds: gisConfig.bounds ? { ...gisConfig.bounds } : null
+      };
+    } else {
+      isConfigured.value = true;
     }
   };
+
   window.addEventListener('gis-config-updated', handler);
   onBeforeUnmount(() => {
     window.removeEventListener('gis-config-updated', handler);
   });
 });
-
-const handleToggleChange = () => {
-  if (isEnabled.value) {
-    // Turning ON
-    openDialog();
-  } else {
-    // Turning OFF
-    hasValidConfig.value = false;
-    if (window.editor && window.editor.sceneManager) {
-      window.editor.sceneManager.setGridHelper(false);
-    }
-  }
-};
-
-const getGridParams = () => {
-  const length = hasValidConfig.value ? gisConfig.range.length : tempConfig.range.length || 10;
-  const width = hasValidConfig.value ? gisConfig.range.width : tempConfig.range.width || 300;
-  const widthSegments = Math.max(1, Math.round((width || 30) / 10));
-  const lengthSegments = Math.max(1, Math.round((length || 30) / 10));
-  return { length: length || 30, width: width || 30, widthSegments, lengthSegments };
-};
-
-const handleGridChange = () => {
-  if (window.editor && window.editor.sceneManager) {
-    const { length, width, widthSegments, lengthSegments } = getGridParams();
-    window.editor.sceneManager.setGridHelper(showGrid.value, length, width, widthSegments, lengthSegments);
-  }
-};
-
-// 使用核心库的投影工具计算边界
-const computeBoundsWithCore = (center, range, projection) => {
-  try {
-    const gp = new GisProjection({
-      center: { lng: Number(center.lng), lat: Number(center.lat) },
-      projection,
-    });
-    return gp.computeBounds({
-      length: Number(range.length),
-      width: Number(range.width),
-    });
-  } catch (e) {
-    console.error('computeBounds error:', e);
-    return null;
-  }
-};
-
-const openDialog = () => {
-  // Init temp config with current values or defaults
-  tempConfig.center.lng = hasValidConfig.value ? gisConfig.center.lng : null;
-  tempConfig.center.lat = hasValidConfig.value ? gisConfig.center.lat : null;
-  tempConfig.range.length = hasValidConfig.value ? gisConfig.range.length : null;
-  tempConfig.range.width = hasValidConfig.value ? gisConfig.range.width : null;
-  tempConfig.projection = hasValidConfig.value ? gisConfig.projection : 'WGS84'; // Default to WGS84 for dropdown
-  
-  errorMsg.value = '';
-  showDialog.value = true;
-};
-
-const validate = () => {
-  if (tempConfig.center.lng === null || tempConfig.center.lat === null) return '请输入完整的中心点坐标';
-  if (!tempConfig.range.length || !tempConfig.range.width) return '请输入完整的范围尺寸';
-  if (!tempConfig.projection) return '请选择投影坐标系';
-  return '';
-};
-
-const confirmEdit = () => {
-  const error = validate();
-  if (error) {
-    errorMsg.value = error;
-    return;
-  }
-
-  // Save config
-  gisConfig.center.lng = tempConfig.center.lng;
-  gisConfig.center.lat = tempConfig.center.lat;
-  gisConfig.range.length = tempConfig.range.length;
-  gisConfig.range.width = tempConfig.range.width;
-  gisConfig.projection = tempConfig.projection;
-
-  hasValidConfig.value = true;
-  isEnabled.value = true;
-  showDialog.value = false;
-  // 通知 SceneManager 更新 GIS 配置和网格大小
-  if (window.editor && window.editor.sceneManager) {
-    const { length, width, widthSegments, lengthSegments } = getGridParams();
-    window.editor.sceneManager.setGisConfig({
-      center: { ...gisConfig.center },
-      range: { ...gisConfig.range },
-      projection: gisConfig.projection,
-      gridVisible: showGrid.value
-    });
-    window.editor.sceneManager.setGridHelper(showGrid.value, length, width, widthSegments, lengthSegments);
-  }
-};
-
-const cancelEdit = () => {
-  showDialog.value = false;
-  // If we were turning it on but cancelled, revert toggle
-  if (!hasValidConfig.value) {
-    isEnabled.value = false;
-  }
-};
 </script>
 
 <style scoped>
@@ -385,11 +398,6 @@ h4 {
   color: #aaa;
 }
 
-.value {
-  color: white;
-  font-family: monospace;
-}
-
 .switch-row {
   margin-bottom: 0;
 }
@@ -400,46 +408,7 @@ h4 {
   color: #777;
 }
 
-.bounds-section {
-  margin-top: -10px;
-}
-
-.bounds-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(3, auto);
-  column-gap: 0;
-  row-gap: 8px;
-  align-items: center;
-  justify-items: stretch;
-}
-
-.bounds-cell {
-  background: #333;
-  border: 1px solid #3d3d3d;
-  border-radius: 4px;
-  padding: 8px;
-  width: 100%;
-  text-align: center;
-}
-
-.bounds-cell .label {
-  color: #aaa;
-  font-size: 12px;
-  margin-bottom: 4px;
-}
-
-.bounds-cell .value {
-  color: #fff;
-  font-size: 13px;
-}
-
-.bounds-cell.north { grid-column: 1 / span 2; grid-row: 1; }
-.bounds-cell.south { grid-column: 1 / span 2; grid-row: 3; }
-.bounds-cell.west  { grid-column: 1; grid-row: 2; }
-.bounds-cell.east  { grid-column: 2; grid-row: 2; }
-
-/* Toggle Switch Styles */
+/* Toggle Switch */
 .toggle-switch {
   position: relative;
   width: 40px;
@@ -484,133 +453,236 @@ h4 {
   transform: translateX(20px);
 }
 
-.edit-btn {
-  width: 100%;
-  padding: 6px;
-  background: #333;
-  border: 1px solid #444;
-  color: #ccc;
-  border-radius: 3px;
-  cursor: pointer;
-  margin-top: 10px;
-  font-size: 12px;
+/* Unconfigured State */
+.unconfigured-state {
+  text-align: center;
+  padding: 20px 10px;
 }
 
-.edit-btn:hover {
-  background: #444;
+.enable-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #0066cc, #0088ff);
+  border: none;
+  border-radius: 6px;
   color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.debug-info {
-  margin-top: 20px;
-  color: #444;
-  font-size: 10px;
+.enable-btn:hover {
+  background: linear-gradient(135deg, #0077dd, #0099ff);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4);
+}
+
+.enable-btn .icon {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.restore-hint {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #4CAF50;
+}
+
+/* Info Section */
+.info-section {
+  padding: 16px;
+}
+
+.status-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: #4CAF50;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.status-icon {
+  font-size: 16px;
+}
+
+.coord-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.coord-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.coord-item .label {
+  color: #888;
+  font-size: 11px;
+}
+
+.coord-item .value {
+  color: #fff;
+  font-size: 13px;
+  font-family: monospace;
+}
+
+/* Bounds Section */
+.bounds-section {
+  margin-top: -10px;
+}
+
+.bounds-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(3, auto);
+  column-gap: 0;
+  row-gap: 8px;
+}
+
+.bounds-cell {
+  background: #333;
+  border: 1px solid #3d3d3d;
+  border-radius: 4px;
+  padding: 8px;
   text-align: center;
 }
 
-/* Modal Styles */
-.modal-overlay {
+.bounds-cell .label {
+  color: #aaa;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.bounds-cell .value {
+  color: #fff;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.bounds-cell.north { grid-column: 1 / span 2; grid-row: 1; }
+.bounds-cell.south { grid-column: 1 / span 2; grid-row: 3; }
+.bounds-cell.west  { grid-column: 1; grid-row: 2; }
+.bounds-cell.east  { grid-column: 2; grid-row: 2; }
+
+/* Action Section */
+.action-section {
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: #333;
+  border: 1px solid #444;
+  color: #ccc;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: #444;
+  color: #fff;
+}
+
+.action-btn.danger {
+  color: #ff6b6b;
+  border-color: #ff6b6b33;
+}
+
+.action-btn.danger:hover {
+  background: #ff6b6b22;
+  border-color: #ff6b6b;
+}
+
+/* Warning Dialog */
+.warning-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 2000;
 }
 
-.modal-content {
+.warning-dialog {
   background: #2a2a2a;
-  width: 320px;
-  padding: 20px;
+  width: 400px;
+  max-width: 90vw;
+  padding: 24px;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-  border: 1px solid #444;
+  border: 2px solid #ff6b6b;
+  box-shadow: 0 8px 32px rgba(255, 107, 107, 0.2);
 }
 
-.modal-content h4 {
-  margin: 0 0 20px 0;
-  color: white;
-  font-size: 14px;
+.warning-dialog h4 {
+  margin: 0 0 16px 0;
+  color: #ff6b6b;
+  font-size: 16px;
   text-align: center;
+  text-transform: none;
 }
 
-.form-group {
-  margin-bottom: 15px;
+.warning-dialog p {
+  color: #ccc;
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0 0 12px 0;
 }
 
-.form-group label {
-  display: block;
-  font-size: 12px;
-  color: #aaa;
-  margin-bottom: 6px;
-}
-
-.input-group {
-  display: flex;
-  gap: 10px;
-}
-
-input[type="number"],
-select {
-  width: 100%;
-  background: #333;
-  border: 1px solid #444;
-  color: white;
-  padding: 6px 8px;
-  border-radius: 3px;
-  font-size: 12px;
-}
-
-input:focus,
-select:focus {
-  border-color: #0066cc;
-  outline: none;
-}
-
-.error-msg {
-  color: #ff4d4f;
-  font-size: 12px;
-  margin-bottom: 15px;
+.warning-dialog .confirm-text {
   text-align: center;
+  color: #fff;
 }
 
-.modal-actions {
+.warning-dialog .actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+  gap: 12px;
   margin-top: 20px;
 }
 
-.btn-cancel,
-.btn-confirm {
-  padding: 6px 16px;
+.btn-cancel {
+  flex: 1;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid #444;
+  color: #aaa;
   border-radius: 4px;
-  border: none;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
 }
 
-.btn-cancel {
-  background: transparent;
-  color: #aaa;
-  border: 1px solid #444;
-}
-
 .btn-cancel:hover {
-  color: white;
+  color: #fff;
   border-color: #666;
 }
 
-.btn-confirm {
-  background: #0066cc;
+.btn-danger {
+  flex: 1;
+  padding: 10px;
+  background: #ff4d4f;
+  border: none;
   color: white;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
 }
 
-.btn-confirm:hover {
-  background: #0077ee;
+.btn-danger:hover {
+  background: #ff7875;
 }
 </style>

@@ -1,24 +1,27 @@
 /**
- * 轻量级 GIS 投影工具
+ * 轻量级 GIS 投影工具 (WGS84)
  * 基于参考点（中心经纬度）计算 ENU 局部坐标，供 Three.js 使用。
  * 说明：
- * - 这里使用椭球参数区分 WGS84/CGCS2000/西安80。
- * - 结果以米为单位，east -> X，north -> Z，up -> Y。
+ * - 使用 WGS84 椭球参数
+ * - 结果以米为单位，east -> X，north -> Z，up -> Y
  */
 export class GisProjection {
-    constructor({ center, projection = 'WGS84' }) {
-        this.setReference(center, projection);
+    // WGS84 椭球参数
+    static ELLIPSOID = {
+        a: 6378137.0,           // 半长轴（米）
+        f: 1 / 298.257223563    // 扁率
+    };
+
+    constructor({ center }) {
+        this.setReference(center);
     }
 
-    setReference(center, projection = 'WGS84') {
+    setReference(center) {
         this.reference = { ...center };
-        this.projection = projection;
-        this.ellipsoid = this.getEllipsoid(projection);
         this.refEcef = this.llhToEcef(
             this.degToRad(center.lat),
             this.degToRad(center.lng),
-            0,
-            this.ellipsoid
+            0
         );
     }
 
@@ -28,15 +31,14 @@ export class GisProjection {
     lngLatToEnu(lng, lat, height = 0) {
         const phi = this.degToRad(lat);
         const lambda = this.degToRad(lng);
-        const h = height;
 
-        const ecef = this.llhToEcef(phi, lambda, h, this.ellipsoid);
+        const ecef = this.llhToEcef(phi, lambda, height);
         return this.ecefToEnu(ecef, this.refEcef, this.reference);
     }
 
     /** 基础：经纬度高 -> ECEF */
-    llhToEcef(phi, lambda, h, ellipsoid) {
-        const { a, f } = ellipsoid;
+    llhToEcef(phi, lambda, h) {
+        const { a, f } = GisProjection.ELLIPSOID;
         const e2 = 2 * f - f * f;
 
         const sinPhi = Math.sin(phi);
@@ -76,21 +78,6 @@ export class GisProjection {
         return { east, north, up };
     }
 
-    /** 椭球参数 */
-    getEllipsoid(projection) {
-        // 半长轴 a（米），扁率 f
-        switch (projection) {
-            case 'CGCS2000': // 与 WGS84 接近
-                return { a: 6378137.0, f: 1 / 298.257222101 };
-            case 'Xian80':
-            case 'XIAN80':
-                return { a: 6378140.0, f: 1 / 298.257 };
-            case 'WGS84':
-            default:
-                return { a: 6378137.0, f: 1 / 298.257223563 };
-        }
-    }
-
     degToRad(deg) {
         return (deg * Math.PI) / 180;
     }
@@ -103,7 +90,7 @@ export class GisProjection {
      * 计算当前参考纬度处的卯酉曲率半径 N 与子午圈曲率半径 M
      */
     getCurvatureRadii(phi) {
-        const { a, f } = this.ellipsoid;
+        const { a, f } = GisProjection.ELLIPSOID;
         const e2 = 2 * f - f * f;
         const sinPhi = Math.sin(phi);
         const denom = Math.sqrt(1 - e2 * sinPhi * sinPhi);
@@ -129,29 +116,4 @@ export class GisProjection {
             lng: this.radToDeg(lambda + dLambda),
         };
     }
-
-    /**
-     * 根据长宽（米）计算经纬度范围
-     * @param {{length:number,width:number}} range
-     */
-    computeBounds(range) {
-        const length = Number(range?.length) || 0;
-        const width = Number(range?.width) || 0;
-        const halfNorthSouth = length / 2;
-        const halfEastWest = width / 2;
-
-        const northPoint = this.offsetMetersToLngLat(0, halfNorthSouth);
-        const southPoint = this.offsetMetersToLngLat(0, -halfNorthSouth);
-        const eastPoint = this.offsetMetersToLngLat(halfEastWest, 0);
-        const westPoint = this.offsetMetersToLngLat(-halfEastWest, 0);
-
-        return {
-            maxLat: northPoint.lat,
-            minLat: southPoint.lat,
-            maxLng: eastPoint.lng,
-            minLng: westPoint.lng,
-        };
-    }
 }
-
-

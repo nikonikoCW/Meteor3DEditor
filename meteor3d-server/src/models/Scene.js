@@ -19,10 +19,22 @@ const SceneSchema = new mongoose.Schema({
     environmentUrl: String, // 新增：环境贴图 URL
     // GIS 配置
     gisConfig: {
+        enable: {
+            type: Boolean,
+            default: true
+        },
         center: {
             lng: Number,
             lat: Number
         },
+        size: Number, // 选框边长（米）
+        bounds: {
+            maxLat: Number,
+            minLat: Number,
+            maxLng: Number,
+            minLng: Number
+        },
+        // 兼容旧版
         range: {
             length: Number,
             width: Number

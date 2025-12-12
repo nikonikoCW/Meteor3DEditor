@@ -12,11 +12,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@meteor3d/core": "workspace:*",
+    "leaflet": "^1.9.4",
     "pinia": "^3.0.4",
     "three": "^0.181.2",
     "vue": "^3.5.25",
-    "vue-router": "^4.6.3",
-    "@meteor3d/core": "workspace:*"
+    "vue-router": "^4.6.3"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.2",

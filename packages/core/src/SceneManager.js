@@ -53,10 +53,8 @@ export class SceneManager {
         this.environmentUrl = null; // 当前环境贴图 URL
         this.gisProjection = null;
         this.gisConfig = null;
-        this.gridHelper = null; // now used as custom plane grid
+        this.gridHelper = null; // 网格辅助平面
         this.gridVisible = false;
-        this.gisConfig = null;
-        this.gisProjection = null;
 
         // 性能监视器
         this.statsManager = new StatsManager({
@@ -308,21 +306,45 @@ export class SceneManager {
 
     /**
      * 配置 GIS 投影：中心锚定在 (0,0,0)
-     * @param {{center:{lng:number,lat:number},range:{length:number,width:number},projection:string}} config
+     * @param {{center:{lng:number,lat:number},size:number,bounds:{maxLat,minLat,maxLng,minLng},enable:boolean}} config
      */
     setGisConfig(config) {
         if (!config || !config.center) return;
-        this.gisConfig = { ...config, gridVisible: config.gridVisible ?? this.gridVisible };
-        this.gisProjection = new GisProjection({
-            center: config.center,
-            projection: config.projection || 'WGS84',
-        });
 
-        const length = config.range?.length || 30;
-        const width = config.range?.width || 30;
-        const widthSegments = Math.max(1, Math.round(width / 10));
-        const lengthSegments = Math.max(1, Math.round(length / 10));
-        this.setGridHelper(this.gisConfig.gridVisible, length, width, widthSegments, lengthSegments);
+        // 保存完整配置
+        this.gisConfig = {
+            ...config,
+            enable: config.enable !== false,
+            gridVisible: config.gridVisible ?? this.gridVisible,
+            bounds: config.bounds || null
+        };
+
+        // 只有 enable 为 true 时才初始化投影
+        if (this.gisConfig.enable) {
+            this.gisProjection = new GisProjection({
+                center: config.center
+            });
+
+            const size = config.size || 30;
+            const segments = Math.max(1, Math.round(size / 10));
+            this.setGridHelper(this.gisConfig.gridVisible, size, size, segments, segments);
+        } else {
+            this.gisProjection = null;
+            this.setGridHelper(false);
+        }
+    }
+
+    /**
+     * 软删除 GIS 配置：保留配置数据但设置 enable 为 false
+     * 用于"移除 GIS"功能，保存后可以恢复
+     */
+    clearGisConfig() {
+        if (this.gisConfig) {
+            this.gisConfig.enable = false;
+        }
+        this.gisProjection = null;
+        this.setGridHelper(false);
+        this.emitGisConfigUpdated();
     }
 
     emitGisConfigUpdated() {

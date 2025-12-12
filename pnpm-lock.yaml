@@ -90,6 +90,9 @@ importers:
       '@meteor3d/core':
         specifier: workspace:*
         version: link:../core
+      leaflet:
+        specifier: ^1.9.4
+        version: 1.9.4
       pinia:
         specifier: ^3.0.4
         version: 3.0.4(vue@3.5.25)
@@ -1227,6 +1230,9 @@ packages:
 
   kolorist@1.8.0:
     resolution: {integrity: sha512-Y+60/zizpJ3HRH8DCss+q95yr6145JXZo46OTpFvDZWLfRCE4qChOyk1b26nMaNpfHHgxagk9dXT5OP0Tfe+dQ==}
+
+  leaflet@1.9.4:
+    resolution: {integrity: sha512-nxS1ynzJOmOlHp+iL3FyWqK89GtNL8U8rvlMOsQdTTssxZwCXh8N2NB3GDQOL+YR3XnWyZAxwQixURb+FA74PA==}
 
   lodash@4.17.21:
     resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
@@ -3000,6 +3006,8 @@ snapshots:
   kind-of@6.0.3: {}
 
   kolorist@1.8.0: {}
+
+  leaflet@1.9.4: {}
 
   lodash@4.17.21: {}
 
