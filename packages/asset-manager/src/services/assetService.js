@@ -200,3 +200,47 @@ export async function waitForProcessing(assetId, interval = 2000, timeout = 3000
         check();
     });
 }
+
+/**
+ * 上传缩略图 (延迟生成)
+ * @param {string} assetId - 资产 ID
+ * @param {Blob} thumbnailBlob - 缩略图 Blob
+ * @returns {Promise<Object>}
+ */
+export async function uploadThumbnail(assetId, thumbnailBlob) {
+    const formData = new FormData();
+    formData.append('thumbnail', thumbnailBlob, 'thumbnail.jpg');
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/assets/${assetId}/thumbnail`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('上传缩略图失败:', error);
+        throw error;
+    }
+}
+
+/**
+ * 获取需要生成缩略图的模型资产
+ * 条件: type=model, processingStatus=ready, thumbnail=null
+ * @returns {Promise<Array>}
+ */
+export async function getAssetsWithoutThumbnail() {
+    try {
+        const assets = await getAssets('model');
+        // 过滤出处理完成但无缩略图的模型
+        return assets.filter(asset =>
+            asset.processingStatus === 'ready' &&
+            !asset.thumbnail &&
+            asset.processedFiles?.lod2 // 确保有 LOD2 可用
+        );
+    } catch (error) {
+        console.error('获取待生成缩略图资产失败:', error);
+        return [];
+    }
+}

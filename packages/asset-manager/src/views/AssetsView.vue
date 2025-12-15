@@ -109,7 +109,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { uploadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset } from '../services/assetService';
+import { uploadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset, uploadThumbnail, getAssetsWithoutThumbnail } from '../services/assetService';
 import { ASSET_BASE_URL } from '../config';
 import { ThumbnailGenerator } from '../utils/ThumbnailGenerator';
 import { message } from '../utils/message';
@@ -168,8 +168,14 @@ const handleFileSelect = async (event) => {
         uploadStatus.value = '正在服务器端处理...';
         // 不阻塞 UI，后台轮询
         waitForProcessing(result.asset._id)
-          .then(() => {
+          .then(async (statusResult) => {
             message.success(`资产 "${result.asset.name}" 处理完成`);
+            
+            // 处理完成后，检查是否需要生成缩略图
+            if (!result.asset.thumbnail && statusResult.processedFiles?.lod2) {
+              await generateAndUploadThumbnail(result.asset._id, statusResult.processedFiles.lod2);
+            }
+            
             loadAssets(); // 刷新列表显示最新状态
           })
           .catch(err => {
@@ -273,8 +279,72 @@ const handleReprocess = async (asset) => {
   }
 };
 
+/**
+ * 为指定资产生成并上传缩略图
+ * @param {string} assetId - 资产 ID
+ * @param {string} lod2Path - LOD2 模型路径
+ */
+const generateAndUploadThumbnail = async (assetId, lod2Path) => {
+  try {
+    // 初始化缩略图生成器
+    if (!thumbnailGenerator) {
+      thumbnailGenerator = new ThumbnailGenerator();
+    }
+    
+    // 规范化路径：替换反斜杠为正斜杠，确保以 / 开头
+    let normalizedPath = lod2Path.replace(/\\/g, '/');
+    if (!normalizedPath.startsWith('/')) {
+      normalizedPath = '/' + normalizedPath;
+    }
+    
+    // 构建完整 URL
+    const modelUrl = `${ASSET_BASE_URL}${normalizedPath}`;
+    console.log('[缩略图] 加载模型 URL:', modelUrl);
+    
+    // 从 URL 生成缩略图
+    const thumbnailBlob = await thumbnailGenerator.generateFromUrl(modelUrl);
+    
+    // 上传缩略图
+    const result = await uploadThumbnail(assetId, thumbnailBlob);
+    
+    if (result.success) {
+      console.log(`[缩略图] 资产 ${assetId} 缩略图生成成功`);
+    } else {
+      console.warn(`[缩略图] 资产 ${assetId} 缩略图上传失败:`, result.message);
+    }
+  } catch (error) {
+    console.warn(`[缩略图] 资产 ${assetId} 缩略图生成失败:`, error);
+  }
+};
+
+/**
+ * 检查并补全缺失的缩略图 (静默执行，一次处理 1 个)
+ */
+const checkMissingThumbnails = async () => {
+  try {
+    const assetsWithoutThumbnail = await getAssetsWithoutThumbnail();
+    
+    if (assetsWithoutThumbnail.length === 0) {
+      return;
+    }
+    
+    console.log(`[缩略图] 发现 ${assetsWithoutThumbnail.length} 个资产缺少缩略图，开始静默生成...`);
+    
+    // 逐个处理，避免并发过多
+    for (const asset of assetsWithoutThumbnail) {
+      await generateAndUploadThumbnail(asset._id, asset.processedFiles.lod2);
+      // 每完成一个就刷新列表
+      await loadAssets();
+    }
+  } catch (error) {
+    console.warn('[缩略图] 检查缺失缩略图失败:', error);
+  }
+};
+
 onMounted(() => {
   loadAssets();
+  // 页面加载后静默检查并生成缺失的缩略图
+  checkMissingThumbnails();
 });
 
 // 🧹 组件卸载时清理资源，防止内存泄漏

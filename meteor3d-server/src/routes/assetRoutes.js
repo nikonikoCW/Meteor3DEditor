@@ -31,4 +31,7 @@ router.get('/:id/status', assetController.getProcessingStatus);
 // POST /api/assets/:id/reprocess - 重新处理资产
 router.post('/:id/reprocess', assetController.reprocessAsset);
 
+// POST /api/assets/:id/thumbnail - 上传缩略图 (延迟生成)
+router.post('/:id/thumbnail', upload.single('thumbnail'), assetController.uploadThumbnail);
+
 module.exports = router;

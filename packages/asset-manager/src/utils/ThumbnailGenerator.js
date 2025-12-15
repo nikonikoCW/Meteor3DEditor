@@ -95,6 +95,45 @@ export class ThumbnailGenerator {
     }
 
     /**
+     * 从远程 URL 生成缩略图 (用于模型处理完成后延迟生成)
+     * @param {string} url - 模型的完整 URL (如 LOD2)
+     * @returns {Promise<Blob>} 缩略图 Blob
+     */
+    async generateFromUrl(url) {
+        let model = null;
+
+        try {
+            model = await this.loadModel(url);
+
+            // 1. 添加到场景
+            this.scene.add(model);
+
+            // 2. 自适应相机
+            this.fitCameraToObject(model);
+
+            // 3. 渲染
+            this.renderer.render(this.scene, this.camera);
+
+            // 4. 生成 Blob
+            return new Promise((resolve) => {
+                this.renderer.domElement.toBlob((blob) => {
+                    resolve(blob);
+                }, 'image/jpeg', 0.85);
+            });
+
+        } catch (error) {
+            console.error('从 URL 生成缩略图失败:', error);
+            throw error;
+        } finally {
+            // 5. 深度清理资源
+            if (model) {
+                this.scene.remove(model);
+                this.cleanupModel(model);
+            }
+        }
+    }
+
+    /**
      * 更科学的相机自适应算法
      */
     fitCameraToObject(object) {

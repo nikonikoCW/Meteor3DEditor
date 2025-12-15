@@ -43,6 +43,17 @@ const storage = multer.diskStorage({
  * 只允许特定格式的文件
  */
 const fileFilter = (req, file, cb) => {
+    // 缩略图字段允许 jpeg/jpg
+    if (file.fieldname === 'thumbnail') {
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (['.jpg', '.jpeg', '.png'].includes(ext)) {
+            cb(null, true);
+        } else {
+            cb(new Error('缩略图只支持 jpg/jpeg/png 格式'), false);
+        }
+        return;
+    }
+
     const allowedFormats = [
         '.gltf', '.glb',           // glTF 格式
         '.obj', '.fbx', '.stl',    // 需转换的 3D 格式

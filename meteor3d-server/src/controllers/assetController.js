@@ -141,12 +141,75 @@ exports.deleteAsset = async (req, res) => {
             });
         }
 
-        // 删除文件
-        if (fs.existsSync(asset.filePath)) {
-            fs.unlinkSync(asset.filePath);
+        // 辅助函数：安全删除文件
+        const safeUnlink = (filePath) => {
+            if (!filePath) return;
+
+            // 规范化路径：替换反斜杠为正斜杠
+            const normalizedPath = filePath.replace(/\\/g, '/');
+
+            if (fs.existsSync(normalizedPath)) {
+                try {
+                    fs.unlinkSync(normalizedPath);
+                    console.log(`[Delete] 已删除: ${normalizedPath}`);
+                } catch (err) {
+                    console.warn(`[Delete] 删除失败: ${normalizedPath}`, err.message);
+                }
+            } else {
+                console.log(`[Delete] 文件不存在，跳过: ${normalizedPath}`);
+            }
+        };
+
+        // 辅助函数：将数据库中的路径转为文件系统路径
+        // 处理两种格式：/uploads/xxx 和 uploads/xxx
+        const dbPathToFsPath = (dbPath) => {
+            if (!dbPath) return null;
+            // 移除前导斜杠（如果有）
+            let fsPath = dbPath.startsWith('/') ? dbPath.substring(1) : dbPath;
+            // 替换反斜杠为正斜杠
+            fsPath = fsPath.replace(/\\/g, '/');
+            return fsPath;
+        };
+
+        console.log(`[Delete] 开始删除资产文件: ${asset.name}`);
+        console.log(`[Delete] 原始文件路径: ${asset.filePath}`);
+        console.log(`[Delete] 缩略图路径: ${asset.thumbnail}`);
+        console.log(`[Delete] processedFiles:`, JSON.stringify(asset.processedFiles, null, 2));
+
+        // 1. 删除原始上传文件
+        safeUnlink(asset.filePath);
+
+        // 2. 删除缩略图
+        safeUnlink(dbPathToFsPath(asset.thumbnail));
+
+        // 3. 删除处理后的文件
+        if (asset.processedFiles) {
+            safeUnlink(dbPathToFsPath(asset.processedFiles.compressed));
+            safeUnlink(dbPathToFsPath(asset.processedFiles.lod0));
+            safeUnlink(dbPathToFsPath(asset.processedFiles.lod1));
+            safeUnlink(dbPathToFsPath(asset.processedFiles.lod2));
+
+            // 删除纹理文件
+            if (asset.processedFiles.textures) {
+                const textures = asset.processedFiles.textures;
+                // 纹理可能是对象格式（按纹理名称分组）
+                if (typeof textures === 'object') {
+                    Object.values(textures).forEach(texGroup => {
+                        if (typeof texGroup === 'string') {
+                            safeUnlink(dbPathToFsPath(texGroup));
+                        } else if (typeof texGroup === 'object' && texGroup !== null) {
+                            Object.values(texGroup).forEach(texPath => {
+                                if (typeof texPath === 'string') {
+                                    safeUnlink(dbPathToFsPath(texPath));
+                                }
+                            });
+                        }
+                    });
+                }
+            }
         }
 
-        // 删除数据库记录
+        // 4. 删除数据库记录
         await Asset.findByIdAndDelete(req.params.id);
 
         res.status(200).json({
@@ -268,6 +331,58 @@ exports.reprocessAsset = async (req, res) => {
         res.status(500).json({
             success: false,
             message: '重新处理失败',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * 上传缩略图 (延迟生成)
+ * 用于模型处理完成后，前端生成缩略图并上传
+ */
+exports.uploadThumbnail = async (req, res) => {
+    try {
+        const asset = await Asset.findById(req.params.id);
+
+        if (!asset) {
+            return res.status(404).json({
+                success: false,
+                message: '资产不存在'
+            });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: '没有上传缩略图文件'
+            });
+        }
+
+        // 更新缩略图路径
+        const thumbnailPath = `/uploads/thumbnails/${req.file.filename}`;
+
+        // 如果已有旧缩略图，删除旧文件
+        if (asset.thumbnail) {
+            const oldThumbnailPath = path.join(__dirname, '../../uploads/thumbnails', path.basename(asset.thumbnail));
+            if (fs.existsSync(oldThumbnailPath)) {
+                fs.unlinkSync(oldThumbnailPath);
+            }
+        }
+
+        await Asset.findByIdAndUpdate(req.params.id, {
+            thumbnail: thumbnailPath
+        });
+
+        res.status(200).json({
+            success: true,
+            message: '缩略图上传成功',
+            thumbnail: thumbnailPath
+        });
+    } catch (error) {
+        console.error('上传缩略图失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '上传缩略图失败',
             error: error.message
         });
     }
