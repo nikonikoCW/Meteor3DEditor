@@ -8,6 +8,7 @@
 - 3D 场景数据的存储与管理 (CRUD)。
 - 3D 资产（模型、纹理、HDRI）的上传、存储与管理。
 - **自动化资产处理流水线**：对上传的模型进行格式转换、压缩、优化和多级细节 (LOD) 生成。
+- **缩略图延迟上传**：前端处理完成后上传缩略图。
 
 ## 2. 技术栈
 
@@ -24,7 +25,8 @@
 - **External Tools** (需预装):
   - `FBX2glTF`: FBX 转 glTF
   - `toktx` (KTX-Software): 纹理转 KTX2 (可选)
-重要！！！：需要支持nodejs版本 16.20.2 & 22.13.0
+
+> **重要**: 需要支持 Node.js 版本 16.20.2 & 22.13.0
 
 ## 3. 工程结构
 
@@ -39,7 +41,7 @@ meteor3d-server/
 │   │   └── upload.js       # Multer 上传配置 (目录结构、文件过滤)
 │   │
 │   ├── controllers/        # 业务逻辑控制器
-│   │   ├── assetController.js  # 资产上传、查询、状态获取、重新处理
+│   │   ├── assetController.js  # 资产上传、查询、删除、缩略图上传
 │   │   └── sceneController.js  # 场景 CRUD
 │   │
 │   ├── models/             # Mongoose 数据模型
@@ -64,7 +66,7 @@ meteor3d-server/
 │           ├── lodGenerator.js     # LOD (Level of Detail) 生成
 │           └── boundsCalculator.js # 边界盒与统计信息计算
 └── uploads/                # 静态资源存储 (自动生成)
-    ├── raw/                # 原始上传文件
+    ├── models/             # 原始上传文件
     ├── thumbnails/         # 缩略图
     ├── temp/               # 临时解压目录
     └── processed/          # 处理后的产物
@@ -73,45 +75,67 @@ meteor3d-server/
         └── textures/       # 优化后的纹理
 ```
 
-## 4. 核心模块详解
+## 4. API 接口
 
-### 4.1 资产处理流水线 (Asset Pipeline)
+### 4.1 资产接口 `/api/assets`
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/upload` | 上传资产 (支持 file + thumbnail 字段) |
+| GET | `/` | 获取资产列表 (支持 ?type=model 过滤) |
+| GET | `/:id` | 获取单个资产详情 |
+| DELETE | `/:id` | 删除资产 (同时清理所有关联文件) |
+| GET | `/:id/download` | 下载原始资产 |
+| GET | `/:id/status` | 获取处理状态和 processedFiles |
+| POST | `/:id/reprocess` | 重新处理资产 |
+| POST | `/:id/thumbnail` | **上传缩略图** (用于延迟生成) |
+
+### 4.2 资产删除逻辑
+
+删除资产时会清理以下所有关联文件：
+- 原始上传文件 (`filePath`)
+- 缩略图 (`thumbnail`)
+- 压缩模型 (`processedFiles.compressed`)
+- LOD 版本 (`processedFiles.lod0/lod1/lod2`)
+- 优化纹理 (`processedFiles.textures.*`)
+
+## 5. 资产处理流水线
 
 当用户上传 3D 模型（或 ZIP 包）时，系统会自动触发异步处理任务。
 
 **流程步骤：**
 
-1.  **Upload**: 文件上传至 `uploads/raw` (或 `uploads/models`)，状态标记为 `pending`，加入 Bull 队列。
-2.  **Queue Process**: `src/pipeline/index.js` 接收任务。
-3.  **Step 0: ZIP Extract**: 如果是 ZIP，解压并自动寻找主模型文件。
-    *   **查找优先级**: `.gltf` > `.glb` > `.fbx` > `.obj` > `.stl`
-    *   **注意**: ZIP 包内应包含模型引用的所有资源（如 `.bin`, 纹理图片），否则后续转换可能失败。
-4.  **Step 1: Convert**: 将非 glTF 格式 (FBX, OBJ) 转换为 GLB。
-    *   **FBX**: 使用 `FBX2glTF` (强制 `--binary` 输出单文件)。
-    *   **OBJ**: 使用 `obj2gltf`。
-5.  **Step 2: Sanitize**: 移除场景中的相机、灯光和无用节点。
-6.  **Step 3: Draco**: 应用 Draco 压缩，大幅减小体积。
-7.  **Step 4: Texture**: 提取纹理，生成多分辨率 (2k/1k/512) 和 KTX2 格式（如果配置支持）。
-    *   **策略**: 纹理独立输出到 `uploads/processed/textures`，**不**直接替换 GLB 内部纹理。
-    *   **目的**: 支持前端按需加载（"几何与纹理分离"策略）。
-8.  **Step 5: LOD**: 生成 3 个级别的细节模型 (LOD0, LOD1, LOD2)。
-    *   **说明**: LOD 模型仅简化网格，内部仍引用原始纹理。前端需配合 Step 4 的输出进行动态材质替换。
-9.  **Step 6: Bounds**: 计算模型的 AABB 边界盒、包围球及面数统计。
-10. **Finish**: 更新数据库状态为 `ready`，保存所有生成文件的路径和统计信息。
+1. **Upload**: 文件上传至 `uploads/models`，状态标记为 `pending`，加入 Bull 队列。
+2. **Queue Process**: `src/pipeline/index.js` 接收任务。
+3. **Step 0: ZIP Extract**: 如果是 ZIP，解压并自动寻找主模型文件。
+   - **查找优先级**: `.gltf` > `.glb` > `.fbx` > `.obj` > `.stl`
+4. **Step 1: Convert**: 将非 glTF 格式 (FBX, OBJ) 转换为 GLB。
+5. **Step 2: Sanitize**: 移除场景中的相机、灯光和无用节点。
+6. **Step 3: Draco**: 应用 Draco 压缩，大幅减小体积。
+7. **Step 4: Texture**: 提取纹理，生成多分辨率 (2k/1k/512)。
+8. **Step 5: LOD**: 生成 3 个级别的细节模型 (LOD0, LOD1, LOD2)。
+9. **Step 6: Bounds**: 计算模型的 AABB 边界盒、包围球及面数统计。
+10. **Finish**: 更新数据库状态为 `ready`，保存所有生成文件的路径。
 11. **Cleanup**: 清理临时解压目录。
 
-### 4.2 数据模型 (Asset Schema)
+## 6. 数据模型 (Asset Schema)
 
-`Asset` 模型扩展了以下字段以支持流水线：
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `name` | String | 资产名称 |
+| `type` | String | 类型: model/texture/hdri |
+| `filePath` | String | 原始文件路径 |
+| `thumbnail` | String | 缩略图 URL (可为 null) |
+| `processingStatus` | String | pending/processing/ready/failed/skipped |
+| `processedFiles.compressed` | String | 压缩后 GLB 路径 |
+| `processedFiles.lod0/1/2` | String | LOD 版本路径 |
+| `processedFiles.textures` | Object | 优化后纹理路径 |
+| `bounds` | Object | box (min/max) 和 sphere (center/radius) |
+| `stats` | Object | triangleCount, vertexCount 等 |
 
-- `processingStatus`: `pending` | `processing` | `ready` | `failed` | `skipped`
-- `processedFiles`: 存储 `compressed`, `lod0`~`lod2`, `textures` 的路径。
-- `bounds`: 预计算的 `box` (min/max) 和 `sphere` (center/radius)。
-- `stats`: `triangleCount`, `vertexCount` 等。
-
-## 5. 开发注意事项
+## 7. 开发注意事项
 
 - **Redis**: 必须启动 Redis 服务并在 `src/config/redis.js` 中配置正确连接。
-- **Draco**: 读取或写入 Draco 压缩模型时，必须使用 `src/pipeline/utils/ioUtils.js` 中的 `createNodeIO`，它已预配置好解码器。
-- **临时文件**: 流水线会在 `uploads/temp` 创建临时文件，正常结束后会自动清理，但调试模式下可能保留。
+- **Draco**: 读取或写入 Draco 压缩模型时，必须使用 `src/pipeline/utils/ioUtils.js` 中的 `createNodeIO`。
+- **临时文件**: 流水线会在 `uploads/temp` 创建临时文件，正常结束后会自动清理。
 - **扩展性**: 新的处理步骤应作为独立的 processor 添加到 `src/pipeline/processors/` 并在 `index.js` 中注册。

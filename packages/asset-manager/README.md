@@ -8,11 +8,12 @@ Meteor3D 资产管理系统 - 独立的 3D 资产管理应用。
 
 | 功能 | 说明 |
 |------|------|
-| **资产上传** | 支持 GLTF/GLB 模型、贴图、HDRI 环境贴图 |
-| **缩略图生成** | 上传模型时自动生成 3D 预览缩略图 |
+| **资产上传** | 支持 GLTF/GLB 模型、ZIP 模型包、贴图、HDRI 环境贴图 |
+| **缩略图生成** | GLB 上传时立即生成，ZIP 包处理完成后延迟生成 |
+| **缩略图补全** | 页面加载时自动检测并生成缺失的缩略图 |
 | **资产分类** | 按类型筛选 (全部/模型/贴图/HDRI) |
 | **资产下载** | 一键下载原始资产文件 |
-| **资产删除** | 删除不需要的资产 |
+| **资产删除** | 删除资产及其所有关联文件 |
 
 ---
 
@@ -20,9 +21,21 @@ Meteor3D 资产管理系统 - 独立的 3D 资产管理应用。
 
 | 类型 | 格式 |
 |------|------|
-| 模型 | `gltf.zip`,`fbx.zip`, `obj.zip`, `.glb` (支持 Draco 压缩) |
+| 模型 | `.glb`, `.gltf.zip`, `.fbx.zip`, `.obj.zip` (支持 Draco 压缩) |
 | 贴图 | `.jpg`, `.jpeg`, `.png` |
 | 环境贴图 | `.hdr`, `.exr` |
+
+---
+
+## 缩略图生成机制
+
+```
+用户上传 GLB ──────────────────────────> 前端立即生成缩略图 ──> 随文件一起上传
+
+用户上传 ZIP ──> 后端转换为 GLB ──> 处理完成 (ready) ──> 前端从 LOD2 生成缩略图 ──> 上传更新
+
+页面加载 ──> 检测 thumbnail=null 的模型 ──> 静默逐个生成并上传
+```
 
 ---
 
@@ -51,12 +64,38 @@ asset-manager/
     │   └── MessageContainer.vue # 消息容器 (Teleport)
     │
     ├── services/
-    │   └── assetService.js # API 服务层 (CRUD 操作)
+    │   └── assetService.js # API 服务层
     │
     └── utils/
         ├── message.js          # 消息通知工具
         └── ThumbnailGenerator.js # 3D 模型缩略图生成器
 ```
+
+---
+
+## API 服务 (assetService.js)
+
+| 函数 | 说明 |
+|------|------|
+| `uploadAsset(file, thumbnail)` | 上传资产 |
+| `getAssets(type)` | 获取资产列表 |
+| `deleteAsset(id)` | 删除资产 |
+| `downloadAsset(id, filename)` | 下载资产 |
+| `getProcessingStatus(id)` | 获取处理状态 |
+| `waitForProcessing(id)` | 轮询等待处理完成 |
+| `reprocessAsset(id)` | 重新处理 |
+| `uploadThumbnail(id, blob)` | **上传缩略图** (延迟生成) |
+| `getAssetsWithoutThumbnail()` | **获取缺少缩略图的模型** |
+
+---
+
+## ThumbnailGenerator.js
+
+| 方法 | 说明 |
+|------|------|
+| `generate(file)` | 从 File 对象生成缩略图 (用于 GLB 上传) |
+| `generateFromUrl(url)` | **从 URL 生成缩略图** (用于处理完成后的延迟生成) |
+| `dispose()` | 清理 WebGL 资源 |
 
 ---
 
@@ -90,9 +129,9 @@ pnpm dev
 后端 API 地址在 `src/config.js` 中配置：
 
 ```javascript
-// 开发环境
-const BASE_URL = 'http://localhost:3001';
+// 通过环境变量配置
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
-// 生产环境
-// const BASE_URL = 'http://pro-server.meteor3d.cn';
+export const API_BASE_URL = `${BASE_URL}/api`;
+export const ASSET_BASE_URL = BASE_URL;
 ```
