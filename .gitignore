@@ -14,3 +14,6 @@ Thumbs.db
 #web 包
 dist/
 
+#测试文件
+testFile/
+
