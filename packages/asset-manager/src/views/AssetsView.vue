@@ -8,7 +8,7 @@
       <input 
         ref="fileInput"
         type="file" 
-        accept=".gltf,.glb,.jpg,.jpeg,.png,.hdr,.exr"
+        accept=".glb,.jpg,.jpeg,.png,.hdr,.exr,.zip"
         @change="handleFileSelect"
         style="display: none"
       />

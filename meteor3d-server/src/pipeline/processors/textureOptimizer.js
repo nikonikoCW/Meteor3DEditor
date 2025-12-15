@@ -1,12 +1,35 @@
 /**
  * 纹理优化处理器
  * 生成多分辨率纹理版本
+ * 
+ * 注意：sharp 是可选依赖，在不支持的 Node.js 版本上会优雅降级
+ * - sharp 0.32.x 支持 Node.js 14-20
+ * - sharp 0.33+ 支持 Node.js 18.17+/20+/22+
  */
-const sharp = require('sharp');
 const path = require('path');
-
 const fs = require('fs');
 const { createNodeIO } = require('../utils/ioUtils');
+
+// 延迟加载 sharp，允许在不支持的环境中优雅降级
+let sharp = null;
+let sharpLoadError = null;
+
+function getSharp() {
+    if (sharp) return sharp;
+    if (sharpLoadError) return null;
+
+    try {
+        sharp = require('sharp');
+        console.log('[TextureOptimizer] sharp 模块加载成功');
+        return sharp;
+    } catch (error) {
+        sharpLoadError = error;
+        console.warn('[TextureOptimizer] sharp 模块加载失败，纹理优化功能将被禁用');
+        console.warn(`[TextureOptimizer] 错误详情: ${error.message}`);
+        console.warn('[TextureOptimizer] 提示: 这通常是 Node.js 版本兼容性问题，可尝试运行 pnpm rebuild sharp');
+        return null;
+    }
+}
 
 const TEXTURE_SIZES = [2048, 1024, 512];
 
@@ -16,8 +39,16 @@ const TEXTURE_SIZES = [2048, 1024, 512];
  * @returns {Object} 各分辨率纹理文件路径
  */
 async function optimizeTextures(context) {
-    const io = await createNodeIO();
+    const sharpInstance = getSharp();
     const results = {};
+
+    // 如果 sharp 不可用，跳过纹理优化
+    if (!sharpInstance) {
+        console.warn('[TextureOptimizer] 跳过纹理优化（sharp 不可用）');
+        return results;
+    }
+
+    const io = await createNodeIO();
 
     try {
         const document = await io.read(context.gltfPath);
@@ -52,7 +83,7 @@ async function optimizeTextures(context) {
                 try {
                     const resizedPath = path.join(texDir, `${context.assetId}_${texName}_${size}.png`);
 
-                    await sharp(Buffer.from(image))
+                    await sharpInstance(Buffer.from(image))
                         .resize(size, size, {
                             fit: 'inside',
                             withoutEnlargement: true

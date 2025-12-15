@@ -20,7 +20,7 @@ Meteor3D 资产管理系统 - 独立的 3D 资产管理应用。
 
 | 类型 | 格式 |
 |------|------|
-| 模型 | `.gltf`, `.glb` (支持 Draco 压缩) |
+| 模型 | `gltf.zip`,`fbx.zip`, `obj.zip`, `.glb` (支持 Draco 压缩) |
 | 贴图 | `.jpg`, `.jpeg`, `.png` |
 | 环境贴图 | `.hdr`, `.exr` |
 
