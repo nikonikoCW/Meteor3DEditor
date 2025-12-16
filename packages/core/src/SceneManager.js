@@ -378,4 +378,76 @@ export class SceneManager {
         const { lng, lat } = this.gisProjection.offsetMetersToLngLat(east, north);
         return { lng, lat, height: up };
     }
+
+    /**
+     * 设置卫星影像底图
+     * @param {string|null} url - 底图图片 URL，null 表示移除底图
+     * @param {Object|null} bounds - 边界 {minLng, minLat, maxLng, maxLat}
+     * @param {number|null} size - 场景尺寸（米）
+     * @param {boolean} visible - 是否显示底图
+     */
+    setBaseMap(url, bounds, size, visible) {
+        // 如果正在加载同一个 URL，直接返回
+        if (visible && url && this.baseMapLoading === url) {
+            return;
+        }
+
+        // 移除旧底图
+        if (this.baseMapMesh) {
+            this.scene.remove(this.baseMapMesh);
+            if (this.baseMapMesh.geometry) this.baseMapMesh.geometry.dispose();
+            if (this.baseMapMesh.material) {
+                if (this.baseMapMesh.material.map) this.baseMapMesh.material.map.dispose();
+                this.baseMapMesh.material.dispose();
+            }
+            this.baseMapMesh = null;
+        }
+
+        if (!visible || !url || !bounds || !size) {
+            this.baseMapLoading = null;
+            return;
+        }
+
+        // 标记正在加载
+        this.baseMapLoading = url;
+
+        // 加载底图纹理
+        const loader = new THREE.TextureLoader();
+        loader.load(
+            url,
+            (texture) => {
+                // 检查是否仍然是当前请求的 URL
+                if (this.baseMapLoading !== url) return;
+
+                texture.colorSpace = THREE.SRGBColorSpace;
+                texture.wrapS = THREE.ClampToEdgeWrapping;
+                texture.wrapT = THREE.ClampToEdgeWrapping;
+                texture.minFilter = THREE.LinearFilter;
+                texture.magFilter = THREE.LinearFilter;
+
+                // 创建平面几何体（与场景尺寸匹配）
+                const geometry = new THREE.PlaneGeometry(size, size);
+                const material = new THREE.MeshBasicMaterial({
+                    map: texture,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 1.0
+                });
+
+                const mesh = new THREE.Mesh(geometry, material);
+                // 放置在 XZ 平面上，Y 略微下沉以避免与网格冲突
+                mesh.rotation.x = -Math.PI / 2;
+                mesh.position.y = -0.1;
+
+                this.baseMapMesh = mesh;
+                this.baseMapLoading = null;
+                this.scene.add(mesh);
+            },
+            undefined,
+            (error) => {
+                console.error('加载底图失败:', error);
+                this.baseMapLoading = null;
+            }
+        );
+    }
 }

@@ -97,7 +97,6 @@ export class DBManager {
      */
     async saveScene(sceneData) {
         try {
-            debugger
             const response = await fetch(`${this.apiBaseUrl}/scene/save`, {
                 method: 'POST',
                 headers: {

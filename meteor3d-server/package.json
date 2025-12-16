@@ -17,6 +17,7 @@
     "@gltf-transform/extensions": "^4.2.1",
     "@gltf-transform/functions": "^4.2.1",
     "adm-zip": "^0.5.16",
+    "axios": "^1.13.2",
     "body-parser": "^2.2.1",
     "bull": "^4.16.5",
     "cors": "^2.8.5",

@@ -43,6 +43,11 @@ const SceneSchema = new mongoose.Schema({
         gridVisible: {
             type: Boolean,
             default: false
+        },
+        baseMapUrl: String, // 底图 URL
+        showBaseMap: {
+            type: Boolean,
+            default: false
         }
     },
     lastModified: {

@@ -24,4 +24,7 @@ router.get('/load', sceneController.loadScene);
 // DELETE /api/scene/clear - 清空场景
 router.delete('/clear', sceneController.clearScene);
 
+// POST /api/scene/basemap - 生成底图
+router.post('/basemap', sceneController.generateBaseMapHandler);
+
 module.exports = router;

@@ -18,6 +18,24 @@
         </div>
       </div>
       <p class="hint">说明：当前网格以 10m × 10m 为一个小格</p>
+      
+      <!-- 显示影像地图开关 -->
+      <div class="prop-row switch-row" style="margin-top: 12px;">
+        <label>显示影像地图</label>
+        <div class="toggle-switch">
+          <input 
+            type="checkbox" 
+            id="basemap-toggle" 
+            v-model="showBaseMap" 
+            @change="handleBaseMapChange"
+            :disabled="!isConfigured || isGeneratingBaseMap"
+          >
+          <label for="basemap-toggle"></label>
+        </div>
+      </div>
+      <p class="hint" v-if="isGeneratingBaseMap">⚙️ 正在生成底图...</p>
+      <p class="hint" v-else-if="baseMapUrl">已加载影像底图</p>
+      <p class="hint" v-else-if="isConfigured">配置 GIS 后可生成底图</p>
     </div>
     <!-- 未配置状态 -->
     <div v-if="!isConfigured" class="section unconfigured-state">
@@ -104,12 +122,20 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue';
+import { useRoute } from 'vue-router';
 import { GisProjection } from '@meteor3d/core';
+import { API_BASE_URL, ASSET_BASE_URL } from '../config';
 import MapSelectorDialog from './MapSelectorDialog.vue';
+
+// 路由
+const route = useRoute();
 
 // 状态
 const isConfigured = ref(false);
 const showGrid = ref(false);
+const showBaseMap = ref(false);
+const baseMapUrl = ref(null);
+const isGeneratingBaseMap = ref(false);
 const showMapDialog = ref(false);
 const showRemoveWarning = ref(false);
 const isAdjustMode = ref(false);
@@ -162,41 +188,60 @@ const displayBounds = computed(() => {
   };
 });
 
+// 应用 GIS 配置（公共逻辑）
+const applyGisConfig = (cfg, options = {}) => {
+  if (!cfg) return;
+  
+  // 更新 center
+  if (cfg.center) {
+    gisConfig.center.lng = cfg.center.lng ?? gisConfig.center.lng;
+    gisConfig.center.lat = cfg.center.lat ?? gisConfig.center.lat;
+  }
+  
+  // 兼容旧版 range 格式
+  if (cfg.range) {
+    gisConfig.size = cfg.range.length ?? cfg.range.width ?? gisConfig.size;
+  }
+  if (cfg.size) {
+    gisConfig.size = cfg.size;
+  }
+  
+  // 更新 bounds
+  if (cfg.bounds) {
+    gisConfig.bounds = { ...cfg.bounds };
+  } else if (options.calculateBoundsIfMissing && gisConfig.center.lng && gisConfig.center.lat) {
+    gisConfig.bounds = calculateBounds(gisConfig.center, gisConfig.size);
+  }
+  
+  // 更新网格状态
+  if (cfg.gridVisible !== undefined) {
+    showGrid.value = cfg.gridVisible;
+  }
+  
+  // 更新底图状态
+  if (cfg.baseMapUrl) {
+    baseMapUrl.value = cfg.baseMapUrl;
+    showBaseMap.value = cfg.showBaseMap ?? false;
+  }
+  
+  // 更新 enable 状态
+  if (cfg.enable === false) {
+    isConfigured.value = false;
+    cachedConfig.value = {
+      center: { ...gisConfig.center },
+      size: gisConfig.size,
+      bounds: gisConfig.bounds ? { ...gisConfig.bounds } : null
+    };
+  } else if (cfg.enable === true || cfg.center) {
+    isConfigured.value = true;
+  }
+};
+
 // 从 SceneManager 恢复状态
 const hydrateFromSceneManager = () => {
   const sm = window.editor?.sceneManager;
   if (sm && sm.gisConfig) {
-    const cfg = sm.gisConfig;
-    if (cfg.center) {
-      gisConfig.center.lng = cfg.center.lng ?? 0;
-      gisConfig.center.lat = cfg.center.lat ?? 0;
-    }
-    // 兼容旧版 range 格式
-    if (cfg.range) {
-      gisConfig.size = cfg.range.length ?? cfg.range.width ?? 1000;
-    }
-    if (cfg.size) {
-      gisConfig.size = cfg.size;
-    }
-    if (cfg.bounds) {
-      gisConfig.bounds = { ...cfg.bounds };
-    } else {
-      // 计算边界
-      gisConfig.bounds = calculateBounds(gisConfig.center, gisConfig.size);
-    }
-    showGrid.value = cfg.gridVisible ?? false;
-    
-    // 检查 enable 状态：enable 为 false 时显示未配置状态，但缓存配置以便恢复
-    if (cfg.enable === false) {
-      isConfigured.value = false;
-      cachedConfig.value = {
-        center: { ...gisConfig.center },
-        size: gisConfig.size,
-        bounds: gisConfig.bounds ? { ...gisConfig.bounds } : null
-      };
-    } else {
-      isConfigured.value = true;
-    }
+    applyGisConfig(sm.gisConfig, { calculateBoundsIfMissing: true });
   }
 };
 
@@ -225,7 +270,7 @@ const openAdjustDialog = () => {
 };
 
 // 地图确认回调
-const handleMapConfirm = (result) => {
+const handleMapConfirm = async (result) => {
   gisConfig.center.lng = result.center.lng;
   gisConfig.center.lat = result.center.lat;
   gisConfig.size = result.size;
@@ -237,6 +282,9 @@ const handleMapConfirm = (result) => {
 
   // 同步到 SceneManager
   syncToSceneManager();
+
+  // 自动生成底图
+  await generateBaseMapRequest();
 };
 
 // 地图取消回调
@@ -277,7 +325,9 @@ const syncToSceneManager = () => {
     bounds: gisConfig.bounds ? { ...gisConfig.bounds } : null,
     enable: true, // 启用 GIS
     projection: 'WGS84',
-    gridVisible: showGrid.value
+    gridVisible: showGrid.value,
+    baseMapUrl: baseMapUrl.value,
+    showBaseMap: showBaseMap.value
   });
 
   sm.setGridHelper(showGrid.value, gisConfig.size, gisConfig.size, gridSegments, gridSegments);
@@ -285,6 +335,7 @@ const syncToSceneManager = () => {
 
 // 网格切换
 const handleGridChange = () => {
+  
   if (!window.editor?.sceneManager) return;
 
   if (isConfigured.value) {
@@ -301,47 +352,98 @@ const handleGridChange = () => {
   }
 };
 
+// 生成底图请求
+const generateBaseMapRequest = async () => {
+  if (!gisConfig.bounds || !window.editor?.sceneManager) return;
+
+  // 从路由获取 sceneId
+  const sceneId = route.params.sceneId;
+  if (!sceneId) {
+    console.warn('场景未保存，无法生成底图');
+    return;
+  }
+
+  isGeneratingBaseMap.value = true;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/scene/basemap`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        sceneId: sceneId,
+        bounds: gisConfig.bounds
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      baseMapUrl.value = data.baseMapUrl;
+      
+      // 自动开启显示
+      showBaseMap.value = true;
+      
+      // 同步到 SceneManager（确保保存时包含 baseMapUrl）
+      syncToSceneManager();
+      
+      handleBaseMapChange();
+    } else {
+      console.error('底图生成失败:', data.message);
+    }
+  } catch (error) {
+    console.error('底图生成请求失败:', error);
+  } finally {
+    isGeneratingBaseMap.value = false;
+  }
+};
+
+// 底图显示切换
+const handleBaseMapChange = () => {
+  if (!window.editor?.sceneManager) return;
+  
+  const sm = window.editor.sceneManager;
+  
+  if (showBaseMap.value && baseMapUrl.value && gisConfig.bounds) {
+    // 显示底图
+    const fullUrl = `${ASSET_BASE_URL}${baseMapUrl.value}`;
+    sm.setBaseMap(fullUrl, gisConfig.bounds, gisConfig.size, true);
+  } else {
+    // 隐藏底图
+    sm.setBaseMap(null, null, null, false);
+  }
+};
+
 onMounted(() => {
   hydrateFromSceneManager();
   if (showGrid.value) {
     handleGridChange();
   }
+  // 恢复底图显示
+  if (showBaseMap.value && baseMapUrl.value) {
+    waitForSceneManagerAndShowBaseMap();
+  }
+
+  // 等待 sceneManager 就绪后显示底图
+  const waitForSceneManagerAndShowBaseMap = () => {
+    if (window.editor?.sceneManager) {
+      handleBaseMapChange();
+    } else {
+      requestAnimationFrame(waitForSceneManagerAndShowBaseMap);
+    }
+  };
 
   // 监听 GIS 配置更新事件
   const handler = (e) => {
     if (!e?.detail) return;
-    const cfg = e.detail;
-
-    // 更新本地配置
-    if (cfg.center) {
-      gisConfig.center.lng = cfg.center.lng ?? gisConfig.center.lng;
-      gisConfig.center.lat = cfg.center.lat ?? gisConfig.center.lat;
-    }
-    if (cfg.size) {
-      gisConfig.size = cfg.size;
-    }
-    // 兼容旧版
-    if (cfg.range) {
-      gisConfig.size = cfg.range.length ?? cfg.range.width ?? gisConfig.size;
-    }
-    if (cfg.bounds) {
-      gisConfig.bounds = { ...cfg.bounds };
-    }
-    if (cfg.gridVisible !== undefined) {
-      showGrid.value = cfg.gridVisible;
-    }
-
-    // 根据 enable 状态更新 UI
-    if (cfg.enable === false) {
-      isConfigured.value = false;
-      // 缓存配置以便恢复
-      cachedConfig.value = {
-        center: { ...gisConfig.center },
-        size: gisConfig.size,
-        bounds: gisConfig.bounds ? { ...gisConfig.bounds } : null
-      };
-    } else {
-      isConfigured.value = true;
+    
+    // 使用公共函数应用配置
+    applyGisConfig(e.detail);
+    
+    // 如果需要显示底图，等待 sceneManager 就绪
+    if (showBaseMap.value && baseMapUrl.value && gisConfig.bounds) {
+      waitForSceneManagerAndShowBaseMap();
     }
   };
 

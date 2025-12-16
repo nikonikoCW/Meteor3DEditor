@@ -1,6 +1,7 @@
 const SceneObject = require('../models/SceneObject');
 const Scene = require('../models/Scene');
 const { v4: uuidv4 } = require('uuid');
+const { generateBaseMap } = require('../services/baseMapGenerator');
 
 /**
  * 获取场景列表
@@ -215,6 +216,57 @@ exports.clearScene = async (req, res) => {
         res.status(500).json({
             success: false,
             message: '清空场景失败',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * 生成底图
+ * 根据 GIS 边界生成卫星影像底图
+ */
+exports.generateBaseMapHandler = async (req, res) => {
+    try {
+        const { sceneId, bounds } = req.body;
+
+        if (!sceneId) {
+            return res.status(400).json({
+                success: false,
+                message: '缺少 sceneId'
+            });
+        }
+
+        if (!bounds || !bounds.minLng || !bounds.minLat || !bounds.maxLng || !bounds.maxLat) {
+            return res.status(400).json({
+                success: false,
+                message: '缺少或无效的 bounds 参数'
+            });
+        }
+
+        // 生成底图
+        const result = await generateBaseMap(bounds, sceneId);
+
+        // 更新场景的 gisConfig.baseMapUrl
+        await Scene.findOneAndUpdate(
+            { sceneId: sceneId },
+            {
+                'gisConfig.baseMapUrl': result.url,
+                lastModified: Date.now()
+            }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: '底图生成成功',
+            baseMapUrl: result.url,
+            width: result.width,
+            height: result.height
+        });
+    } catch (error) {
+        console.error('生成底图失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '生成底图失败',
             error: error.message
         });
     }
