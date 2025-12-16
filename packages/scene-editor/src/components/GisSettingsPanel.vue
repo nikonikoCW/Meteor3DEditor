@@ -420,31 +420,12 @@ onMounted(() => {
   if (showGrid.value) {
     handleGridChange();
   }
-  // 恢复底图显示
-  if (showBaseMap.value && baseMapUrl.value) {
-    waitForSceneManagerAndShowBaseMap();
-  }
+  // 底图已在 PersistenceManager.loadScene() 中自动加载，无需在此处理
 
-  // 等待 sceneManager 就绪后显示底图
-  const waitForSceneManagerAndShowBaseMap = () => {
-    if (window.editor?.sceneManager) {
-      handleBaseMapChange();
-    } else {
-      requestAnimationFrame(waitForSceneManagerAndShowBaseMap);
-    }
-  };
-
-  // 监听 GIS 配置更新事件
+  // 监听 GIS 配置更新事件（仅更新 UI 状态，底图已在 PersistenceManager 加载）
   const handler = (e) => {
     if (!e?.detail) return;
-    
-    // 使用公共函数应用配置
     applyGisConfig(e.detail);
-    
-    // 如果需要显示底图，等待 sceneManager 就绪
-    if (showBaseMap.value && baseMapUrl.value && gisConfig.bounds) {
-      waitForSceneManagerAndShowBaseMap();
-    }
   };
 
   window.addEventListener('gis-config-updated', handler);

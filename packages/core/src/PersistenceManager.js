@@ -371,7 +371,20 @@ export class PersistenceManager {
 
         // 恢复 GIS 配置
         if (sceneData.metadata && sceneData.metadata.gisConfig) {
-            this.sceneManager.setGisConfig(sceneData.metadata.gisConfig);
+            const gisConfig = sceneData.metadata.gisConfig;
+            this.sceneManager.setGisConfig(gisConfig);
+
+            // 自动恢复底图显示
+            if (gisConfig.showBaseMap && gisConfig.baseMapUrl) {
+                const baseUrl = this.dbManager.apiBaseUrl.replace('/api', '');
+                const fullUrl = `${baseUrl}${gisConfig.baseMapUrl}`;
+                this.sceneManager.setBaseMap(
+                    fullUrl,
+                    gisConfig.bounds,
+                    gisConfig.size,
+                    true
+                );
+            }
         }
         this.sceneManager.emitGisConfigUpdated();
 
