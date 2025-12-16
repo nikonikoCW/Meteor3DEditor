@@ -33,15 +33,17 @@ jobs:
             sed -i '/"build:dashboard"/d' package.json
             sed -i '/"build:app"/d' package.json
           fi
+          
+          # 移除 .github 目录 (不需要同步 workflow)
+          rm -rf .github
 
       - name: Push to public repo
-        uses: cpina/github-action-push-to-another-repository@main
-        env:
-          API_TOKEN_GITHUB: ${{ secrets.PUBLIC_REPO_TOKEN }}
-        with:
-          source-directory: '.'
-          destination-github-username: 'nikonikoCW'
-          destination-repository-name: 'Meteor3DEditor'
-          user-email: 84675738@qq.com
-          user-name: nikonikoCW
-          target-branch: master
+        run: |
+          git config user.name "nikonikoCW"
+          git config user.email "84675738@qq.com"
+          
+          git add -A
+          git commit -m "Sync from private repo" --allow-empty
+          
+          git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/nikonikoCW/Meteor3DEditor.git
+          git push public HEAD:master --force
