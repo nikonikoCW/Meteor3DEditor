@@ -1,0 +1,47 @@
+name: Sync to Public Repo
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout private repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remove private packages
+        run: |
+          rm -rf packages/dashboard
+          rm -rf packages/app-editor
+          
+          # 更新 pnpm-workspace.yaml
+          cat > pnpm-workspace.yaml << 'EOF'
+          packages:
+            - 'packages/*'
+            - 'meteor3d-server'
+          EOF
+          
+          # 移除 package.json 中闭源包相关脚本
+          if [ -f package.json ]; then
+            sed -i '/"dev:dashboard"/d' package.json
+            sed -i '/"dev:app"/d' package.json
+            sed -i '/"build:dashboard"/d' package.json
+            sed -i '/"build:app"/d' package.json
+          fi
+
+      - name: Push to public repo
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.PUBLIC_REPO_TOKEN }}
+        with:
+          source-directory: '.'
+          destination-github-username: 'nikonikoCW'
+          destination-repository-name: 'Meteor3DEditor'
+          user-email: 84675738@qq.com
+          user-name: nikonikoCW
+          target-branch: master
