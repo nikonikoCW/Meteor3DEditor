@@ -45,7 +45,8 @@ scene-editor/
     │   ├── PropertiesPanel.vue     # 属性面板
     │   ├── LibraryPanel.vue        # 资产库面板
     │   ├── Toolbar.vue             # 工具栏
-    │   ├── GisSettingsPanel.vue    # GIS 设置面板
+    │   ├── GisSettingsPanel.vue    # GIS 设置面板 (包含影像底图)
+    │   ├── MapSelectorDialog.vue   # 地图范围选择弹窗
     │   └── SceneSettingsPanel.vue  # 场景设置面板
     │
     ├── stores/                 # Pinia 状态仓库
@@ -88,7 +89,20 @@ export const ASSET_BASE_URL = BASE_URL;
 ## 核心依赖
 
 - **@meteor3d/core**: 共享核心库 (SceneManager, PersistenceManager, GisProjection)
-- **后端 API**: `meteor3d-server` (资产 CRUD, 场景 CRUD)
+- **后端 API**: `meteor3d-server` (资产 CRUD, 场景 CRUD, 底图生成)
+
+---
+
+## GIS 影像底图功能
+
+`GisSettingsPanel.vue` 支持在配置 GIS 后自动生成卓贴地图影像底图：
+
+| 功能 | 说明 |
+|------|------|
+| 自动生成 | 配置/调整 GIS 范围后后端自动下载天地图瓦片拼接 |
+| 显示开关 | “显示影像地图”开关控制底图可见性 |
+| 持久化 | 底图 URL 和显示状态保存在 `gisConfig` 中 |
+| 加载恢复 | 重新进入场景时自动恢复底图显示 |
 
 ---
 

@@ -12,6 +12,7 @@
 - **渲染循环**: 管理 `requestAnimationFrame` 循环。
 - **对象管理**: `addObject`, `removeObject`, `clearScene`。
 - **GIS 支持**: 管理 `GisProjection` 实例，提供经纬度与世界坐标互转接口 (`lngLatToWorld`, `worldToLngLat`)。
+- **影像底图**: `setBaseMap(url, bounds, size, visible)` 加载卫星影像作为地面纹理。
 - **环境**: 加载 HDR 环境贴图 (`loadEnvironment`)。
 - **辅助工具**: 网格辅助线 (`setGridHelper`)。
 
@@ -70,10 +71,11 @@ packages/core/
 
 ### GIS 坐标系统
 - **启用**: 通过 `SceneManager.setGisConfig(config)` 启用。
-- **配置**: `config` 包含 `center` (参考点), `enable` (是否启用), `bounds` (范围)。
+- **配置**: `config` 包含 `center` (参考点), `enable` (是否启用), `bounds` (范围), `baseMapUrl` (底图路径), `showBaseMap` (是否显示底图)。
 - **转换**:
   - `lngLatToWorld(lng, lat, height)` -> `Vector3 (x=East, y=Up, z=North)`
   - `worldToLngLat(vector3)` -> `{ lng, lat, height }`
+- **底图**: `setBaseMap(url, bounds, size, visible)` 加载/隐藏卫星影像底图。
 
 ### 场景保存/加载
 1. **加载**: `PersistenceManager.loadScene(id)` -> `DBManager.getSceneData` -> `SceneManager.clearScene` -> `deserializeObject` -> `SceneManager.addObject`。

@@ -42,7 +42,7 @@ meteor3d-server/
 │   │
 │   ├── controllers/        # 业务逻辑控制器
 │   │   ├── assetController.js  # 资产上传、查询、删除、缩略图上传
-│   │   └── sceneController.js  # 场景 CRUD
+│   │   └── sceneController.js  # 场景 CRUD、底图生成
 │   │
 │   ├── models/             # Mongoose 数据模型
 │   │   ├── Asset.js        # 资产 Schema (包含处理状态、输出文件路径、统计信息)
@@ -51,6 +51,9 @@ meteor3d-server/
 │   ├── routes/             # API 路由定义
 │   │   ├── assetRoutes.js  # /api/assets
 │   │   └── sceneRoutes.js  # /api/scene
+│   │
+│   ├── services/           # 业务服务
+│   │   └── baseMapGenerator.js # GIS 底图生成服务 (天地图瓦片下载拼接)
 │   │
 │   └── pipeline/           # 资产处理流水线核心模块
 │       ├── index.js        # 流水线入口，编排处理步骤，队列任务处理器
@@ -89,6 +92,18 @@ meteor3d-server/
 | GET | `/:id/status` | 获取处理状态和 processedFiles |
 | POST | `/:id/reprocess` | 重新处理资产 |
 | POST | `/:id/thumbnail` | **上传缩略图** (用于延迟生成) |
+
+### 4.3 场景接口 `/api/scene`
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/list` | 获取场景列表 |
+| POST | `/create` | 创建新场景 |
+| DELETE | `/:id` | 删除场景 |
+| POST | `/save` | 保存场景 |
+| GET | `/load` | 加载场景 (需 sceneId 参数) |
+| DELETE | `/clear` | 清空场景 |
+| POST | `/basemap` | **生成 GIS 底图** (天地图瓦片拼接) |
 
 ### 4.2 资产删除逻辑
 
