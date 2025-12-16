@@ -25,6 +25,12 @@ jobs:
           rm -rf packages/dashboard
           rm -rf packages/app-editor
           
+          # 删除所有 .md 文件 (保留在闭源仓库)
+          find . -name "*.md" -type f -delete
+          
+          # 删除 plan 目录 (如果有的话)
+          rm -rf plan
+          
           # 更新 pnpm-workspace.yaml
           cat > pnpm-workspace.yaml << 'EOF'
           packages:
