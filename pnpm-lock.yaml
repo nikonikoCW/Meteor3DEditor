@@ -62,6 +62,10 @@ importers:
       three:
         specifier: ^0.181.2
         version: 0.181.2
+    devDependencies:
+      vite:
+        specifier: ^7.2.4
+        version: 7.2.6
 
   packages/dashboard:
     dependencies:

@@ -6,6 +6,7 @@
         "dev:app": "pnpm --filter @meteor3d/app-editor dev",
         "dev:asset": "pnpm --filter @meteor3d/asset-manager dev",
         "dev:dashboard": "pnpm --filter @meteor3d/dashboard dev",
+        "build:core": "pnpm --filter @meteor3d/core build",
         "build:all": "pnpm -r build"
     },
     "devDependencies": {

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Meteor3D 场景加载示例</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        #canvas {
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="canvas"></div>
+
+    <script src="./dist/meteor3d-core.umd.js"></script>
+    <script>
+        Meteor3D.loadScene({
+            sceneId: '5b200ba6-17d3-4f16-8d3d-0389e1aca205',
+            serverUrl: 'http://localhost:3001',
+            container: document.getElementById('canvas'),
+            config: {
+                dracoPath: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/'
+            }
+        }).then(result => {
+            console.log('场景加载成功', result);
+            window.meteor3d = result
+        }).catch(err => {
+            console.error('加载失败', err);
+        });
+    </script>
+</body>
+
+</html>

@@ -1,12 +1,24 @@
 {
     "name": "@meteor3d/core",
     "version": "1.0.0",
-    "main": "index.js",
+    "main": "dist/meteor3d-core.umd.js",
+    "module": "dist/meteor3d-core.es.js",
     "type": "module",
     "exports": {
-        ".": "./index.js"
+        ".": {
+            "import": "./dist/meteor3d-core.es.js",
+            "require": "./dist/meteor3d-core.umd.js"
+        },
+        "./src/*": "./src/*"
+    },
+    "scripts": {
+        "build": "vite build",
+        "dev": "vite build --watch"
     },
     "dependencies": {
         "three": "^0.181.2"
+    },
+    "devDependencies": {
+        "vite": "^7.2.4"
     }
 }

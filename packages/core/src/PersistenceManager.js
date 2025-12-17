@@ -10,21 +10,35 @@ import { message } from './utils/message.js';
  * 支持 GLTF 模型的增量保存（只保存修改过的属性）
  */
 export class PersistenceManager {
+    // 默认 Draco 解码器路径（可通过 setDracoPath 修改）
+    static dracoPath = '/draco/';
+
+    /**
+     * 设置全局 Draco 解码器路径
+     * @param {string} path - Draco 解码器路径（应以 / 结尾）
+     */
+    static setDracoPath(path) {
+        PersistenceManager.dracoPath = path.endsWith('/') ? path : path + '/';
+    }
+
     /**
      * 构造函数
      * @param {SceneManager} sceneManager - 场景管理器实例
      * @param {EditorStore} editorStore - 编辑器状态存储实例
      * @param {Object} dbManager - 数据库管理器实例 (依赖注入)
+     * @param {Object} [options] - 可选配置
+     * @param {string} [options.dracoPath] - 自定义 Draco 解码器路径
      */
-    constructor(sceneManager, editorStore, dbManager) {
+    constructor(sceneManager, editorStore, dbManager, options = {}) {
         this.sceneManager = sceneManager;
         this.editorStore = editorStore;
         this.dbManager = dbManager;
         this.objectMap = new Map();
 
-        // 设置 DRACO 解码器
+        // 设置 DRACO 解码器（优先使用实例配置，其次全局配置）
         const dracoLoader = new DRACOLoader();
-        dracoLoader.setDecoderPath('/draco/');
+        const dracoPath = options.dracoPath || PersistenceManager.dracoPath;
+        dracoLoader.setDecoderPath(dracoPath);
 
         // 设置 GLTF 加载器并启用 DRACO 支持
         this.gltfLoader = new GLTFLoader();
