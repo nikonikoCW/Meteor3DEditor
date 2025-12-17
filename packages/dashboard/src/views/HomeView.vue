@@ -82,6 +82,16 @@
           </p>
           <div class="product-action">开始开发 →</div>
         </div>
+
+        <div class="product-card" @click="$router.push('/api-docs')">
+          <div class="card-glow"></div>
+          <div class="product-icon">📚</div>
+          <h3 class="product-title">API 文档</h3>
+          <p class="product-desc">
+            Core SDK 使用文档，一行代码嵌入 3D 场景到任意网页
+          </p>
+          <div class="product-action">查看文档 →</div>
+        </div>
       </div>
     </section>
 
