@@ -277,8 +277,9 @@ onMounted(() => {
 
 .widget-wrapper {
   position: absolute;
-  background: #252525;
+  background: transparent;
   border: 1px solid #333;
+  border:none;
   overflow: hidden;
   user-select: none;
 }

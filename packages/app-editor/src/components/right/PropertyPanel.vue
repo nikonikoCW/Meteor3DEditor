@@ -58,7 +58,7 @@
           </option>
         </select>
 
-        <!-- Color -->
+        <!-- Color (RGB only) -->
         <div v-else-if="prop.type === 'color'" class="color-input-wrapper">
           <input 
             type="color" 
@@ -66,6 +66,31 @@
             :disabled="disabled"
           >
           <span>{{ selectedWidget.data[prop.name] }}</span>
+        </div>
+
+        <!-- Color with Alpha (RGBA) -->
+        <div v-else-if="prop.type === 'color-alpha'" class="color-alpha-wrapper">
+          <div class="color-row">
+            <input 
+              type="color" 
+              :value="extractHex(selectedWidget.data[prop.name])"
+              @input="updateColorWithAlpha(prop.name, $event.target.value, getAlpha(selectedWidget.data[prop.name]))"
+              :disabled="disabled"
+            >
+            <span class="color-value">{{ selectedWidget.data[prop.name] || 'rgba(0,0,0,1)' }}</span>
+          </div>
+          <div class="alpha-row">
+            <label class="alpha-label">透明度</label>
+            <input 
+              type="range" 
+              min="0" 
+              max="100" 
+              :value="Math.round(getAlpha(selectedWidget.data[prop.name]) * 100)"
+              @input="updateColorWithAlpha(prop.name, extractHex(selectedWidget.data[prop.name]), $event.target.value / 100)"
+              :disabled="disabled"
+            >
+            <span class="alpha-value">{{ Math.round(getAlpha(selectedWidget.data[prop.name]) * 100) }}%</span>
+          </div>
         </div>
 
         <!-- Text/Number -->
@@ -127,6 +152,39 @@ watch(selectedWidget, async (newWidget) => {
     widgetProps.value = [];
   }
 }, { immediate: true });
+
+// RGBA 颜色处理辅助函数
+const extractHex = (rgba) => {
+  if (!rgba) return '#000000';
+  if (rgba.startsWith('#')) return rgba.slice(0, 7);
+  
+  const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (match) {
+    const r = parseInt(match[1]).toString(16).padStart(2, '0');
+    const g = parseInt(match[2]).toString(16).padStart(2, '0');
+    const b = parseInt(match[3]).toString(16).padStart(2, '0');
+    return `#${r}${g}${b}`;
+  }
+  return '#000000';
+};
+
+const getAlpha = (rgba) => {
+  if (!rgba) return 1;
+  if (rgba.startsWith('#')) return 1;
+  
+  const match = rgba.match(/rgba\(\d+,\s*\d+,\s*\d+,\s*([\d.]+)\)/);
+  return match ? parseFloat(match[1]) : 1;
+};
+
+const updateColorWithAlpha = (propName, hex, alpha) => {
+  if (!selectedWidget.value) return;
+  
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  
+  selectedWidget.value.data[propName] = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 </script>
 
 <style scoped>
@@ -240,5 +298,71 @@ input:disabled, select:disabled {
 .readonly {
   color: #666;
   font-size: 12px;
+}
+
+/* Color with Alpha */
+.color-alpha-wrapper {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.color-alpha-wrapper .color-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.color-alpha-wrapper input[type="color"] {
+  width: 32px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+}
+
+.color-alpha-wrapper .color-value {
+  font-size: 10px;
+  color: #888;
+  font-family: monospace;
+}
+
+.color-alpha-wrapper .alpha-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-alpha-wrapper .alpha-label {
+  font-size: 10px;
+  color: #666;
+  margin-bottom: 0;
+  width: 40px;
+}
+
+.color-alpha-wrapper input[type="range"] {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  background: #333;
+  border-radius: 2px;
+}
+
+.color-alpha-wrapper input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #42b983;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.color-alpha-wrapper .alpha-value {
+  font-size: 10px;
+  color: #888;
+  width: 30px;
+  text-align: right;
 }
 </style>

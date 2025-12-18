@@ -3,7 +3,8 @@
     class="clock-widget"
     :style="{
       fontSize: (data.fontSize || 24) + 'px',
-      color: data.color || '#ffffff'
+      color: data.color || '#ffffff',
+      backgroundColor: data.backgroundColor || '#000000'
     }"
   >
     {{ formattedTime }}

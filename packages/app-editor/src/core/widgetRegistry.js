@@ -204,7 +204,8 @@ const clockConfig = {
             defaultValue: 'HH:mm:ss'
         },
         { name: 'fontSize', label: '字号', type: 'number', defaultValue: 24 },
-        { name: 'color', label: '颜色', type: 'color', defaultValue: '#ffffff' }
+        { name: 'color', label: '颜色', type: 'color', defaultValue: '#ffffff' },
+        { name: 'backgroundColor', label: '背景色', type: 'color-alpha', defaultValue: '#000000' }
     ]
 };
 
