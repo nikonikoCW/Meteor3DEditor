@@ -10,8 +10,10 @@
     },
     "dependencies": {
         "@meteor3d/core": "workspace:*",
+        "echarts": "^6.0.0",
         "pinia": "^3.0.4",
-        "vue": "^3.5.25"
+        "vue": "^3.5.25",
+        "vue3-moveable": "^0.28.0"
     },
     "devDependencies": {
         "@vitejs/plugin-vue": "^6.0.2",
