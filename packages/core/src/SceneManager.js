@@ -4,6 +4,7 @@ import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { GisProjection } from './GisProjection.js';
 import { StatsManager } from './StatsManager.js';
 import { TriangleStatsManager } from './TriangleStatsManager.js';
+import { LabelManager } from './LabelManager.js';
 
 /**
  * 场景管理器
@@ -65,6 +66,14 @@ export class SceneManager {
         // 三角形统计管理器
         this.triangleStatsManager = new TriangleStatsManager(this.renderer, this.scene);
 
+        // 标签管理器
+        this.labelManager = new LabelManager(
+            this.renderer,
+            this.scene,
+            this.camera,
+            (lng, lat, h) => this.lngLatToWorld(lng, lat, h)
+        );
+
         this.animate = this.animate.bind(this);
         this.animate();
     }
@@ -78,6 +87,9 @@ export class SceneManager {
         this.statsManager.begin();
         this.controls.update();
         this.renderer.render(this.scene, this.camera);
+        if (this.labelManager) {
+            this.labelManager.update();
+        }
         this.statsManager.end();
     }
 
@@ -168,6 +180,11 @@ export class SceneManager {
         this.camera.aspect = w / h;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(w, h, false); // false: 不设置 canvas 的 style 宽高，只设置 buffer 宽高
+
+        // 同步更新标签渲染器尺寸
+        if (this.labelManager) {
+            this.labelManager.onResize(w, h);
+        }
     }
 
     /**
@@ -357,9 +374,16 @@ export class SceneManager {
     /**
      * 经纬度 -> Three.js 世界坐标
      * east -> +X, north -> +Z, up -> +Y
+     * @param {number} lng - 经度
+     * @param {number} lat - 纬度
+     * @param {number} [height=0] - 高度（米）
+     * @returns {THREE.Vector3|null} 世界坐标，GIS 未配置时返回 null
      */
     lngLatToWorld(lng, lat, height = 0) {
-        if (!this.gisProjection) return new THREE.Vector3(0, 0, 0);
+        if (!this.gisProjection) {
+            console.warn('[Meteor3D] GIS 未配置，无法使用经纬度坐标转换。请先调用 setGisConfig() 配置 GIS 中心点。');
+            return null;
+        }
         const { east, north, up } = this.gisProjection.lngLatToEnu(lng, lat, height);
         return new THREE.Vector3(east, up, north);
     }
@@ -367,11 +391,15 @@ export class SceneManager {
     /**
      * 世界坐标 -> 经纬度/高度
      * 假设 X 为东向（east），Z 为北向（north），Y 为高度（up）
-     * @param {THREE.Vector3} worldPos
-     * @returns {{lng:number,lat:number,height:number}|null}
+     * @param {THREE.Vector3} worldPos - 世界坐标
+     * @returns {{lng:number,lat:number,height:number}|null} GIS 未配置时返回 null
      */
     worldToLngLat(worldPos) {
-        if (!this.gisProjection || !worldPos) return null;
+        if (!this.gisProjection) {
+            console.warn('[Meteor3D] GIS 未配置，无法使用坐标转换。请先调用 setGisConfig() 配置 GIS 中心点。');
+            return null;
+        }
+        if (!worldPos) return null;
         const east = worldPos.x;
         const north = worldPos.z;
         const up = worldPos.y;

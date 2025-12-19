@@ -202,6 +202,23 @@ function createMeteor3DInstance(sceneManager, resizeObserver) {
         /** 设置网格辅助线 */
         setGridHelper: (visible, length, width) => sceneManager.setGridHelper(visible, length, width),
 
+        // ========== 标签 API ==========
+        /**
+         * 创建标签
+         * @param {Object} options - 配置选项
+         * @param {Object} [options.position] - 世界坐标 {x, y, z}
+         * @param {Object} [options.lngLat] - 经纬度 {lng, lat, height}
+         * @param {string} options.content - HTML 内容
+         * @param {Object} [options.style] - CSS 样式对象
+         * @param {Object} [options.offset] - 屏幕像素偏移 {x, y}
+         * @returns {Label} 标签实例
+         */
+        createLabel: (options) => sceneManager.labelManager.createLabel(options),
+        /** 获取所有标签 */
+        getLabels: () => sceneManager.labelManager.getLabels(),
+        /** 清除所有标签 */
+        clearLabels: () => sceneManager.labelManager.clearLabels(),
+
         // ========== 生命周期 ==========
         /** 销毁实例，释放资源 */
         dispose: () => {
