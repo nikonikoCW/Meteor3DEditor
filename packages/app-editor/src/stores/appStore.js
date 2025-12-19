@@ -73,7 +73,9 @@ export const useAppStore = defineStore('app', () => {
                     position: w.position,
                     size: w.size,
                     rotation: w.rotation,
-                    data: w.data
+                    data: w.data,
+                    visible: w.visible !== false,  // 默认 true
+                    interactions: w.interactions || []
                 }))
             };
 
@@ -131,6 +133,33 @@ export const useAppStore = defineStore('app', () => {
         hasUnsavedChanges.value = false;
     }
 
+    // 触发组件事件，执行交互规则
+    function triggerEvent(widgetId, eventName) {
+        const widget = widgets.value.find(w => w.id === widgetId);
+        if (!widget || !widget.interactions) return;
+
+        // 找到匹配的交互规则
+        const rules = widget.interactions.filter(i => i.event === eventName);
+
+        for (const rule of rules) {
+            const targetWidget = widgets.value.find(w => w.id === rule.target);
+            if (!targetWidget) continue;
+
+            // 执行动作
+            switch (rule.action) {
+                case 'show':
+                    targetWidget.visible = true;
+                    break;
+                case 'hide':
+                    targetWidget.visible = false;
+                    break;
+                case 'toggle':
+                    targetWidget.visible = targetWidget.visible === false ? true : false;
+                    break;
+            }
+        }
+    }
+
     return {
         // 状态
         appId,
@@ -152,6 +181,7 @@ export const useAppStore = defineStore('app', () => {
         toggleEditMode,
         saveApp,
         loadApp,
-        newApp
+        newApp,
+        triggerEvent
     };
 });

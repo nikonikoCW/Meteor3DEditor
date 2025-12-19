@@ -2,7 +2,7 @@
   <aside class="right-panel" :class="{ disabled: disabled }">
     <div class="panel-tabs">
       <button 
-        v-for="tab in tabs" 
+        v-for="tab in visibleTabs" 
         :key="tab.key"
         class="tab-btn"
         :class="{ active: activeTab === tab.key }"
@@ -20,10 +20,13 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed, watch } from 'vue';
 import PropertyPanel from './PropertyPanel.vue';
 import DataPanel from './DataPanel.vue';
 import InteractionPanel from './InteractionPanel.vue';
+import { useAppStore } from '../../stores/appStore';
+import { storeToRefs } from 'pinia';
+import { getWidgetEvents } from '../../core/widgetRegistry';
 
 defineProps({
   disabled: {
@@ -32,13 +35,37 @@ defineProps({
   }
 });
 
-const tabs = [
+const appStore = useAppStore();
+const { selectedWidget } = storeToRefs(appStore);
+
+const allTabs = [
   { key: 'property', label: '属性' },
   { key: 'data', label: '数据' },
   { key: 'interaction', label: '交互' }
 ];
 
+// 只有组件有事件时才显示交互 Tab
+const visibleTabs = computed(() => {
+  if (!selectedWidget.value) {
+    return allTabs.filter(t => t.key !== 'interaction');
+  }
+  
+  const events = getWidgetEvents(selectedWidget.value.type);
+  if (events.length === 0) {
+    return allTabs.filter(t => t.key !== 'interaction');
+  }
+  
+  return allTabs;
+});
+
 const activeTab = ref('property');
+
+// 当交互 Tab 被隐藏时，切回属性 Tab
+watch(visibleTabs, (tabs) => {
+  if (!tabs.find(t => t.key === activeTab.value)) {
+    activeTab.value = 'property';
+  }
+});
 </script>
 
 <style scoped>

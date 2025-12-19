@@ -6,18 +6,29 @@
       fontSize: (data.fontSize || 14) + 'px',
       borderRadius: (data.borderRadius || 4) + 'px'
     }"
+    @click="handleClick"
   >
     {{ data.label || '按钮' }}
   </button>
 </template>
 
 <script setup>
-defineProps({
+const props = defineProps({
   data: {
     type: Object,
     default: () => ({})
+  },
+  widgetId: {
+    type: String,
+    default: ''
   }
 });
+
+const emit = defineEmits(['widget-event']);
+
+const handleClick = () => {
+  emit('widget-event', { event: 'click' });
+};
 </script>
 
 <style scoped>

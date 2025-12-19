@@ -67,6 +67,16 @@ export function getWidgetsByCategory() {
     return categories;
 }
 
+/**
+ * 获取组件支持的事件
+ * @param {string} type - 组件类型
+ * @returns {Array} - 事件列表
+ */
+export function getWidgetEvents(type) {
+    const def = registry.get(type);
+    return def?.config.events || [];
+}
+
 // --- 组件配置 ---
 
 // 场景组件配置
@@ -133,6 +143,10 @@ const buttonConfig = {
         { name: 'label', label: '按钮文字', type: 'text', defaultValue: '点击我' },
         { name: 'color', label: '背景色', type: 'color', defaultValue: '#00ccff' },
         { name: 'fontSize', label: '字号', type: 'number', defaultValue: 14 }
+    ],
+    // 组件支持的事件
+    events: [
+        { name: 'click', label: '点击' }
     ]
 };
 

@@ -60,7 +60,18 @@ const AppSchema = new mongoose.Schema({
         data: {
             type: mongoose.Schema.Types.Mixed,
             default: {}
-        }
+        },
+        // 组件显隐
+        visible: {
+            type: Boolean,
+            default: true
+        },
+        // 交互规则列表
+        interactions: [{
+            event: String,    // 事件名 (如 'click')
+            target: String,   // 目标组件 ID
+            action: String    // 动作 (show/hide/toggle)
+        }]
     }],
     // 最后修改时间
     lastModified: {

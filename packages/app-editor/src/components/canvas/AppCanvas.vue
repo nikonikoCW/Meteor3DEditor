@@ -13,6 +13,7 @@
     <div
       v-for="widget in widgets"
       :key="widget.id"
+      v-show="widget.visible !== false"
       :ref="(el) => setWidgetRef(el, widget.id)"
       class="widget-wrapper"
       :class="{ 
@@ -25,8 +26,10 @@
       <component 
         v-if="getComponent(widget.type)"
         :is="getComponent(widget.type)" 
-        :data="widget.data" 
+        :data="widget.data"
+        :widgetId="widget.id"
         class="widget-content"
+        @widget-event="(e) => onWidgetEvent(widget.id, e)"
       />
       <div v-else class="error-widget">Unknown: {{ widget.type }}</div>
     </div>
@@ -162,6 +165,12 @@ const onWidgetClick = (widget) => {
   nextTick(() => {
     moveableKey.value++;
   });
+};
+
+// 处理组件事件（仅在预览模式下执行交互）
+const onWidgetEvent = (widgetId, eventData) => {
+  if (isEditMode.value) return;  // 编辑模式下不执行交互
+  appStore.triggerEvent(widgetId, eventData.event);
 };
 
 // ====== Moveable 事件 ======
