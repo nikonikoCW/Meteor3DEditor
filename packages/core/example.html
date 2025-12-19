@@ -29,9 +29,26 @@
             config: {
                 dracoPath: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/'
             }
-        }).then(result => {
-            console.log('场景加载成功', result);
-            window.meteor3d = result
+        }).then(instance => {
+            console.log('场景加载成功');
+            window.meteor3d = instance;
+
+            // 可用 API 列表:
+            // instance.enableStats() / disableStats() / toggleStats(bool)
+            // instance.toggleTriangleStats(bool, callback)
+            // instance.fitCameraToScene()
+            // instance.resize(width, height)
+            // instance.lngLatToWorld(lng, lat, height)
+            // instance.worldToLngLat(worldPos)
+            // instance.setGridHelper(visible, length, width)
+            // instance.dispose()
+
+            // 高级用法（不推荐）:
+            // instance._internal.sceneManager
+            // instance._internal.scene
+            // instance._internal.camera
+            // instance._internal.renderer
+
         }).catch(err => {
             console.error('加载失败', err);
         });

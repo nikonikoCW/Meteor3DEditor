@@ -14,7 +14,7 @@ import { PersistenceManager } from './PersistenceManager.js';
  * @param {boolean} [options.config.fitCamera=true] - 是否自动调整相机视角
  * @param {boolean} [options.config.showGrid] - 是否显示辅助网格（默认跟随场景配置）
  * @param {boolean} [options.config.autoResize=true] - 是否自动响应容器尺寸变化
- * @returns {Promise<{sceneManager: SceneManager, scene: THREE.Scene, camera, renderer, dispose: Function}>}
+ * @returns {Promise<Meteor3DInstance>} 场景实例 API
  * 
  * @example
  * // HTML 中使用
@@ -24,8 +24,14 @@ import { PersistenceManager } from './PersistenceManager.js';
  *     sceneId: 'your-scene-id',
  *     serverUrl: 'https://api.meteor3d.com',
  *     container: document.getElementById('canvas')
- *   }).then(({ sceneManager }) => {
- *     console.log('Scene loaded!');
+ *   }).then(instance => {
+ *     // 启用性能监视器
+ *     instance.enableStats();
+ *     
+ *     // 控制三角形统计
+ *     instance.toggleTriangleStats(true, (stats) => {
+ *       console.log('渲染三角形:', stats.rendered);
+ *     });
  *   });
  * </script>
  */
@@ -135,8 +141,9 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
     }
 
     // ========== 5. 设置窗口自适应 ==========
+    let resizeObserver = null;
     if (config.autoResize !== false) {
-        const resizeObserver = new ResizeObserver((entries) => {
+        resizeObserver = new ResizeObserver((entries) => {
             const entry = entries[0];
             if (entry && entry.contentRect) {
                 const { width, height } = entry.contentRect;
@@ -144,21 +151,76 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
             }
         });
         resizeObserver.observe(container);
-
-        // 将 resizeObserver 附加到 sceneManager 以便清理
-        sceneManager._resizeObserver = resizeObserver;
     }
 
+    // ========== 6. 返回封装后的 API ==========
+    return createMeteor3DInstance(sceneManager, resizeObserver);
+}
+
+/**
+ * 创建 Meteor3D 实例 API
+ * 只暴露安全的公开方法，隐藏内部实现细节
+ * 
+ * @param {SceneManager} sceneManager 
+ * @param {ResizeObserver} resizeObserver 
+ * @returns {Meteor3DInstance}
+ */
+function createMeteor3DInstance(sceneManager, resizeObserver) {
     return {
-        sceneManager,
-        scene: sceneManager.scene,
-        camera: sceneManager.camera,
-        renderer: sceneManager.renderer,
-        // 提供一个销毁方法
+        // ========== 性能监控 ==========
+        /** 启用 FPS 性能监视器 */
+        enableStats: () => sceneManager.enableStats(),
+        /** 禁用 FPS 性能监视器 */
+        disableStats: () => sceneManager.disableStats(),
+        /** 切换 FPS 监视器显隐 */
+        toggleStats: (show) => sceneManager.toggleStats(show),
+        /** 检查 FPS 监视器是否启用 */
+        isStatsEnabled: () => sceneManager.isStatsEnabled(),
+
+        // ========== 三角形统计 ==========
+        /** 切换三角形统计显示 */
+        toggleTriangleStats: (show, callback, interval) =>
+            sceneManager.toggleTriangleStats(show, callback, interval),
+        /** 获取当前三角形统计 */
+        getTriangleStats: () => sceneManager.getTriangleStats(),
+        /** 检查三角形统计是否启用 */
+        isTriangleStatsEnabled: () => sceneManager.isTriangleStatsEnabled(),
+
+        // ========== 相机控制 ==========
+        /** 聚焦相机到所有场景物体 */
+        fitCameraToScene: () => sceneManager.fitCameraToScene(),
+        /** 手动触发尺寸调整 */
+        resize: (width, height) => sceneManager.onWindowResize(width, height),
+
+        // ========== GIS 坐标转换 ==========
+        /** 经纬度转世界坐标 */
+        lngLatToWorld: (lng, lat, height) => sceneManager.lngLatToWorld(lng, lat, height),
+        /** 世界坐标转经纬度 */
+        worldToLngLat: (worldPos) => sceneManager.worldToLngLat(worldPos),
+
+        // ========== 辅助显示 ==========
+        /** 设置网格辅助线 */
+        setGridHelper: (visible, length, width) => sceneManager.setGridHelper(visible, length, width),
+
+        // ========== 生命周期 ==========
+        /** 销毁实例，释放资源 */
         dispose: () => {
-            if (sceneManager._resizeObserver) {
-                sceneManager._resizeObserver.disconnect();
+            if (resizeObserver) {
+                resizeObserver.disconnect();
             }
+            // 未来可以在这里添加更多清理逻辑
+        },
+
+        // ========== 高级用法（不推荐直接使用） ==========
+        /** 
+         * 获取内部对象（高级用法，风险自负）
+         * @deprecated 请优先使用上面的封装 API
+         */
+        _internal: {
+            sceneManager,
+            scene: sceneManager.scene,
+            camera: sceneManager.camera,
+            renderer: sceneManager.renderer
         }
     };
 }
