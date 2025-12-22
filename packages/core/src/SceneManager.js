@@ -74,8 +74,56 @@ export class SceneManager {
             (lng, lat, h) => this.lngLatToWorld(lng, lat, h)
         );
 
+        // 事件系统
+        this.events = {};
+        this.isReady = false;
+
         this.animate = this.animate.bind(this);
         this.animate();
+    }
+
+    /**
+     * 订阅事件
+     * @param {string} event - 事件名称
+     * @param {Function} callback - 回调函数
+     */
+    on(event, callback) {
+        if (!this.events[event]) {
+            this.events[event] = [];
+        }
+        this.events[event].push(callback);
+    }
+
+    /**
+     * 取消订阅事件
+     * @param {string} event - 事件名称
+     * @param {Function} callback - 回调函数
+     */
+    off(event, callback) {
+        if (!this.events[event]) return;
+        this.events[event] = this.events[event].filter(cb => cb !== callback);
+    }
+
+    /**
+     * 触发事件
+     * @param {string} event - 事件名称
+     * @param {any} data - 事件数据
+     */
+    emit(event, data) {
+        if (this.events[event]) {
+            this.events[event].forEach(cb => cb(data));
+        }
+    }
+
+    /**
+     * 设置场景就绪状态
+     * @param {boolean} ready - 是否就绪
+     */
+    setReady(ready) {
+        this.isReady = ready;
+        if (ready) {
+            this.emit('scene-ready', { isReady: true });
+        }
     }
 
     /**

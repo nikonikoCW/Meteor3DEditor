@@ -18,8 +18,8 @@ export class LabelManager {
         this.camera = camera;
         this.lngLatToWorld = lngLatToWorld;
 
-        // 标签列表
-        this.labels = [];
+        // 标签列表 (ID -> Label)
+        this.labels = new Map();
 
         // 初始化 CSS2DRenderer
         this.cssRenderer = new CSS2DRenderer();
@@ -43,15 +43,22 @@ export class LabelManager {
     /**
      * 创建标签
      * @param {Object} options - 配置选项
+     * @param {string} [options.id] - 唯一标识符
      * @param {Object} [options.position] - 世界坐标 {x, y, z}
      * @param {Object} [options.lngLat] - 经纬度 {lng, lat, height}
      * @param {string} options.content - HTML 内容
      * @param {Object} [options.style] - CSS 样式对象
      * @param {Object} [options.offset] - 屏幕像素偏移 {x, y}
-     * @returns {Label} 标签实例
+     * @returns {string} 标签 ID
      */
     createLabel(options) {
-        const { position, lngLat, content, style = {}, offset = { x: 0, y: 0 } } = options;
+        const { id = THREE.MathUtils.generateUUID(), position, lngLat, content, style = {}, offset = { x: 0, y: 0 } } = options;
+
+        // 检查是否已存在
+        if (this.labels.has(id)) {
+            console.warn(`Label with id ${id} already exists.`);
+            return id;
+        }
 
         // 创建 DOM 元素
         const element = document.createElement('div');
@@ -100,21 +107,49 @@ export class LabelManager {
 
         // 创建标签包装对象
         const label = new Label(labelObject, element, this, worldPos.clone());
-        this.labels.push(label);
+        label.id = id; // 附加 ID
+        this.labels.set(id, label);
 
-        return label;
+        return id;
+    }
+
+    /**
+     * 更新标签
+     * @param {string} id - 标签ID
+     * @param {Object} config - 更新配置
+     */
+    updateLabel(id, config) {
+        const label = this.labels.get(id);
+        if (!label) {
+            console.warn(`Label not found: ${id}`);
+            return;
+        }
+
+        if (config.position) label.setPosition(config.position);
+        if (config.lngLat) label.setLngLat(config.lngLat);
+        if (config.content) label.setContent(config.content);
+        if (config.style) label.setStyle(config.style);
+        if (config.offset) label.setOffset(config.offset);
     }
 
     /**
      * 移除标签
-     * @param {Label} label 
+     * @param {string|Label} labelOrId 标签ID或实例
      */
-    removeLabel(label) {
-        const index = this.labels.indexOf(label);
-        if (index > -1) {
-            this.labels.splice(index, 1);
+    removeLabel(labelOrId) {
+        let label = labelOrId;
+        let id = labelOrId;
+
+        if (labelOrId instanceof Label) {
+            id = labelOrId.id;
+        } else {
+            label = this.labels.get(id);
+        }
+
+        if (label) {
             this.scene.remove(label._object);
             label._element.remove();
+            this.labels.delete(id);
         }
     }
 
@@ -122,11 +157,11 @@ export class LabelManager {
      * 清除所有标签
      */
     clearLabels() {
-        for (const label of this.labels) {
+        for (const label of this.labels.values()) {
             this.scene.remove(label._object);
             label._element.remove();
         }
-        this.labels = [];
+        this.labels.clear();
     }
 
     /**
@@ -134,7 +169,7 @@ export class LabelManager {
      * @returns {Label[]}
      */
     getLabels() {
-        return [...this.labels];
+        return Array.from(this.labels.values());
     }
 
     /**
@@ -210,6 +245,18 @@ class Label {
      */
     setStyle(style) {
         Object.assign(this._element.style, style);
+    }
+
+    /**
+     * 设置偏移
+     * @param {{x: number, y: number}} offset
+     */
+    setOffset(offset) {
+        if (offset && (offset.x !== undefined || offset.y !== undefined)) {
+            const x = offset.x || 0;
+            const y = offset.y || 0;
+            this._element.style.transform = `translate(${x}px, ${y}px)`;
+        }
     }
 
     /**

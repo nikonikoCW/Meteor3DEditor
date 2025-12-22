@@ -153,6 +153,9 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
         resizeObserver.observe(container);
     }
 
+    // 标记场景就绪
+    sceneManager.setReady(true);
+
     // ========== 6. 返回封装后的 API ==========
     return createMeteor3DInstance(sceneManager, resizeObserver);
 }
@@ -167,6 +170,14 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
  */
 function createMeteor3DInstance(sceneManager, resizeObserver) {
     return {
+        // ========== 基础状态与事件 ==========
+        /** 获取场景是否就绪 */
+        get isReady() { return sceneManager.isReady; },
+        /** 订阅事件 */
+        on: (event, callback) => sceneManager.on(event, callback),
+        /** 取消订阅事件 */
+        off: (event, callback) => sceneManager.off(event, callback),
+
         // ========== 性能监控 ==========
         /** 启用 FPS 性能监视器 */
         enableStats: () => sceneManager.enableStats(),
