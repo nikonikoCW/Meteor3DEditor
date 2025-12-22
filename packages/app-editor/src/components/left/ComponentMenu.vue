@@ -45,18 +45,21 @@
       </div>
 
       <!-- 3D 组件 -->
-      <div class="category" v-if="categories['3d'].length > 0">
+      <div class="category" :class="{ disabled: !isSceneReady }" v-if="categories['3d'].length > 0">
         <div class="category-header">
           <span class="category-icon">🎯</span>
           <span class="category-name">3D 组件</span>
+          <span v-if="!isSceneReady" class="category-hint" title="请先添加场景组件并选择场景">🔒</span>
         </div>
         <div class="category-items">
           <div 
             v-for="widget in categories['3d']" 
             :key="widget.type"
             class="widget-item"
-            :draggable="!disabled"
-            @dragstart="onDragStart($event, widget.type)"
+            :class="{ 'widget-disabled': !isSceneReady }"
+            :draggable="!disabled && isSceneReady"
+            :title="!isSceneReady ? '请先添加场景组件并选择场景' : widget.label"
+            @dragstart="onDragStart($event, widget.type, !isSceneReady)"
           >
             <span class="widget-icon">{{ widget.icon }}</span>
             <span class="widget-label">{{ widget.label }}</span>
@@ -68,8 +71,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { getWidgetsByCategory } from '../../core/widgetRegistry';
+import { useAppStore } from '../../stores/appStore';
 
 const props = defineProps({
   disabled: {
@@ -78,14 +82,18 @@ const props = defineProps({
   }
 });
 
+const appStore = useAppStore();
 const categories = ref({ scene: [], '2d': [], '3d': [] });
+
+// 场景是否就绪
+const isSceneReady = computed(() => appStore.isSceneReady);
 
 onMounted(() => {
   categories.value = getWidgetsByCategory();
 });
 
-const onDragStart = (event, type) => {
-  if (props.disabled) {
+const onDragStart = (event, type, isDisabled = false) => {
+  if (props.disabled || isDisabled) {
     event.preventDefault();
     return;
   }
@@ -123,6 +131,10 @@ const onDragStart = (event, type) => {
   margin-bottom: 16px;
 }
 
+.category.disabled {
+  opacity: 0.6;
+}
+
 .category-header {
   display: flex;
   align-items: center;
@@ -138,6 +150,12 @@ const onDragStart = (event, type) => {
 
 .category-name {
   font-weight: 500;
+}
+
+.category-hint {
+  margin-left: auto;
+  font-size: 12px;
+  cursor: help;
 }
 
 .category-items {
@@ -160,13 +178,18 @@ const onDragStart = (event, type) => {
   transition: all 0.2s;
 }
 
-.widget-item:hover {
+.widget-item:hover:not(.widget-disabled) {
   background: #333;
   border-color: #444;
 }
 
-.widget-item:active {
+.widget-item:active:not(.widget-disabled) {
   cursor: grabbing;
+}
+
+.widget-item.widget-disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .widget-icon {
@@ -181,11 +204,5 @@ const onDragStart = (event, type) => {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-}
-
-/* 禁用状态 */
-.component-menu:has(.widget-item[draggable="false"]) .widget-item {
-  cursor: not-allowed;
-  opacity: 0.5;
 }
 </style>

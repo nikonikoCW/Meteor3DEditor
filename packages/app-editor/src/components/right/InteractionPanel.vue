@@ -32,9 +32,9 @@
           <div class="rule-row">
             <label>动作</label>
             <select v-model="rule.action" @change="markChanged">
-              <option value="toggle">切换显隐</option>
-              <option value="show">显示</option>
-              <option value="hide">隐藏</option>
+              <option value="toggle">切换</option>
+              <option value="enable">启用</option>
+              <option value="disable">禁用</option>
             </select>
           </div>
           <button class="delete-btn" @click="removeRule(event.name, idx)">删除</button>

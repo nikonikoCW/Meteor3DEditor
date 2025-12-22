@@ -245,6 +245,23 @@ const tourConfig = {
     props: []
 };
 
+// 性能监视器组件配置 (3D 逻辑组件)
+const statsConfig = {
+    label: '性能监视器',
+    icon: '📈',
+    category: '3d',
+    defaultSize: { width: 150, height: 80 },
+    minSize: { width: 80, height: 40 },
+    // 3D 逻辑组件无属性面板
+    props: [],
+    // 暴露给交互系统的动作
+    actions: [
+        { name: 'enable', label: '启用' },
+        { name: 'disable', label: '禁用' },
+        { name: 'toggle', label: '切换' }
+    ]
+};
+
 // 统一注册
 export function initRegistry() {
     // 场景组件
@@ -260,4 +277,5 @@ export function initRegistry() {
     // 3D 组件
     registerWidget('Label3D', labelConfig, () => import('../components/widgets/LabelWidget.vue'));
     registerWidget('Tour', tourConfig, () => import('../components/widgets/TourWidget.vue'));
+    registerWidget('Stats', statsConfig, () => import('../components/widgets/StatsWidget.vue'));
 }

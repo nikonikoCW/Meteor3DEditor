@@ -61,8 +61,8 @@ const AppSchema = new mongoose.Schema({
             type: mongoose.Schema.Types.Mixed,
             default: {}
         },
-        // 组件显隐
-        visible: {
+        // 组件启用状态
+        enabled: {
             type: Boolean,
             default: true
         },
@@ -70,7 +70,7 @@ const AppSchema = new mongoose.Schema({
         interactions: [{
             event: String,    // 事件名 (如 'click')
             target: String,   // 目标组件 ID
-            action: String    // 动作 (show/hide/toggle)
+            action: String    // 动作 (enable/disable/toggle)
         }]
     }],
     // 最后修改时间

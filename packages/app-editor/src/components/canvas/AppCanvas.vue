@@ -9,11 +9,11 @@
   >
     <div class="grid-background" v-if="isEditMode"></div>
     
-    <!-- Widgets -->
+    <!-- 普通 UI 组件 (场景/2D) -->
     <div
-      v-for="widget in widgets"
+      v-for="widget in uiWidgets"
       :key="widget.id"
-      v-show="widget.visible !== false"
+      v-show="widget.enabled !== false"
       :ref="(el) => setWidgetRef(el, widget.id)"
       class="widget-wrapper"
       :class="{ 
@@ -27,6 +27,7 @@
         v-if="getComponent(widget.type)"
         :is="getComponent(widget.type)" 
         :data="widget.data"
+        :enabled="widget.enabled !== false"
         :widgetId="widget.id"
         class="widget-content"
         @widget-event="(e) => onWidgetEvent(widget.id, e)"
@@ -34,9 +35,21 @@
       <div v-else class="error-widget">Unknown: {{ widget.type }}</div>
     </div>
 
-    <!-- Moveable 控制器 -->
+    <!-- 3D 逻辑组件 (无 UI，隐藏渲染) -->
+    <template v-for="widget in headlessWidgets" :key="widget.id">
+      <component
+        v-if="isSceneReady && getComponent(widget.type)"
+        :is="getComponent(widget.type)"
+        :data="widget.data"
+        :enabled="widget.enabled !== false"
+        :widgetId="widget.id"
+        @widget-event="(e) => onWidgetEvent(widget.id, e)"
+      />
+    </template>
+
+    <!-- Moveable 控制器 (仅对 UI 组件生效) -->
     <Moveable
-      v-if="isEditMode && selectedWidget && widgetRefs[selectedWidget.id]"
+      v-if="isEditMode && selectedWidget && !isHeadlessWidget(selectedWidget.type) && widgetRefs[selectedWidget.id]"
       :key="moveableKey"
       :target="widgetRefs[selectedWidget.id]"
       :draggable="true"
@@ -74,9 +87,25 @@ import { useAppStore } from '../../stores/appStore';
 import { storeToRefs } from 'pinia';
 import { getWidgetDefinition } from '../../core/widgetRegistry';
 
+
+// 判断是否是无 UI 的 3D 逻辑组件
+const isHeadlessWidget = (type) => {
+  const def = getWidgetDefinition(type);
+  return def?.config.category === '3d';
+};
+
 const canvasRef = ref(null);
 const appStore = useAppStore();
 const { widgets, selectedWidget, isEditMode } = storeToRefs(appStore);
+
+
+const isSceneReady = computed(() => appStore.isSceneReady);
+
+
+
+// 分离 UI 组件和 3D 逻辑组件
+const uiWidgets = computed(() => widgets.value.filter(w => !isHeadlessWidget(w.type)));
+const headlessWidgets = computed(() => widgets.value.filter(w => isHeadlessWidget(w.type)));
 
 // Widget refs 映射
 const widgetRefs = ref({});
@@ -139,6 +168,7 @@ const onDrop = (event) => {
     position: { x, y },
     size: { ...defaultSize },
     rotation: 0,
+    enabled: true,  // 显式设置初始启用状态
     data: {}
   };
 

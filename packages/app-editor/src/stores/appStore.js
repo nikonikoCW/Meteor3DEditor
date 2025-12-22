@@ -17,6 +17,10 @@ export const useAppStore = defineStore('app', () => {
     const currentSceneId = ref(null);
     const isEditMode = ref(false);
 
+    // 场景状态
+    const isSceneReady = ref(false);
+    const sceneInstance = ref(null);  // Core SDK 实例
+
     // 保存状态
     const isSaving = ref(false);
     const isLoading = ref(false);
@@ -74,7 +78,7 @@ export const useAppStore = defineStore('app', () => {
                     size: w.size,
                     rotation: w.rotation,
                     data: w.data,
-                    visible: w.visible !== false,  // 默认 true
+                    enabled: w.enabled !== false,  // 默认启用
                     interactions: w.interactions || []
                 }))
             };
@@ -109,7 +113,13 @@ export const useAppStore = defineStore('app', () => {
             appId.value = app.appId;
             appName.value = app.name;
             canvas.value = app.canvas || { width: 1920, height: 1080, background: '#1a1a1a' };
-            widgets.value = app.widgets || [];
+
+            // 确保每个 widget 都有 enabled 属性（兼容旧数据）
+            widgets.value = (app.widgets || []).map(w => ({
+                ...w,
+                // 优先使用 enabled，如果没有则回退到 visible，都没有则默认 true
+                enabled: w.enabled !== undefined ? w.enabled : (w.visible !== false)
+            }));
 
             hasUnsavedChanges.value = false;
             selectedWidget.value = null;
@@ -131,6 +141,20 @@ export const useAppStore = defineStore('app', () => {
         widgets.value = [];
         selectedWidget.value = null;
         hasUnsavedChanges.value = false;
+        // 重置场景状态
+        isSceneReady.value = false;
+        sceneInstance.value = null;
+    }
+
+    // 设置场景就绪状态
+    function setSceneReady(ready, instance = null) {
+        isSceneReady.value = ready;
+        if (instance) {
+            sceneInstance.value = instance;
+        }
+        if (!ready) {
+            sceneInstance.value = null;
+        }
     }
 
     // 触发组件事件，执行交互规则
@@ -147,14 +171,14 @@ export const useAppStore = defineStore('app', () => {
 
             // 执行动作
             switch (rule.action) {
-                case 'show':
-                    targetWidget.visible = true;
+                case 'enable':
+                    targetWidget.enabled = true;
                     break;
-                case 'hide':
-                    targetWidget.visible = false;
+                case 'disable':
+                    targetWidget.enabled = false;
                     break;
                 case 'toggle':
-                    targetWidget.visible = targetWidget.visible === false ? true : false;
+                    targetWidget.enabled = !targetWidget.enabled;
                     break;
             }
         }
@@ -169,6 +193,8 @@ export const useAppStore = defineStore('app', () => {
         selectedWidget,
         currentSceneId,
         isEditMode,
+        isSceneReady,
+        sceneInstance,
         isSaving,
         isLoading,
         hasUnsavedChanges,
@@ -178,6 +204,7 @@ export const useAppStore = defineStore('app', () => {
         addWidget,
         removeWidget,
         setSceneId,
+        setSceneReady,
         toggleEditMode,
         saveApp,
         loadApp,

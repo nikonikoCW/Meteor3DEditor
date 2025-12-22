@@ -4,16 +4,46 @@
 
 ## 项目概述
 
-`app-editor` 是 Meteor3D 低代码平台的**应用编辑器**模块。它允许用户通过拖拽组件的方式，快速搭建包含 3D 场景、图表、按钮等元素的交互式 Web 应用，是一个典型的**低代码可视化编辑工具**。
+`app-editor` 是 Meteor3D 低代码平台的**应用编辑器**模块。它允许用户通过拖拽组件的方式，快速搭建包含 3D 场景、图表、按钮等元素的交互式 Web 应用。
 
-### 核心能力
+---
 
-- 🧩 **拖拽式组件编排**：从左侧组件库拖拽组件到画布
-- 🌍 **嵌入 3D 场景**：通过 `SceneWidget` 组件嵌入由 `scene-editor` 创建的 3D 场景
-- 📊 **图表组件**：支持 ECharts 图表展示 (折线图/柱状图/饼图)
-- � **Moveable 交互**：支持组件拖拽、8方向缩放、旋转、吸附对齐
-- 📝 **属性编辑**：选中组件后，可在右侧属性面板实时修改属性
-- 💾 **数据持久化**：支持应用的保存、加载、删除
+## 核心架构
+
+### 分层设计
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    @meteor3d/core (原子能力层)               │
+│     loadScene() / enableStats() / createLabel() ...        │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ 调用
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 App Editor (业务组装层)                      │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │ 场景组件     │  │  2D 组件    │  │     3D 逻辑组件      │  │
+│  │ (Container) │  │   (UI)      │  │    (Headless)       │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 组件三分类
+
+| 类型 | 角色 | 特点 | 右侧面板 |
+|------|------|------|----------|
+| **场景组件** | 容器 | 渲染 3D Canvas，初始化 Core SDK | 属性栏 |
+| **2D 组件** | UI 交互 | 可见元素 (按钮/图表/文本) | 属性栏 + 数据栏 + 交互栏 |
+| **3D 逻辑组件** | 业务逻辑 | 无 UI，对 Core API 的声明式封装 | 数据栏 + 交互栏 |
+
+### `enabled` 状态语义
+
+所有组件都有 `enabled` 属性，语义统一：
+
+| 组件类型 | enabled = true | enabled = false |
+|----------|---------------|-----------------|
+| 2D 组件 | 显示 UI | 隐藏 UI |
+| 3D 逻辑组件 | 执行业务逻辑 | 停止 + 清理 |
 
 ---
 
@@ -23,145 +53,196 @@
 |------|------|
 | 框架 | Vue 3 (Composition API + `<script setup>`) |
 | 状态管理 | Pinia |
-| 画布交互 | vue3-moveable (拖拽/缩放/旋转/吸附) |
+| 画布交互 | vue3-moveable |
 | 图表 | ECharts |
-| 3D 引擎 | `@meteor3d/core` (Three.js 封装) |
+| 3D 引擎 | `@meteor3d/core` |
 | 构建工具 | Vite 7 |
-| 包管理 | pnpm workspace |
 
 ---
 
 ## 项目结构
 
 ```
-packages/app-editor/
-├── index.html                 # 入口 HTML
-├── package.json               # npm 配置
-├── vite.config.js             # Vite 构建配置
-├── .env.development           # 开发环境变量 (API 地址)
-├── .env.production            # 生产环境变量
-├── public/
-│   ├── draco/                 # Draco 解码器 (用于 GLTF 解压)
-│   └── meteor-min.svg         # 网站 favicon
-└── src/
-    ├── main.js                # Vue 应用入口
-    ├── App.vue                # 根组件 (路由切换)
-    ├── config.js              # 环境配置 (API_BASE_URL)
-    ├── assets/
-    │   └── main.css           # 全局样式
-    ├── core/
-    │   └── widgetRegistry.js  # 组件注册表 (核心)
-    ├── stores/
-    │   └── appStore.js        # Pinia 状态管理 (含保存/加载)
-    ├── services/
-    │   └── appService.js      # 后端 API 调用
-    ├── views/
-    │   ├── AppListView.vue    # 应用列表页面
-    │   └── AppEditorView.vue  # 编辑器主视图
-    └── components/
-        ├── header/
-        │   └── EditorHeader.vue   # 顶部工具栏 (返回/标题/编辑开关/保存)
-        ├── left/
-        │   ├── LeftPanel.vue      # 左侧面板容器
-        │   ├── ComponentTree.vue  # 组件树 (已添加组件列表)
-        │   └── ComponentMenu.vue  # 组件库 (按分类展示)
-        ├── canvas/
-        │   └── AppCanvas.vue      # 画布 (Moveable 集成)
-        ├── right/
-        │   ├── RightPanel.vue     # 右侧面板容器 (Tab 切换)
-        │   ├── PropertyPanel.vue  # 属性面板
-        │   ├── DataPanel.vue      # 数据面板 (placeholder)
-        │   └── InteractionPanel.vue # 交互面板 (placeholder)
-        └── widgets/               # 可拖拽组件实现
-            ├── SceneWidget.vue    # 3D 场景组件
-            ├── EChartsWidget.vue  # ECharts 图表组件
-            ├── ButtonWidget.vue   # 交互按钮组件
-            ├── ImageWidget.vue    # 图片组件
-            ├── TextWidget.vue     # 文本组件
-            ├── ClockWidget.vue    # 时钟组件
-            ├── LabelWidget.vue    # 3D 标签 (placeholder)
-            └── TourWidget.vue     # 漫游路径 (placeholder)
+src/
+├── core/
+│   └── widgetRegistry.js      # 组件注册表
+├── stores/
+│   └── appStore.js            # 状态管理 + 交互触发
+├── components/
+│   ├── canvas/
+│   │   └── AppCanvas.vue      # 画布 (UI组件/3D逻辑组件分离渲染)
+│   ├── left/
+│   │   └── ComponentMenu.vue  # 组件库 (3D 分类场景就绪后解锁)
+│   ├── right/
+│   │   ├── PropertyPanel.vue  # 属性面板
+│   │   ├── DataPanel.vue      # 数据面板
+│   │   └── InteractionPanel.vue # 交互面板 (enable/disable/toggle)
+│   └── widgets/
+│       ├── SceneWidget.vue    # 场景组件 (provide Core 实例)
+│       ├── StatsWidget.vue    # 性能监视器 (3D 逻辑组件)
+│       ├── ButtonWidget.vue   # 按钮 (2D)
+│       └── ...
+└── views/
+    └── AppEditorView.vue      # 编辑器主视图
 ```
 
 ---
 
-## 核心模块说明
+## 核心运转逻辑
 
-### 1. `widgetRegistry.js` - 组件注册表
+### 1. 场景加载与 3D 组件依赖
 
-支持按分类管理组件（scene/2d/3d），关键函数：
+```mermaid
+sequenceDiagram
+    participant User as 用户
+    participant SceneWidget as 场景组件
+    participant Store as appStore
+    participant 3DWidget as 3D逻辑组件
 
-| 函数 | 说明 |
-|------|------|
-| `registerWidget(type, config, componentLoader)` | 注册组件类型 |
-| `getWidgetDefinition(type)` | 获取组件定义 |
-| `getRegisteredWidgets()` | 获取所有组件列表 |
-| `getWidgetsByCategory()` | 按分类获取组件 (scene/2d/3d) |
+    User->>SceneWidget: 拖入并配置场景ID
+    SceneWidget->>Core: loadScene(sceneId)
+    Core-->>SceneWidget: 加载完成
+    SceneWidget->>Store: setSceneReady(true, instance)
+    Store-->>ComponentMenu: 解锁 3D 组件分类
+    User->>3DWidget: 拖入 3D 逻辑组件
+    3DWidget->>Store: inject sceneInstance
+    3DWidget->>Core: 调用 Core API
+```
 
-### 2. `appStore.js` - 应用状态管理
+**约束**：3D 逻辑组件只能在场景加载完成后添加（组件库灰显禁用状态）
 
-| 状态/方法 | 说明 |
-|-----------|------|
-| `appId`, `appName` | 应用标识和名称 |
-| `widgets` | 画布上的组件实例列表 |
-| `selectedWidget` | 当前选中的组件 |
-| `isEditMode` | 编辑/预览模式切换 |
-| `saveApp()` | 保存应用到后端 |
-| `loadApp(id)` | 从后端加载应用 |
-| `newApp()` | 创建新应用 |
-
-### 3. `AppCanvas.vue` - 画布组件
-
-使用 `vue3-moveable` 实现：
-- 拖放新组件 (`@drop`)
-- 组件移动 (`@drag`, `@dragEnd`)
-- 8方向缩放 (`@resize`, `@resizeEnd`)
-- 旋转 (`@rotate`, `@rotateEnd`)
-- 吸附对齐 (snappable + guidelines)
-
-### 4. `AppListView.vue` - 应用列表
-
-应用管理页面：
-- 卡片式展示所有应用
-- 创建新应用
-- 编辑/删除现有应用
-
----
-
-## 数据流
+### 2. 交互系统
 
 ```
-┌────────────────┐    拖拽     ┌─────────────────┐
-│ ComponentMenu  │ ─────────▶ │   AppCanvas     │
-│  (组件库)       │   drop     │   (画布)         │
-└────────────────┘            └─────────────────┘
-                                      │
-                                      │ addWidget()
-                                      ▼
-                              ┌─────────────────┐
-                              │    appStore     │ ◄──── saveApp() ────▶ 后端 API
-                              │ (Pinia 状态)     │
-                              └─────────────────┘
-                                      │
-                                      │ selectWidget()
-                                      ▼
-                              ┌─────────────────┐
-                              │ PropertyPanel   │
-                              │ (属性面板)       │
-                              └─────────────────┘
+Button (2D)              StatsWidget (3D)
+   │                          │
+   │ click 事件               │
+   ▼                          │
+InteractionPanel              │
+   │ 配置规则:                 │
+   │ target: StatsWidget      │
+   │ action: enable           │
+   ▼                          │
+appStore.triggerEvent()       │
+   │                          │
+   └──► enabled = true ───────┘
+             │
+             ▼
+        Core.enableStats()
+```
+
+### 3. 3D 逻辑组件模式
+
+3D 逻辑组件是对 Core API 的**声明式封装**：
+
+```javascript
+// StatsWidget.vue
+watch(() => props.enabled, (isEnabled) => {
+  if (isEnabled) {
+    getCoreInstance().enableStats();
+  } else {
+    getCoreInstance().disableStats();
+  }
+});
 ```
 
 ---
 
-## 后端 API
+## 数据持久化
+
+### Widget 数据结构
+
+```javascript
+{
+  id: 'uuid',
+  type: 'Stats',           // 组件类型
+  position: { x, y },      // 位置 (2D 组件)
+  size: { width, height }, // 尺寸 (2D 组件)
+  rotation: 0,             // 旋转角度
+  enabled: true,           // 启用状态
+  data: {},                // 组件配置数据
+  interactions: [{         // 交互规则
+    event: 'click',
+    target: 'widget-id',
+    action: 'toggle'       // enable | disable | toggle
+  }]
+}
+```
+
+### 后端 API
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/app/list` | 获取应用列表 |
-| GET | `/api/app/:id` | 获取应用详情 |
+| GET | `/api/app/list` | 应用列表 |
+| GET | `/api/app/:id` | 应用详情 |
 | POST | `/api/app` | 创建应用 |
-| PUT | `/api/app/:id` | 更新应用 (全量保存) |
+| PUT | `/api/app/:id` | 更新应用 |
 | DELETE | `/api/app/:id` | 删除应用 |
+
+---
+
+## 扩展指南
+
+### 添加新的 3D 逻辑组件
+
+1. **创建组件文件** `src/components/widgets/NewWidget.vue`
+
+```vue
+<template>
+  <!-- 3D 逻辑组件无 UI -->
+  <div v-if="false"></div>
+</template>
+
+<script setup>
+import { inject, watch, onMounted, onBeforeUnmount } from 'vue';
+import { useAppStore } from '../../stores/appStore';
+
+const props = defineProps({
+  enabled: { type: Boolean, default: true },
+  data: { type: Object, default: () => ({}) }
+});
+
+const appStore = useAppStore();
+
+// 获取 Core 实例
+const getCoreInstance = () => appStore.sceneInstance;
+
+// 监听 enabled 变化
+watch(() => props.enabled, (isEnabled) => {
+  if (isEnabled) {
+    // 调用 Core API
+  } else {
+    // 清理逻辑
+  }
+});
+
+onMounted(() => {
+  if (props.enabled) {
+    // 初始化
+  }
+});
+
+onBeforeUnmount(() => {
+  // 清理
+});
+</script>
+```
+
+2. **注册组件** `widgetRegistry.js`
+
+```javascript
+registerWidget('NewLogic', {
+  label: '新逻辑组件',
+  icon: '🔧',
+  category: '3d',  // 重要：分类为 3d
+  defaultSize: { width: 150, height: 80 },
+  props: [],
+  actions: [
+    { name: 'enable', label: '启用' },
+    { name: 'disable', label: '禁用' }
+  ]
+}, () => import('../components/widgets/NewWidget.vue'));
+```
 
 ---
 
@@ -171,52 +252,29 @@ packages/app-editor/
 # 开发模式
 pnpm dev:app
 
-# 构建生产版本
+# 构建
 pnpm --filter @meteor3d/app-editor build
 ```
 
 ---
 
-## 扩展指南
-
-### 添加新的组件类型
-
-1. 在 `src/components/widgets/` 创建新的 Vue 组件
-2. 在 `widgetRegistry.js` 中注册：
-
-```javascript
-registerWidget('NewWidget', {
-  label: '新组件',
-  icon: '🆕',
-  category: '2d',  // scene | 2d | 3d
-  defaultSize: { width: 200, height: 100 },
-  minSize: { width: 50, height: 30 },
-  props: [
-    { name: 'title', label: '标题', type: 'text', defaultValue: '默认标题' }
-  ]
-}, () => import('../components/widgets/NewWidget.vue'));
-```
-
-3. 组件会自动出现在左侧组件库对应分类中
-
----
-
 ## 已实现功能
 
-- [x] 拖拽式组件添加
-- [x] 组件移动/缩放/旋转 (vue3-moveable)
-- [x] 吸附对齐和辅助线
-- [x] 编辑/预览模式切换
+- [x] 拖拽式组件编排
+- [x] Moveable 交互 (拖拽/缩放/旋转)
+- [x] 编辑/预览模式
 - [x] 属性面板编辑
 - [x] 应用保存/加载
-- [x] 应用列表管理
 - [x] 2D 组件 (ECharts/图片/文本/时钟/按钮)
-- [x] 3D 场景嵌入
+- [x] 3D 场景嵌入 (SceneWidget)
+- [x] 3D 逻辑组件框架 (StatsWidget)
+- [x] 交互系统 (enable/disable/toggle)
+- [x] 场景就绪约束 (3D 组件依赖场景)
 
 ## 待实现功能
 
-- [ ] 3D 标签/漫游组件 (目前为 placeholder)
+- [ ] 3D 标签组件 (LabelWidget)
+- [ ] 漫游路径组件 (TourWidget)
 - [ ] 数据面板 (数据源配置)
-- [ ] 交互面板 (事件绑定)
 - [ ] 组件层级管理 (z-index)
 - [ ] 撤销/重做

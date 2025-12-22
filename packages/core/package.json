@@ -1,12 +1,12 @@
 {
     "name": "@meteor3d/core",
     "version": "1.0.0",
-    "main": "dist/meteor3d-core.umd.js",
-    "module": "dist/meteor3d-core.es.js",
+    "main": "index.js",
+    "module": "index.js",
     "type": "module",
     "exports": {
         ".": {
-            "import": "./dist/meteor3d-core.es.js",
+            "import": "./index.js",
             "require": "./dist/meteor3d-core.umd.js"
         },
         "./src/*": "./src/*"
