@@ -5,12 +5,15 @@
 </p>
 
 <p align="center">
+  <a href="https://www.meteor3d.cn" target="_blank">🌐 官网演示</a> •
   <a href="#功能特性">功能特性</a> •
   <a href="#快速开始">快速开始</a> •
   <a href="#技术栈">技术栈</a> •
   <a href="#项目结构">项目结构</a> •
   <a href="#许可证">许可证</a>
 </p>
+
+> ⚠️ **注意**：官方演示服务器为 1M 带宽小型服务器，首次加载 3D 模型可能较慢，请耐心等待。
 
 ---
 
