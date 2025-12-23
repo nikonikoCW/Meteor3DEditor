@@ -9,10 +9,15 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@codemirror/lang-css": "^6.3.1",
+        "@codemirror/lang-html": "^6.4.11",
+        "@codemirror/lang-json": "^6.0.2",
         "@meteor3d/core": "workspace:*",
+        "codemirror": "^6.0.2",
         "echarts": "^6.0.0",
         "pinia": "^3.0.4",
         "vue": "^3.5.25",
+        "vue-codemirror": "^6.1.1",
         "vue3-moveable": "^0.28.0"
     },
     "devDependencies": {

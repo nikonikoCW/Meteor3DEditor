@@ -77,6 +77,16 @@ export function getWidgetEvents(type) {
     return def?.config.events || [];
 }
 
+/**
+ * 获取组件的数据配置 (用于 DataPanel)
+ * @param {string} type - 组件类型
+ * @returns {Array} - 数据配置列表
+ */
+export function getWidgetDataConfig(type) {
+    const def = registry.get(type);
+    return def?.config.dataConfig || [];
+}
+
 // --- 组件配置 ---
 
 // 场景组件配置
@@ -223,15 +233,69 @@ const clockConfig = {
     ]
 };
 
-// 3D 标签组件配置 (placeholder)
+// 3D 标签组件配置
 const labelConfig = {
     label: '3D 标签',
     icon: '🏷️',
     category: '3d',
     defaultSize: { width: 150, height: 80 },
     minSize: { width: 80, height: 40 },
-    props: [
-        { name: 'text', label: '标签文字', type: 'text', defaultValue: '标签' }
+    props: [],
+    // 数据面板配置
+    dataConfig: [
+        {
+            name: 'template',
+            label: '标签模板',
+            type: 'code-editor',
+            language: 'html',
+            defaultValue: `
+            <div class="label">
+            <div class="title">{{name}}</div>
+            <div class="value">温度: {{temperature}}°C</div>
+            <div class="status {{statusClass}}">{{status}}</div>
+            </div>`,
+            description: '支持 {{variable}} 变量语法'
+        },
+        {
+            name: 'style',
+            label: '样式',
+            type: 'code-editor',
+            language: 'css',
+            defaultValue: `.label {
+  background: rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+}`
+        },
+        {
+            name: 'labels',
+            label: '标签数据',
+            type: 'json-editor',
+            defaultValue: [
+                { "id": "p1", "name": "监控点A", "temperature": 25.5, "status": "离线", "lng": 104.06506044769014, "lat": 30.550820587820624, "height": 60 },
+                { "id": "p3", "name": "监控点C", "temperature": 56.3, "status": "正常", "lng": 104.06506044769014, "lat": 30.550820587820624, "height": 30 },
+                { "id": "p2", "name": "监控点B", "temperature": -25.5, "status": "警告", "lng": 104.06596044769014, "lat": 30.550820587820624, "height": -20 }
+            ],
+            placeholder: `[
+            {
+                "id": "p1",
+                "name": "监控点A",
+                "temperature": 25.5,
+                "status": "正常",
+                "statusClass": "normal",
+                "lng": 120.1,
+                "lat": 30.2,
+                "height": 10
+            }
+            ]`
+        }
+    ],
+    actions: [
+        { name: 'enable', label: '启用' },
+        { name: 'disable', label: '禁用' }
     ]
 };
 

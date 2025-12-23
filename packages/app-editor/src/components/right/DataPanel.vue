@@ -1,26 +1,146 @@
 <template>
-  <div class="data-panel">
+  <div class="data-panel" v-if="selectedWidget">
+    <div v-if="dataConfig.length > 0" class="data-content">
+      <template v-for="item in dataConfig" :key="item.name">
+        <!-- 代码编辑器 -->
+        <DataCodeEditor
+          v-if="item.type === 'code-editor'"
+          :label="item.label"
+          :language="item.language"
+          :description="item.description"
+          v-model="widgetData[item.name]"
+          @update:modelValue="onDataChange(item.name, $event)"
+        />
+        
+        <!-- JSON 编辑器 -->
+        <DataJsonEditor
+          v-else-if="item.type === 'json-editor'"
+          :label="item.label"
+          :placeholder="item.placeholder"
+          v-model="widgetData[item.name]"
+          @update:modelValue="onDataChange(item.name, $event)"
+        />
+        
+        <!-- 文本输入 -->
+        <div v-else-if="item.type === 'text'" class="data-field">
+          <label>{{ item.label }}</label>
+          <input 
+            type="text" 
+            :value="widgetData[item.name]"
+            @input="onDataChange(item.name, $event.target.value)"
+          />
+        </div>
+      </template>
+    </div>
+    
+    <!-- 无数据配置 -->
+    <div v-else class="placeholder">
+      <span class="placeholder-icon">📄</span>
+      <p class="placeholder-desc">该组件无需数据配置</p>
+    </div>
+  </div>
+  
+  <!-- 未选中组件 -->
+  <div class="data-panel" v-else>
     <div class="placeholder">
       <span class="placeholder-icon">📊</span>
       <p class="placeholder-title">数据面板</p>
-      <p class="placeholder-desc">配置组件的数据源</p>
-      <p class="placeholder-note">功能开发中...</p>
+      <p class="placeholder-desc">请选择一个组件</p>
     </div>
   </div>
 </template>
 
 <script setup>
+import { computed, reactive, watch } from 'vue';
+import { useAppStore } from '../../stores/appStore';
+import { storeToRefs } from 'pinia';
+import { getWidgetDataConfig } from '../../core/widgetRegistry';
+import DataCodeEditor from './DataCodeEditor.vue';
+import DataJsonEditor from './DataJsonEditor.vue';
+
+const appStore = useAppStore();
+const { selectedWidget, hasUnsavedChanges } = storeToRefs(appStore);
+
+// 获取当前组件的数据配置
+const dataConfig = computed(() => {
+  if (!selectedWidget.value) return [];
+  return getWidgetDataConfig(selectedWidget.value.type);
+});
+
+// 组件数据的响应式包装
+const widgetData = computed(() => {
+  if (!selectedWidget.value) return {};
+  // 确保 data 对象存在
+  if (!selectedWidget.value.data) {
+    selectedWidget.value.data = {};
+  }
+  
+  // 初始化默认值
+  const data = selectedWidget.value.data;
+  for (const item of dataConfig.value) {
+    if (data[item.name] === undefined && item.defaultValue !== undefined) {
+      data[item.name] = item.defaultValue;
+    }
+  }
+  
+  return data;
+});
+
+// 数据变化处理
+const onDataChange = (name, value) => {
+  if (!selectedWidget.value) return;
+  if (!selectedWidget.value.data) {
+    selectedWidget.value.data = {};
+  }
+  selectedWidget.value.data[name] = value;
+  hasUnsavedChanges.value = true;
+};
 </script>
 
 <style scoped>
 .data-panel {
   height: 100%;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+}
+
+.data-content {
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.data-field {
+  margin-bottom: 12px;
+}
+
+.data-field label {
+  display: block;
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 6px;
+}
+
+.data-field input {
+  width: 100%;
+  padding: 6px 8px;
+  background: #252525;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+}
+
+.data-field input:focus {
+  outline: none;
+  border-color: #42b983;
 }
 
 .placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   color: #666;
 }
@@ -40,12 +160,5 @@
   margin: 0;
   font-size: 13px;
   color: #555;
-}
-
-.placeholder-note {
-  margin-top: 20px;
-  font-size: 12px;
-  color: #444;
-  font-style: italic;
 }
 </style>
