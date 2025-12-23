@@ -26,6 +26,10 @@
 - **GIS 投影支持** - 经纬度坐标系统，适配数字孪生场景
 - **卫星影像底图** - 自动加载瓦片地图，构建真实地理环境
 
+<p align="center">
+  <img src="./packages/docs/public/场景编辑器.jpg" alt="场景编辑器" width="800">
+</p>
+
 ### 📦 资产管理器 (Asset Manager)
 - **3D 模型上传** - 支持 GLTF/GLB 格式
 - **自动缩略图生成** - 基于 Three.js 的智能预览
@@ -37,6 +41,24 @@
 - **场景序列化** - 支持保存和加载场景数据
 - **GIS 坐标转换** - WGS84 与本地坐标系互转
 - **性能监控** - 内置 FPS、三角面数统计
+
+### 🌟 应用编辑器 (App Editor) `商业版`
+
+> **拖拽搭建 3D 数据可视化大屏，零代码交付！**
+
+<p align="center">
+  <img src="./packages/docs/public/状态-内测中-blue.svg" alt="内测中">
+  <img src="./packages/docs/public/授权-商业许可-orange.svg" alt="商业许可">
+</p>
+
+- 🎯 **可视化画布** - 自定义分辨率，适配各类大屏
+- 🔗 **组件交互** - 按钮点击触发场景切换、数据联动
+- 📊 **数据面板** - ECharts 图表、3D 标签实时渲染
+- 🚀 **一键预览** - 所见即所得，秒级部署上线
+
+<p align="center">
+  <img src="./packages/docs/public/应用编辑器.jpg" alt="应用编辑器" width="800">
+</p>
 
 ---
 
