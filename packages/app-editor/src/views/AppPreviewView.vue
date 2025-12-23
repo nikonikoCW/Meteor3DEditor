@@ -1,7 +1,7 @@
 <template>
-  <div class="preview-layout">
-    <!-- 应用画布 -->
-    <div class="preview-canvas" ref="canvasContainer">
+  <div class="preview-layout" ref="layoutRef" :style="layoutAlignmentStyle">
+    <!-- 画布容器 -->
+    <div class="preview-canvas" :style="canvasStyle">
       <!-- 场景和 2D 组件 -->
       <template v-for="widget in uiWidgets" :key="widget.id">
         <div
@@ -49,9 +49,40 @@ import { storeToRefs } from 'pinia';
 import { getWidgetDefinition } from '../core/widgetRegistry';
 
 const appStore = useAppStore();
-const { widgets, isLoading, isSceneReady } = storeToRefs(appStore);
+const { widgets, canvas, isLoading, isSceneReady } = storeToRefs(appStore);
 
-const canvasContainer = ref(null);
+const layoutRef = ref(null);
+const viewportSize = ref({ width: 800, height: 600 });
+
+// 视口对齐样式 (根据画布和视口尺寸动态调整)
+const layoutAlignmentStyle = computed(() => {
+  const vw = viewportSize.value.width;
+  const vh = viewportSize.value.height;
+  const cw = canvas.value.width;
+  const ch = canvas.value.height;
+  
+  // A: 画布都小于视口 → 居中
+  if (cw <= vw && ch <= vh) {
+    return { justifyContent: 'center', alignItems: 'center' };
+  }
+  // B: 宽度超出 → 左对齐，垂直居中
+  if (cw > vw && ch <= vh) {
+    return { justifyContent: 'flex-start', alignItems: 'center' };
+  }
+  // C: 高度超出 → 上对齐，水平居中
+  if (cw <= vw && ch > vh) {
+    return { justifyContent: 'center', alignItems: 'flex-start' };
+  }
+  // D: 都超出 → 左上角对齐
+  return { justifyContent: 'flex-start', alignItems: 'flex-start' };
+});
+
+// 画布样式
+const canvasStyle = computed(() => ({
+  width: canvas.value.width + 'px',
+  height: canvas.value.height + 'px',
+  background: canvas.value.background || '#1a1a1a'
+}));
 
 // 判断是否是 3D 逻辑组件
 const isHeadlessWidget = (type) => {
@@ -98,7 +129,21 @@ const getAppIdFromUrl = () => {
 };
 
 // 加载应用
+const updateViewportSize = () => {
+  if (layoutRef.value) {
+    const rect = layoutRef.value.getBoundingClientRect();
+    viewportSize.value = { width: rect.width, height: rect.height };
+  }
+};
+
 onMounted(async () => {
+  updateViewportSize();
+  // 监听视口变化
+  if (layoutRef.value) {
+    const resizeObserver = new ResizeObserver(updateViewportSize);
+    resizeObserver.observe(layoutRef.value);
+  }
+
   const urlAppId = getAppIdFromUrl();
   if (urlAppId) {
     try {
@@ -116,15 +161,15 @@ onMounted(async () => {
 .preview-layout {
   width: 100vw;
   height: 100vh;
-  background: #1a1a1a;
-  overflow: hidden;
+  background: #0d0d0d;
+  overflow: auto;
   position: relative;
+  display: flex;
 }
 
 .preview-canvas {
-  width: 100%;
-  height: 100%;
   position: relative;
+  flex-shrink: 0;
 }
 
 .widget-item {

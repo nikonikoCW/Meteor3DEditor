@@ -1,14 +1,22 @@
 <template>
   <div 
-    class="app-canvas"
+    class="app-canvas-viewport"
     :class="{ 'edit-mode': isEditMode }"
-    ref="canvasRef"
-    @dragover.prevent
-    @drop="onDrop"
-    @click="onCanvasClick"
+    :style="viewportAlignmentStyle"
+    ref="viewportRef"
   >
-    <div class="grid-background" v-if="isEditMode"></div>
-    
+    <!-- 画布容器 (可缩放居中) -->
+    <div 
+      class="canvas-container"
+      ref="canvasRef"
+      :style="canvasContainerStyle"
+      @dragover.prevent
+      @drop="onDrop"
+      @click="onCanvasClick"
+    >
+      <!-- 画布边界 -->
+      <div class="canvas-boundary" :style="canvasBoundaryStyle">
+        <div class="grid-background" v-if="isEditMode"></div>
     <!-- 普通 UI 组件 (场景/2D) -->
     <div
       v-for="widget in uiWidgets"
@@ -53,6 +61,7 @@
       :key="moveableKey"
       :target="widgetRefs[selectedWidget.id]"
       :draggable="true"
+      :bounds="dragBounds"
       :resizable="true"
       :rotatable="true"
       :snappable="true"
@@ -77,6 +86,8 @@
       @rotate="onRotate"
       @rotateEnd="onRotateEnd"
     />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -94,14 +105,59 @@ const isHeadlessWidget = (type) => {
   return def?.config.category === '3d';
 };
 
+const viewportRef = ref(null);
 const canvasRef = ref(null);
 const appStore = useAppStore();
-const { widgets, selectedWidget, isEditMode } = storeToRefs(appStore);
-
+const { widgets, selectedWidget, isEditMode, canvas } = storeToRefs(appStore);
 
 const isSceneReady = computed(() => appStore.isSceneReady);
 
+// 视口尺寸
+const viewportSize = ref({ width: 800, height: 600 });
 
+// 视口对齐样式 (根据画布和视口尺寸动态调整)
+const viewportAlignmentStyle = computed(() => {
+  const vw = viewportSize.value.width;
+  const vh = viewportSize.value.height;
+  const cw = canvas.value.width;
+  const ch = canvas.value.height;
+  
+  // A: 画布都小于视口 → 居中
+  if (cw <= vw && ch <= vh) {
+    return { justifyContent: 'center', alignItems: 'center' };
+  }
+  // B: 宽度超出 → 左对齐，垂直居中
+  if (cw > vw && ch <= vh) {
+    return { justifyContent: 'flex-start', alignItems: 'center' };
+  }
+  // C: 高度超出 → 上对齐，水平居中
+  if (cw <= vw && ch > vh) {
+    return { justifyContent: 'center', alignItems: 'flex-start' };
+  }
+  // D: 都超出 → 左上角对齐
+  return { justifyContent: 'flex-start', alignItems: 'flex-start' };
+});
+
+// 画布容器样式
+const canvasContainerStyle = computed(() => ({
+  width: canvas.value.width + 'px',
+  height: canvas.value.height + 'px'
+}));
+
+// 画布边界样式
+const canvasBoundaryStyle = computed(() => ({
+  width: canvas.value.width + 'px',
+  height: canvas.value.height + 'px',
+  background: canvas.value.background || '#1a1a1a'
+}));
+
+// 拖拽边界限制：组件不能超出画布
+const dragBounds = computed(() => ({
+  left: 0,
+  top: 0,
+  right: canvas.value.width,
+  bottom: canvas.value.height
+}));
 
 // 分离 UI 组件和 3D 逻辑组件
 const uiWidgets = computed(() => widgets.value.filter(w => !isHeadlessWidget(w.type)));
@@ -109,8 +165,6 @@ const headlessWidgets = computed(() => widgets.value.filter(w => isHeadlessWidge
 
 // Widget refs 映射
 const widgetRefs = ref({});
-const canvasWidth = ref(2000);
-const canvasHeight = ref(2000);
 const moveableKey = ref(0);
 
 // 设置 widget ref
@@ -285,23 +339,49 @@ watch(selectedWidget, () => {
   });
 });
 
-// 更新画布尺寸
+// 更新视口尺寸
+const updateViewportSize = () => {
+  if (viewportRef.value) {
+    const rect = viewportRef.value.getBoundingClientRect();
+    viewportSize.value = { width: rect.width, height: rect.height };
+  }
+};
+
 onMounted(() => {
-  if (canvasRef.value) {
-    const rect = canvasRef.value.getBoundingClientRect();
-    canvasWidth.value = rect.width;
-    canvasHeight.value = rect.height;
+  updateViewportSize();
+  // 监听视口变化
+  if (viewportRef.value) {
+    const resizeObserver = new ResizeObserver(updateViewportSize);
+    resizeObserver.observe(viewportRef.value);
   }
 });
 </script>
 
 <style scoped>
-.app-canvas {
+.app-canvas-viewport {
   width: 100%;
   height: 100%;
   position: relative;
-  overflow: hidden;
-  background: #1a1a1a;
+  overflow: auto;
+  background: #0d0d0d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-container {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.canvas-boundary {
+  position: relative;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.edit-mode .canvas-boundary {
+  outline: 2px dashed rgba(66, 185, 131, 0.4);
+  outline-offset: 2px;
 }
 
 .grid-background {
@@ -309,10 +389,12 @@ onMounted(() => {
   inset: 0;
   background-size: 20px 20px;
   background-image: 
-    linear-gradient(to right, #222 1px, transparent 1px),
-    linear-gradient(to bottom, #222 1px, transparent 1px);
+    linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
   pointer-events: none;
 }
+
+
 
 .widget-wrapper {
   position: absolute;

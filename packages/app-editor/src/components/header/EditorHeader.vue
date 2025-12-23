@@ -5,6 +5,13 @@
       <img src="/meteor-min.svg" alt="Logo" class="logo" />
       <h1>{{ appName }}</h1>
       <span v-if="hasUnsavedChanges" class="unsaved-indicator">●</span>
+      <button 
+        class="canvas-size-btn" 
+        @click="showCanvasSettings = true"
+        title="画布设置"
+      >
+        🖼️ {{ canvas.width }}×{{ canvas.height }}
+      </button>
     </div>
     <div class="header-right">
       <div class="mode-toggle">
@@ -34,14 +41,25 @@
       </button>
     </div>
   </header>
+
+  <!-- 画布设置弹窗 -->
+  <CanvasSettingsModal
+    v-model:visible="showCanvasSettings"
+    :canvas="canvas"
+    @apply="onCanvasApply"
+  />
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { useAppStore } from '../../stores/appStore';
 import { storeToRefs } from 'pinia';
+import CanvasSettingsModal from './CanvasSettingsModal.vue';
 
 const appStore = useAppStore();
-const { isEditMode, appName, appId, hasUnsavedChanges, isSaving } = storeToRefs(appStore);
+const { isEditMode, appName, appId, canvas, hasUnsavedChanges, isSaving } = storeToRefs(appStore);
+
+const showCanvasSettings = ref(false);
 
 const onSave = async () => {
   try {
@@ -66,6 +84,13 @@ const onBack = () => {
     }
   }
   window.location.href = '/';
+};
+
+const onCanvasApply = (newCanvas) => {
+  canvas.value.width = newCanvas.width;
+  canvas.value.height = newCanvas.height;
+  canvas.value.background = newCanvas.background;
+  hasUnsavedChanges.value = true;
 };
 </script>
 
@@ -108,6 +133,27 @@ const onBack = () => {
   border-color: #555;
 }
 
+/* Canvas Size Button */
+.canvas-size-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 8px;
+}
+
+.canvas-size-btn:hover {
+  background: #333;
+  border-color: #42b983;
+  color: #42b983;
+}
 .logo {
   width: 28px;
   height: 28px;
