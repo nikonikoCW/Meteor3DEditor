@@ -5,6 +5,7 @@ import { GisProjection } from './GisProjection.js';
 import { StatsManager } from './StatsManager.js';
 import { TriangleStatsManager } from './TriangleStatsManager.js';
 import { LabelManager } from './LabelManager.js';
+import { OutlineManager } from './OutlineManager.js';
 
 /**
  * 场景管理器
@@ -74,6 +75,14 @@ export class SceneManager {
             (lng, lat, h) => this.lngLatToWorld(lng, lat, h)
         );
 
+        // 描边管理器
+        this.outlineManager = new OutlineManager(
+            this.renderer,
+            this.scene,
+            this.camera,
+            canvas.parentElement || document.body
+        );
+
         // 事件系统
         this.events = {};
         this.isReady = false;
@@ -134,7 +143,13 @@ export class SceneManager {
         requestAnimationFrame(this.animate);
         this.statsManager.begin();
         this.controls.update();
-        this.renderer.render(this.scene, this.camera);
+
+        // 如果有描边对象，使用后处理渲染；否则直接渲染
+        const hasOutline = this.outlineManager.render();
+        if (!hasOutline) {
+            this.renderer.render(this.scene, this.camera);
+        }
+
         if (this.labelManager) {
             this.labelManager.update();
         }
@@ -233,6 +248,11 @@ export class SceneManager {
         if (this.labelManager) {
             this.labelManager.onResize(w, h);
         }
+
+        // 同步更新描边管理器尺寸
+        if (this.outlineManager) {
+            this.outlineManager.resize(w, h);
+        }
     }
 
     /**
@@ -278,6 +298,65 @@ export class SceneManager {
         this.scene.remove(object);
         this.objects = this.objects.filter(obj => obj !== object);
         this.markTriangleStatsDirty();
+    }
+
+    /**
+     * 通过 UUID 查找场景中的对象
+     * @param {string} uuid - 对象 UUID
+     * @returns {THREE.Object3D|null}
+     */
+    findObjectByUUID(uuid) {
+        let found = null;
+        this.scene.traverse((child) => {
+            if (child.uuid === uuid) {
+                found = child;
+            }
+        });
+        return found;
+    }
+
+    /**
+     * 启用对象描边
+     * @param {string} uuid - 对象 UUID
+     * @param {Object} options - 配置选项
+     * @param {number} [options.color=0x00ff00] - 描边颜色
+     * @param {number} [options.thickness=1] - 描边粗细
+     * @param {number} [options.strength=3] - 描边强度
+     * @returns {boolean} 是否成功
+     */
+    enableOutline(uuid, options = {}) {
+        const object = this.findObjectByUUID(uuid);
+        if (!object) {
+            console.warn(`[OutlineManager] Object not found: ${uuid}`);
+            return false;
+        }
+        return this.outlineManager.enable(object, options);
+    }
+
+    /**
+     * 禁用对象描边
+     * @param {string} uuid - 对象 UUID，不传则清除所有描边
+     * @returns {boolean} 是否成功
+     */
+    disableOutline(uuid) {
+        if (!uuid) {
+            this.outlineManager.disableAll();
+            return true;
+        }
+        const object = this.findObjectByUUID(uuid);
+        if (!object) {
+            console.warn(`[OutlineManager] Object not found: ${uuid}`);
+            return false;
+        }
+        return this.outlineManager.disable(object);
+    }
+
+    /**
+     * 获取当前描边对象的 UUID 列表
+     * @returns {string[]}
+     */
+    getOutlinedObjects() {
+        return this.outlineManager.getOutlinedUUIDs();
     }
 
     /**

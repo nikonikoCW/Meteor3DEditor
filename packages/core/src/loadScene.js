@@ -230,6 +230,26 @@ function createMeteor3DInstance(sceneManager, resizeObserver) {
         /** 清除所有标签 */
         clearLabels: () => sceneManager.labelManager.clearLabels(),
 
+        // ========== 描边效果 ==========
+        /**
+         * 启用对象描边
+         * @param {string} uuid - 对象 UUID
+         * @param {Object} [options] - 配置选项
+         * @param {number} [options.color=0x00ff00] - 描边颜色
+         * @param {number} [options.thickness=1] - 描边粗细
+         * @param {number} [options.strength=3] - 描边强度
+         * @returns {boolean}
+         */
+        enableOutline: (uuid, options) => sceneManager.enableOutline(uuid, options),
+        /**
+         * 禁用对象描边
+         * @param {string} [uuid] - 对象 UUID，不传则清除所有
+         * @returns {boolean}
+         */
+        disableOutline: (uuid) => sceneManager.disableOutline(uuid),
+        /** 获取当前描边对象的 UUID 列表 */
+        getOutlinedObjects: () => sceneManager.getOutlinedObjects(),
+
         // ========== 生命周期 ==========
         /** 销毁实例，释放资源 */
         dispose: () => {
