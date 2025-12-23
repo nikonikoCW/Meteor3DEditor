@@ -86,7 +86,7 @@ const getWidgetStyle = (widget) => {
 
 // 处理组件事件
 const onWidgetEvent = (widgetId, event) => {
-  if (event.type === 'click') {
+  if (event.event === 'click') {
     appStore.triggerEvent(widgetId, 'click');
   }
 };
