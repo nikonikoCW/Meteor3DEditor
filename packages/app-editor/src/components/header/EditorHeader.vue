@@ -15,6 +15,15 @@
         </label>
       </div>
       <button 
+        class="preview-btn" 
+        @click="onPreview"
+        :disabled="!appId"
+        title="新窗口预览"
+      >
+        <span class="preview-icon">👁</span>
+        预览
+      </button>
+      <button 
         class="save-btn" 
         :disabled="!isEditMode || isSaving" 
         @click="onSave"
@@ -32,7 +41,7 @@ import { useAppStore } from '../../stores/appStore';
 import { storeToRefs } from 'pinia';
 
 const appStore = useAppStore();
-const { isEditMode, appName, hasUnsavedChanges, isSaving } = storeToRefs(appStore);
+const { isEditMode, appName, appId, hasUnsavedChanges, isSaving } = storeToRefs(appStore);
 
 const onSave = async () => {
   try {
@@ -41,6 +50,13 @@ const onSave = async () => {
   } catch (error) {
     alert('保存失败: ' + error.message);
   }
+};
+
+const onPreview = () => {
+  if (!appId.value) return;
+  // 新窗口打开预览页面
+  const previewUrl = `${window.location.origin}?appId=${appId.value}&mode=preview`;
+  window.open(previewUrl, '_blank');
 };
 
 const onBack = () => {
@@ -198,7 +214,33 @@ input:checked + .slider:before {
   cursor: not-allowed;
 }
 
-.save-icon, .loading-icon {
+.save-icon, .loading-icon, .preview-icon {
   font-size: 14px;
+}
+
+/* Preview Button */
+.preview-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #2d2d2d;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #ddd;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preview-btn:hover:not(:disabled) {
+  background: #3d3d3d;
+  border-color: #42b983;
+  color: #42b983;
+}
+
+.preview-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 </style>
