@@ -10,6 +10,10 @@
         <input type="text" v-model="selectedObject.name" @change="onGeneralChange">
       </div>
       <div class="prop-row">
+        <label>ID</label>
+        <input type="text" v-model="selectedObject.uuid" :disabled="true">
+      </div>
+      <div class="prop-row">
         <label>类型</label>
         <span class="readonly-val">{{ selectedObject.type }}</span>
       </div>
