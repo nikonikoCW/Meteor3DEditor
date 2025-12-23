@@ -190,7 +190,8 @@ const getWidgetStyle = (widget) => {
     top: `${widget.position.y}px`,
     width: `${widget.size?.width || 200}px`,
     height: `${widget.size?.height || 150}px`,
-    transform: widget.rotation ? `rotate(${widget.rotation}deg)` : 'none'
+    transform: widget.rotation ? `rotate(${widget.rotation}deg)` : 'none',
+    zIndex: widget.data?.zIndex || 1
   };
 };
 

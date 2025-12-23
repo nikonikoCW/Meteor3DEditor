@@ -107,7 +107,8 @@ const getWidgetStyle = (widget) => {
     left: `${widget.position?.x || 0}px`,
     top: `${widget.position?.y || 0}px`,
     width: `${widget.size?.width || 200}px`,
-    height: `${widget.size?.height || 150}px`
+    height: `${widget.size?.height || 150}px`,
+    zIndex: widget.data?.zIndex || 1
   };
   if (widget.rotation) {
     style.transform = `rotate(${widget.rotation}deg)`;

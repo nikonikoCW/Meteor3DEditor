@@ -115,7 +115,8 @@ const sceneConfig = {
                     return [];
                 }
             }
-        }
+        },
+        { name: 'zIndex', label: '层级', type: 'number', defaultValue: 1 }
     ]
 };
 
@@ -152,7 +153,9 @@ const buttonConfig = {
     props: [
         { name: 'label', label: '按钮文字', type: 'text', defaultValue: '点击我' },
         { name: 'color', label: '背景色', type: 'color', defaultValue: '#00ccff' },
-        { name: 'fontSize', label: '字号', type: 'number', defaultValue: 14 }
+        { name: 'fontSize', label: '字号', type: 'number', defaultValue: 14 },
+        { name: 'borderRadius', label: '圆角', type: 'number', defaultValue: 4 },
+        { name: 'zIndex', label: '层级', type: 'number', defaultValue: 1 }
     ],
     // 组件支持的事件
     events: [
@@ -179,7 +182,8 @@ const imageConfig = {
                 { label: '拉伸', value: 'fill' }
             ],
             defaultValue: 'cover'
-        }
+        },
+        { name: 'zIndex', label: '层级', type: 'number', defaultValue: 1 }
     ]
 };
 
@@ -204,7 +208,8 @@ const textConfig = {
                 { label: '右对齐', value: 'right' }
             ],
             defaultValue: 'left'
-        }
+        },
+        { name: 'zIndex', label: '层级', type: 'number', defaultValue: 1 }
     ]
 };
 
@@ -229,7 +234,8 @@ const clockConfig = {
         },
         { name: 'fontSize', label: '字号', type: 'number', defaultValue: 24 },
         { name: 'color', label: '颜色', type: 'color', defaultValue: '#ffffff' },
-        { name: 'backgroundColor', label: '背景色', type: 'color-alpha', defaultValue: '#000000' }
+        { name: 'backgroundColor', label: '背景色', type: 'color-alpha', defaultValue: '#000000' },
+        { name: 'zIndex', label: '层级', type: 'number', defaultValue: 1 }
     ]
 };
 
