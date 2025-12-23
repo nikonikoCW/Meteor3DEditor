@@ -4,13 +4,23 @@
     <div class="section">
       <h4>基础信息</h4>
       <div class="field">
+        <label>名称</label>
+        <input 
+          type="text" 
+          v-model="selectedWidget.name" 
+          @input="onNameChange"
+          :disabled="disabled"
+          placeholder="输入组件名称"
+        >
+      </div>
+      <div class="field">
         <label>类型</label>
-        <span class="readonly">{{ selectedWidget.type }}</span>
+        <span class="readonly">{{ getWidgetLabel(selectedWidget.type) }}</span>
       </div>
     </div>
 
-    <!-- 布局属性 -->
-    <div class="section">
+    <!-- 布局属性 (3D 组件不显示) -->
+    <div class="section" v-if="!isHeadlessWidget(selectedWidget.type)">
       <h4>布局</h4>
       <div class="row">
         <div class="field half">
@@ -122,7 +132,24 @@ defineProps({
 });
 
 const appStore = useAppStore();
-const { selectedWidget } = storeToRefs(appStore);
+const { selectedWidget, hasUnsavedChanges } = storeToRefs(appStore);
+
+// 判断是否是 3D 逻辑组件
+const isHeadlessWidget = (type) => {
+  const def = getWidgetDefinition(type);
+  return def?.config.category === '3d';
+};
+
+// 获取组件类型标签
+const getWidgetLabel = (type) => {
+  const def = getWidgetDefinition(type);
+  return def?.config.label || type;
+};
+
+// 名称变化时标记未保存
+const onNameChange = () => {
+  hasUnsavedChanges.value = true;
+};
 
 const widgetProps = ref([]);
 

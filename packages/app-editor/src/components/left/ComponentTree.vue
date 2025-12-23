@@ -13,7 +13,7 @@
         @click="onSelectWidget(widget)"
       >
         <span class="widget-icon">{{ getWidgetIcon(widget.type) }}</span>
-        <span class="widget-name">{{ widget.type }}</span>
+        <span class="widget-name">{{ getWidgetDisplayName(widget) }}</span>
         <button class="delete-btn" @click.stop="onDeleteWidget(widget)" title="删除">×</button>
       </div>
       <div v-if="widgets.length === 0" class="empty-tip">
@@ -34,6 +34,13 @@ const { widgets, selectedWidget } = storeToRefs(appStore);
 const getWidgetIcon = (type) => {
   const def = getWidgetDefinition(type);
   return def?.config.icon || '📦';
+};
+
+// 获取显示名称：优先使用自定义名称，否则使用类型标签
+const getWidgetDisplayName = (widget) => {
+  if (widget.name) return widget.name;
+  const def = getWidgetDefinition(widget.type);
+  return def?.config.label || widget.type;
 };
 
 const onSelectWidget = (widget) => {

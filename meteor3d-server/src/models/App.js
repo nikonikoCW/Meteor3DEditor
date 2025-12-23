@@ -45,6 +45,10 @@ const AppSchema = new mongoose.Schema({
             type: String,
             required: true
         },
+        name: {
+            type: String,
+            default: ''
+        },
         position: {
             x: { type: Number, default: 0 },
             y: { type: Number, default: 0 }

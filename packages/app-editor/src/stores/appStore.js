@@ -74,6 +74,7 @@ export const useAppStore = defineStore('app', () => {
                 widgets: widgets.value.map(w => ({
                     id: w.id,
                     type: w.type,
+                    name: w.name || '',  // 自定义名称
                     position: w.position,
                     size: w.size,
                     rotation: w.rotation,
