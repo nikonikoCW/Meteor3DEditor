@@ -24,6 +24,7 @@ jobs:
         run: |
           rm -rf packages/dashboard
           rm -rf packages/app-editor
+          rm -rf packages/docs
           
           # 删除所有 .md 文件 (但保留根目录 README.md)
           find . -name "*.md" -type f ! -name "README.md" -delete
