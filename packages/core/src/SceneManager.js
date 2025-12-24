@@ -6,6 +6,7 @@ import { StatsManager } from './StatsManager.js';
 import { TriangleStatsManager } from './TriangleStatsManager.js';
 import { LabelManager } from './LabelManager.js';
 import { OutlineManager } from './OutlineManager.js';
+import { HighlightManager } from './HighlightManager.js';
 
 /**
  * 场景管理器
@@ -82,6 +83,9 @@ export class SceneManager {
             this.camera,
             canvas.parentElement || document.body
         );
+
+        // 高亮管理器
+        this.highlightManager = new HighlightManager();
 
         // 事件系统
         this.events = {};
@@ -357,6 +361,49 @@ export class SceneManager {
      */
     getOutlinedObjects() {
         return this.outlineManager.getOutlinedUUIDs();
+    }
+
+    /**
+     * 启用对象高亮
+     * @param {string} uuid - 对象 UUID
+     * @param {Object} options - 配置选项
+     * @param {number} [options.color=0xffff00] - 高亮颜色
+     * @param {number} [options.intensity=0.5] - 发光强度
+     * @returns {boolean} 是否成功
+     */
+    enableHighlight(uuid, options = {}) {
+        const object = this.findObjectByUUID(uuid);
+        if (!object) {
+            console.warn(`[HighlightManager] Object not found: ${uuid}`);
+            return false;
+        }
+        return this.highlightManager.enable(object, options);
+    }
+
+    /**
+     * 禁用对象高亮
+     * @param {string} uuid - 对象 UUID，不传则清除所有高亮
+     * @returns {boolean} 是否成功
+     */
+    disableHighlight(uuid) {
+        if (!uuid) {
+            this.highlightManager.disableAll();
+            return true;
+        }
+        const object = this.findObjectByUUID(uuid);
+        if (!object) {
+            console.warn(`[HighlightManager] Object not found: ${uuid}`);
+            return false;
+        }
+        return this.highlightManager.disable(object);
+    }
+
+    /**
+     * 获取当前高亮对象的 UUID 列表
+     * @returns {string[]}
+     */
+    getHighlightedObjects() {
+        return this.highlightManager.getHighlightedUUIDs();
     }
 
     /**

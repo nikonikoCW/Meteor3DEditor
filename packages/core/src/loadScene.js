@@ -252,6 +252,25 @@ function createMeteor3DInstance(sceneManager, resizeObserver) {
         /** 获取当前描边对象的 UUID 列表 */
         getOutlinedObjects: () => sceneManager.getOutlinedObjects(),
 
+        // ========== 高亮效果 ==========
+        /**
+         * 启用对象高亮
+         * @param {string} uuid - 对象 UUID
+         * @param {Object} [options] - 配置选项
+         * @param {number} [options.color=0xffff00] - 高亮颜色
+         * @param {number} [options.intensity=0.5] - 发光强度
+         * @returns {boolean}
+         */
+        enableHighlight: (uuid, options) => sceneManager.enableHighlight(uuid, options),
+        /**
+         * 禁用对象高亮
+         * @param {string} [uuid] - 对象 UUID，不传则清除所有
+         * @returns {boolean}
+         */
+        disableHighlight: (uuid) => sceneManager.disableHighlight(uuid),
+        /** 获取当前高亮对象的 UUID 列表 */
+        getHighlightedObjects: () => sceneManager.getHighlightedObjects(),
+
         // ========== 生命周期 ==========
         /** 销毁实例，释放资源 */
         dispose: () => {
