@@ -30,6 +30,7 @@
         </div>
         <div class="panel-content">
           <PropertiesPanel v-show="activeRightTab === 'properties'" />
+          <MaterialPanel v-show="activeRightTab === 'material'" />
           <SceneSettingsPanel v-show="activeRightTab === 'settings'" />
           <GisSettingsPanel v-show="activeRightTab === 'gis'" />
         </div>
@@ -46,6 +47,7 @@ import LibraryPanel from '../components/LibraryPanel.vue';
 import Viewport from '../components/Viewport.vue';
 import SceneTree from '../components/SceneTree.vue';
 import PropertiesPanel from '../components/PropertiesPanel.vue';
+import MaterialPanel from '../components/MaterialPanel.vue';
 import SceneSettingsPanel from '../components/SceneSettingsPanel.vue';
 import GisSettingsPanel from '../components/GisSettingsPanel.vue';
 
@@ -57,6 +59,11 @@ const rightTabs = [
     id: 'properties', 
     title: '属性',
     icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>'
+  },
+  { 
+    id: 'material', 
+    title: '材质',
+    icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>'
   },
   { 
     id: 'settings', 

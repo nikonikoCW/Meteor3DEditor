@@ -94,75 +94,6 @@
       </div>
     </div>
 
-    <!-- Material -->
-    <div class="section" v-if="selectedObject.material">
-      <h4>材质 (Material)</h4>
-      
-      <div class="prop-row">
-        <label>类型</label>
-        <span class="readonly-val">{{ selectedObject.material.type }}</span>
-      </div>
-
-      <div class="prop-row">
-        <label>颜色</label>
-        <input type="color" :value="'#' + selectedObject.material.color.getHexString()" @change="updateColor">
-      </div>
-
-      <div class="prop-row" v-if="selectedObject.material.map !== undefined">
-        <label>贴图</label>
-        <span class="readonly-val">{{ selectedObject.material.map ? (selectedObject.material.map.name || 'Texture') : '无' }}</span>
-      </div>
-
-      <div class="prop-row">
-        <label>混合模式</label>
-        <select v-model.number="selectedObject.material.blending" @change="onMaterialChange">
-            <option :value="THREE.NoBlending">No Blending</option>
-            <option :value="THREE.NormalBlending">Normal</option>
-            <option :value="THREE.AdditiveBlending">Additive</option>
-            <option :value="THREE.SubtractiveBlending">Subtractive</option>
-            <option :value="THREE.MultiplyBlending">Multiply</option>
-        </select>
-      </div>
-
-      <div class="prop-row">
-        <label>渲染面</label>
-        <select v-model.number="selectedObject.material.side" @change="onMaterialChange">
-            <option :value="THREE.FrontSide">Front</option>
-            <option :value="THREE.BackSide">Back</option>
-            <option :value="THREE.DoubleSide">Double</option>
-        </select>
-      </div>
-
-      <div class="prop-row">
-        <label>透明</label>
-        <input type="checkbox" v-model="selectedObject.material.transparent" @change="onMaterialChange">
-      </div>
-
-      <div class="prop-row">
-        <label>深度测试</label>
-        <input type="checkbox" v-model="selectedObject.material.depthTest" @change="onMaterialChange">
-      </div>
-
-      <div class="prop-row">
-        <label>深度写入</label>
-        <input type="checkbox" v-model="selectedObject.material.depthWrite" @change="onMaterialChange">
-      </div>
-
-      <div class="prop-row">
-        <label>顶点颜色</label>
-        <input type="checkbox" v-model="selectedObject.material.vertexColors" @change="onMaterialChange">
-      </div>
-
-      <div class="prop-row" v-if="selectedObject.material.roughness !== undefined">
-        <label>粗糙度</label>
-        <input type="number" min="0" max="1" step="0.1" v-model.number="selectedObject.material.roughness" @change="onMaterialChange">
-      </div>
-      <div class="prop-row" v-if="selectedObject.material.metalness !== undefined">
-        <label>金属度</label>
-        <input type="number" min="0" max="1" step="0.1" v-model.number="selectedObject.material.metalness" @change="onMaterialChange">
-      </div>
-    </div>
-
     <div class="debug-info">
         <small>UUID: {{ selectedObject.uuid.slice(0, 8) }}...</small>
     </div>
@@ -306,6 +237,14 @@ const onMaterialChange = () => {
   if (selectedObject.value.material) {
       selectedObject.value.material.needsUpdate = true;
   }
+};
+
+// Handle emissive color updates
+const updateEmissive = (event) => {
+  if (!selectedObject.value || !selectedObject.value.material) return;
+  
+  selectedObject.value.material.emissive.set(event.target.value);
+  onMaterialChange();
 };
 </script>
 
