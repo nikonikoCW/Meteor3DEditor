@@ -332,6 +332,43 @@ const statsConfig = {
     ]
 };
 
+// 描边效果组件配置 (3D 逻辑组件)
+const outlineConfig = {
+    label: '描边效果',
+    icon: '✏️',
+    category: '3d',
+    defaultSize: { width: 150, height: 80 },
+    minSize: { width: 80, height: 40 },
+    props: [
+        { name: 'uuid', label: '对象 UUID', type: 'text', defaultValue: '' },
+        { name: 'color', label: '描边颜色', type: 'color', defaultValue: '#00ff00' },
+        { name: 'thickness', label: '粗细', type: 'number', defaultValue: 1, min: 0.1, max: 10, step: 0.1 },
+        { name: 'strength', label: '强度', type: 'number', defaultValue: 3, min: 0, max: 10, step: 0.5 }
+    ],
+    actions: [
+        { name: 'enable', label: '启用描边' },
+        { name: 'disable', label: '禁用描边' }
+    ]
+};
+
+// 高亮效果组件配置 (3D 逻辑组件)
+const highlightConfig = {
+    label: '高亮效果',
+    icon: '💡',
+    category: '3d',
+    defaultSize: { width: 150, height: 80 },
+    minSize: { width: 80, height: 40 },
+    props: [
+        { name: 'uuid', label: '对象 UUID', type: 'text', defaultValue: '' },
+        { name: 'color', label: '高亮颜色', type: 'color', defaultValue: '#ffff00' },
+        { name: 'intensity', label: '强度', type: 'number', defaultValue: 0.5, min: 0, max: 1, step: 0.1 }
+    ],
+    actions: [
+        { name: 'enable', label: '启用高亮' },
+        { name: 'disable', label: '禁用高亮' }
+    ]
+};
+
 // 统一注册
 export function initRegistry() {
     // 场景组件
@@ -348,4 +385,6 @@ export function initRegistry() {
     registerWidget('Label3D', labelConfig, () => import('../components/widgets/LabelWidget.vue'));
     registerWidget('Tour', tourConfig, () => import('../components/widgets/TourWidget.vue'));
     registerWidget('Stats', statsConfig, () => import('../components/widgets/StatsWidget.vue'));
+    registerWidget('Outline', outlineConfig, () => import('../components/widgets/OutlineWidget.vue'));
+    registerWidget('Highlight', highlightConfig, () => import('../components/widgets/HighlightWidget.vue'));
 }

@@ -36,7 +36,7 @@ export class SceneManager {
         fillLight.position.set(-10, 10, -10);
         this.scene.add(fillLight);
 
-        this.camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+        this.camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 10000);
         this.camera.position.set(5, 5, 5);
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); // 开启 alpha 以防背景问题
@@ -391,6 +391,7 @@ export class SceneManager {
             return true;
         }
         const object = this.findObjectByUUID(uuid);
+        console.log(`[disableHighlight] UUID: ${uuid}, Found: ${!!object}, Highlighted: ${this.highlightManager.getHighlightedUUIDs()}`);
         if (!object) {
             console.warn(`[HighlightManager] Object not found: ${uuid}`);
             return false;

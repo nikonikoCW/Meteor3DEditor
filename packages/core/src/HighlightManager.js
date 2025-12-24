@@ -57,18 +57,29 @@ export class HighlightManager {
                         mat.needsUpdate = true;
                     } else if (mat.color !== undefined) {
                         // 方案 B：不支持 emissive 的材质（如 MeshBasicMaterial）
-                        // 使用颜色叠加方式
+                        // 保存原始材质引用，创建高亮材质副本
+                        const originalMaterial = mat;
+                        const highlightMat = mat.clone();
+
+                        // 将高亮色与原色混合（intensity 限制在 0-1）
+                        const clampedIntensity = Math.min(1, Math.max(0, intensity));
+                        highlightMat.color.lerp(highlightColor, clampedIntensity);
+                        highlightMat.needsUpdate = true;
+
+                        // 保存原始材质引用
                         originalData.push({
                             mesh: child,
                             materialIndex: index,
-                            type: 'color',
-                            originalColor: mat.color.clone()
+                            type: 'material',
+                            originalMaterial: originalMaterial
                         });
 
-                        // 将高亮色与原色混合
-                        const blendedColor = mat.color.clone().lerp(highlightColor, intensity);
-                        mat.color.copy(blendedColor);
-                        mat.needsUpdate = true;
+                        // 替换为高亮材质
+                        if (Array.isArray(child.material)) {
+                            child.material[index] = highlightMat;
+                        } else {
+                            child.material = highlightMat;
+                        }
                     }
                 });
             }
@@ -118,7 +129,12 @@ export class HighlightManager {
      */
     _restoreObject(uuid) {
         const record = this.highlightedObjects.get(uuid);
-        if (!record) return;
+        if (!record) {
+            console.warn(`[HighlightManager] _restoreObject: No record found for ${uuid}`);
+            return;
+        }
+
+        console.log(`[HighlightManager] Restoring ${record.originalData.length} materials for ${uuid}`);
 
         record.originalData.forEach((data) => {
             const materials = Array.isArray(data.mesh.material)
@@ -128,13 +144,22 @@ export class HighlightManager {
             const mat = materials[data.materialIndex];
             if (!mat) return;
 
-            if (data.type === 'emissive' && mat.emissive) {
-                mat.emissive.copy(data.originalEmissive);
-                mat.emissiveIntensity = data.originalEmissiveIntensity;
-                mat.needsUpdate = true;
-            } else if (data.type === 'color' && mat.color) {
-                mat.color.copy(data.originalColor);
-                mat.needsUpdate = true;
+            if (data.type === 'emissive') {
+                const mat = materials[data.materialIndex];
+                if (mat && mat.emissive) {
+                    mat.emissive.copy(data.originalEmissive);
+                    mat.emissiveIntensity = data.originalEmissiveIntensity;
+                    mat.needsUpdate = true;
+                    console.log(`[HighlightManager] Restored emissive for mesh`);
+                }
+            } else if (data.type === 'material') {
+                // 恢复原始材质引用
+                if (Array.isArray(data.mesh.material)) {
+                    data.mesh.material[data.materialIndex] = data.originalMaterial;
+                } else {
+                    data.mesh.material = data.originalMaterial;
+                }
+                console.log(`[HighlightManager] Restored original material for mesh`);
             }
         });
 

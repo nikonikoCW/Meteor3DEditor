@@ -25,7 +25,7 @@
                 :key="w.id" 
                 :value="w.id"
               >
-                {{ w.type }} - {{ w.id.slice(0, 8) }}
+                {{ w.name || `${w.type} - ${w.id.slice(0, 8)}` }}
               </option>
             </select>
           </div>

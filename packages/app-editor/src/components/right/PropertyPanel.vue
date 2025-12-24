@@ -109,6 +109,9 @@
           :type="prop.type === 'number' ? 'number' : 'text'"
           v-model="selectedWidget.data[prop.name]"
           :disabled="disabled"
+          :min="prop.min"
+          :max="prop.max"
+          :step="prop.step"
         >
       </div>
     </div>
