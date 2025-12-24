@@ -449,6 +449,24 @@ export class SceneManager {
     }
 
     /**
+     * 设置坐标轴辅助线可见性
+     * @param {boolean} visible - 是否可见
+     * @param {number} size - 坐标轴长度（默认 10）
+     */
+    setAxesHelper(visible, size = 10) {
+        // 先移除旧的坐标轴
+        if (this.axesHelper) {
+            this.scene.remove(this.axesHelper);
+            this.axesHelper = null;
+        }
+
+        if (visible) {
+            this.axesHelper = new THREE.AxesHelper(size);
+            this.scene.add(this.axesHelper);
+        }
+    }
+
+    /**
      * 配置 GIS 投影：中心锚定在 (0,0,0)
      * @param {{center:{lng:number,lat:number},size:number,bounds:{maxLat,minLat,maxLng,minLng},enable:boolean}} config
      */

@@ -70,6 +70,20 @@
           <span class="stats-value">{{ triangleStats.textureCount.toLocaleString() }}</span>
         </div>
       </div>
+
+      <div class="prop-row switch-row" style="margin-top: 12px;">
+        <label>坐标轴</label>
+        <div class="switch-container">
+          <label class="switch">
+            <input type="checkbox" v-model="showAxes" @change="onAxesToggle">
+            <span class="slider"></span>
+          </label>
+          <span class="switch-label">{{ showAxes ? '开启' : '关闭' }}</span>
+        </div>
+      </div>
+      <div class="hint" v-if="showAxes">
+        显示 XYZ 坐标轴（红=X 绿=Y 蓝=Z）
+      </div>
     </div>
     
     <div class="debug-info">
@@ -103,6 +117,9 @@ const triangleStats = reactive({
   textureCount: 0
 });
 
+// 坐标轴开关状态
+const showAxes = ref(false);
+
 // 切换性能监视器
 const onStatsToggle = () => {
   if (window.editor && window.editor.sceneManager) {
@@ -123,6 +140,13 @@ const onTriangleStatsToggle = () => {
       },
       100
     );
+  }
+};
+
+// 切换坐标轴显示
+const onAxesToggle = () => {
+  if (window.editor && window.editor.sceneManager) {
+    window.editor.sceneManager.setAxesHelper(showAxes.value, 10);
   }
 };
 

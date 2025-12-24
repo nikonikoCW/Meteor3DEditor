@@ -212,6 +212,8 @@ function createMeteor3DInstance(sceneManager, resizeObserver) {
         // ========== 辅助显示 ==========
         /** 设置网格辅助线 */
         setGridHelper: (visible, length, width) => sceneManager.setGridHelper(visible, length, width),
+        /** 设置坐标轴辅助线 */
+        setAxesHelper: (visible, size) => sceneManager.setAxesHelper(visible, size),
 
         // ========== 标签 API ==========
         /**
