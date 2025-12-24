@@ -444,8 +444,6 @@ export class SceneManager {
             this.gridHelper = gridPlane;
             this.scene.add(gridPlane);
         }
-
-        this.emitGisConfigUpdated();
     }
 
     /**
