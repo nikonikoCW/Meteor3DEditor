@@ -18,3 +18,7 @@ dist/
 testFile/
 
 gitRule.txt
+
+# VitePress
+**/.vitepress/cache/
+**/.vitepress/dist/
