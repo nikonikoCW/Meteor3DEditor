@@ -127,18 +127,39 @@ const chartConfig = {
     category: '2d',
     defaultSize: { width: 400, height: 300 },
     minSize: { width: 150, height: 100 },
-    props: [
-        { name: 'title', label: '标题', type: 'text', defaultValue: '新图表' },
+    props: [],
+    dataConfig: [
         {
-            name: 'chartType',
-            label: '图表类型',
-            type: 'select',
-            options: [
-                { label: '折线图', value: 'line' },
-                { label: '柱状图', value: 'bar' },
-                { label: '饼图', value: 'pie' }
-            ],
-            defaultValue: 'line'
+            name: 'code',
+            label: 'ECharts 代码',
+            type: 'code-editor',
+            language: 'javascript',
+            defaultValue: `option = {
+  title: {
+    text: 'ECharts 示例',
+    textStyle: { color: '#ccc', fontSize: 14 }
+  },
+  tooltip: { trigger: 'axis' },
+  xAxis: {
+    type: 'category',
+    data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    axisLine: { lineStyle: { color: '#444' } },
+    axisLabel: { color: '#888' }
+  },
+  yAxis: {
+    type: 'value',
+    axisLine: { lineStyle: { color: '#444' } },
+    axisLabel: { color: '#888' },
+    splitLine: { lineStyle: { color: '#333' } }
+  },
+  series: [{
+    type: 'line',
+    data: [120, 200, 150, 80, 70, 110, 130],
+    itemStyle: { color: '#42b983' },
+    areaStyle: { color: 'rgba(66,185,131,0.2)' }
+  }]
+};`,
+            description: '支持 MakeAPie 代码格式'
         }
     ]
 };

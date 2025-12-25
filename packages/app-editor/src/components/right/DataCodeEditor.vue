@@ -41,6 +41,7 @@ import { ref, computed, watch } from 'vue';
 import { Codemirror } from 'vue-codemirror';
 import { html } from '@codemirror/lang-html';
 import { css } from '@codemirror/lang-css';
+import { javascript } from '@codemirror/lang-javascript';
 import { oneDark } from '@codemirror/theme-one-dark';
 
 const props = defineProps({
@@ -62,6 +63,8 @@ const extensions = computed(() => {
     base.push(html());
   } else if (props.language === 'css') {
     base.push(css());
+  } else if (props.language === 'javascript') {
+    base.push(javascript());
   }
   return base;
 });
@@ -142,12 +145,13 @@ const applyChanges = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10000;
 }
 
 .modal-container {
-  width: 600px;
-  max-height: 80vh;
+  width: 80%;
+  max-width: 1200px;
+  max-height: 90vh;
   background: #1e1e1e;
   border-radius: 8px;
   display: flex;
@@ -183,7 +187,7 @@ const applyChanges = () => {
 }
 
 .editor-wrapper {
-  height: 350px;
+  height: 70vh;
   overflow: auto;
 }
 
