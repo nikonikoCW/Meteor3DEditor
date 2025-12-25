@@ -9,7 +9,29 @@
       <div class="dialog-body">
         <!-- 上半部分：JSON 上传 -->
         <div class="section upload-section">
-          <h4>1. 上传位置数据 (JSON)</h4>
+          <h4>
+            1. 上传位置数据 (JSON)
+            <span class="help-icon" title="">
+              ❓
+              <div class="tooltip" @click.stop>
+                <div class="tooltip-inner">
+                  <div class="tooltip-title">JSON 文件格式说明</div>
+                  <pre class="tooltip-code">[
+  {
+    "lng": 121.4737,
+    "lat": 31.2304,
+    "height": 10,
+    "rotation": [0, 45, 0],
+    "scale": [1, 1, 1]
+  }
+]</pre>
+                  <button class="copy-btn" @click="copyExample">
+                    {{ copied ? '✓ 已复制' : '📋 复制示例' }}
+                  </button>
+                </div>
+              </div>
+            </span>
+          </h4>
           <div class="upload-box" :class="{ 'has-file': items.length > 0 }">
             <input 
               type="file" 
@@ -22,7 +44,7 @@
               <button class="upload-btn" @click="$refs.fileInput.click()">
                 📂 选择 JSON 文件
               </button>
-              <p class="hint">支持格式: .json (包含 lng, lat, height)</p>
+              <p class="hint">数组格式，包含 lng, lat 字段</p>
             </div>
             <div v-else class="file-info">
               <span class="success-icon">✓</span>
@@ -103,6 +125,31 @@ const availableAssets = ref([]);
 const selectedAssetId = ref(null);
 const loading = ref(false);
 const loadingAssets = ref(false);
+const copied = ref(false);
+
+// 示例 JSON 数据
+const exampleJson = `[
+  {
+    "lng": 121.4737,
+    "lat": 31.2304,
+    "height": 10,
+    "rotation": [0, 45, 0],
+    "scale": [1, 1, 1]
+  }
+]`;
+
+// 复制示例到剪贴板
+const copyExample = async () => {
+  try {
+    await navigator.clipboard.writeText(exampleJson);
+    copied.value = true;
+    setTimeout(() => {
+      copied.value = false;
+    }, 2000);
+  } catch (err) {
+    message.error('复制失败');
+  }
+};
 
 // 获取资产列表
 const loadAssets = async () => {
@@ -305,6 +352,89 @@ watch(() => props.visible, (newVal) => {
   color: #aaa;
   font-size: 13px;
   font-weight: normal;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Help Icon & Tooltip */
+.help-icon {
+  position: relative;
+  cursor: help;
+  font-size: 12px;
+  opacity: 0.7;
+  padding: 5px;  /* 扩展悬停区域 */
+  margin: -5px;
+}
+
+.help-icon:hover {
+  opacity: 1;
+}
+
+.help-icon .tooltip {
+  display: none;
+  position: absolute;
+  left: -10px;
+  top: 100%;
+  margin-top: 0;  /* 无间隙 */
+  padding-top: 8px;  /* 用 padding 代替 margin，保持悬停区域连续 */
+  z-index: 100;
+}
+
+.help-icon .tooltip > * {
+  background: #1a1a1a;
+}
+
+.help-icon .tooltip .tooltip-inner {
+  background: #1a1a1a;
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 12px;
+  width: 320px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.help-icon:hover .tooltip {
+  display: block;
+}
+
+.tooltip-title {
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.tooltip-code {
+  background: #0d0d0d;
+  color: #88cc88;
+  padding: 10px;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 11px;
+  margin: 0;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.copy-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 6px 12px;
+  background: #333;
+  border: 1px solid #555;
+  color: #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.copy-btn:hover {
+  background: #444;
+  color: #fff;
+  border-color: #0066cc;
 }
 
 /* Upload Section */
