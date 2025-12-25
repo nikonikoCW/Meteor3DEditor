@@ -28,15 +28,19 @@ scene-editor/
 ├── package.json            # 包配置
 ├── vite.config.js          # Vite 构建配置 (端口 5173)
 │
+├── public/
+│   ├── draco/                  # Draco 解码器
+│   └── meteor-min.svg          # Logo
+│
 └── src/
     ├── main.js             # Vue 应用入口
     ├── App.vue             # 根组件
     ├── config.js           # API 配置 (后端地址)
     │
     ├── views/                  # 页面视图
-    │   ├── HomeView.vue            # 首页
     │   ├── EditorView.vue          # 编辑器主页面
-    │   └── ScenesView.vue          # 场景列表
+    │   ├── ScenesView.vue          # 场景列表 (支持分页)
+    │   └── AboutView.vue           # 关于页面
     │
     ├── components/             # Vue 组件
     │   ├── Viewport.vue            # 3D 视口
@@ -44,17 +48,25 @@ scene-editor/
     │   ├── TreeNode.vue            # 树节点
     │   ├── PropertiesPanel.vue     # 属性面板
     │   ├── LibraryPanel.vue        # 资产库面板
-    │   ├── Toolbar.vue             # 工具栏
+    │   ├── Toolbar.vue             # 工具栏 (含批量导入)
+    │   ├── BatchLoaderDialog.vue   # 批量导入弹窗 (JSON格式提示+复制)
     │   ├── GisSettingsPanel.vue    # GIS 设置面板 (包含影像底图)
     │   ├── MapSelectorDialog.vue   # 地图范围选择弹窗
-    │   └── SceneSettingsPanel.vue  # 场景设置面板
+    │   ├── SceneSettingsPanel.vue  # 场景设置面板
+    │   ├── MaterialPanel.vue       # 材质面板
+    │   ├── Navigation.vue          # 导航组件
+    │   ├── Message.vue             # 消息提示
+    │   ├── MessageContainer.vue    # 消息容器
+    │   └── icons/                  # 图标组件目录
     │
     ├── stores/                 # Pinia 状态仓库
     ├── router/                 # Vue Router 路由
     ├── services/               # API 服务层
-    │   └── assetService.js         # 资产 API 服务
+    │   ├── assetService.js         # 资产 API 服务
+    │   └── sceneService.js         # 场景 API 服务
     │
-    └── utils/                  # 工具函数
+    ├── core/                   # 内部核心逻辑
+    ├── utils/                  # 工具函数
 ```
 
 ---
@@ -110,3 +122,28 @@ export const ASSET_BASE_URL = BASE_URL;
 
 - [VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar)
 - 推荐使用 Chromium 浏览器 + Vue.js devtools 扩展
+
+---
+
+## 场景列表分页
+
+`ScenesView.vue` 支持分页加载场景列表：
+
+| 功能 | 说明 |
+|------|------|
+| 分页显示 | 上一页/下一页/页码导航 |
+| 每页数量 | 可选择 5/10/20/30 条 |
+| 总数统计 | 显示总场景数 |
+
+---
+
+## 批量导入功能
+
+`Toolbar.vue` 中的 **批量导入** 按钮，支持从 JSON 文件批量生成模型：
+
+| 功能 | 说明 |
+|------|------|
+| JSON 格式提示 | 悬停帮助图标显示格式说明 |
+| 复制示例 | 一键复制 JSON 模板到剪贴板 |
+| 模型选择 | 从资产库选择要使用的模型 |
+| GIS 坐标 | 自动将经纬度转换为场景坐标 |

@@ -14,6 +14,7 @@ Meteor3D 资产管理系统 - 独立的 3D 资产管理应用。
 | **资产分类** | 按类型筛选 (全部/模型/贴图/HDRI) |
 | **资产下载** | 一键下载原始资产文件 |
 | **资产删除** | 删除资产及其所有关联文件 |
+| **分页列表** | 支持每页 5/10/20/30 条，上一页/下一页导航 |
 
 ---
 
@@ -78,7 +79,7 @@ asset-manager/
 | 函数 | 说明 |
 |------|------|
 | `uploadAsset(file, thumbnail)` | 上传资产 |
-| `getAssets(type)` | 获取资产列表 |
+| `getAssets(type, page, pageSize)` | 获取资产列表 (支持分页) |
 | `deleteAsset(id)` | 删除资产 |
 | `downloadAsset(id, filename)` | 下载资产 |
 | `getProcessingStatus(id)` | 获取处理状态 |

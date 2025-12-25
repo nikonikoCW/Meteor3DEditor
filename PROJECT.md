@@ -72,6 +72,16 @@ Meteor3D 是一个 **低代码 3D 场景可视化编辑平台**，采用 pnpm mo
   });
   ```
 
+### 5. Dashboard (统一入口)
+- **用途**：平台统一入口页面
+- **功能**：展示平台介绍、导航到各子系统
+- **端口**：5172
+
+### 6. Docs (文档站点)
+- **用途**：SDK API 文档与使用指南
+- **技术**：VitePress 静态文档站点
+- **内容**：API 参考、使用示例、快速入门
+
 ---
 
 ## 技术栈
@@ -112,11 +122,18 @@ Meteor3D/
 ├── packages/
 │   ├── core/                    # @meteor3d/core 共享核心库
 │   │   ├── index.js             # 导出入口
+│   │   ├── example.html         # SDK 使用示例
 │   │   └── src/
 │   │       ├── SceneManager.js      # Three.js 场景/相机/渲染器管理
 │   │       ├── PersistenceManager.js # 场景序列化/反序列化/IndexedDB 持久化
 │   │       ├── DBManager.js         # IndexedDB 操作封装
 │   │       ├── GisProjection.js     # GIS 坐标投影转换 (proj4)
+│   │       ├── loadScene.js         # SDK 场景加载 API (对外暴露)
+│   │       ├── HighlightManager.js  # 模型高亮效果管理
+│   │       ├── LabelManager.js      # HTML 标签管理 (CSS2DRenderer)
+│   │       ├── OutlineManager.js    # 模型描边效果管理
+│   │       ├── StatsManager.js      # 性能监视器 (FPS/MS)
+│   │       ├── TriangleStatsManager.js # 三角面/Draw Call 统计
 │   │       └── utils/
 │   │           ├── ThumbnailGenerator.js  # 3D 模型缩略图生成
 │   │           └── message.js             # 消息通知工具
@@ -165,17 +182,37 @@ Meteor3D/
 │   │           ├── ThumbnailGenerator.js  # 缩略图生成
 │   │           └── message.js             # 消息工具
 │   │
-│   └── app-editor/              # @meteor3d/app-editor 应用编辑器
+│   ├── app-editor/              # @meteor3d/app-editor 应用编辑器
+│   │   ├── package.json
+│   │   ├── vite.config.js
+│   │   └── src/
+│   │       ├── App.vue
+│   │       ├── main.js
+│   │       ├── config.js
+│   │       ├── components/            # 组件目录
+│   │       │   └── widgets/           # 组件库 (12 个组件)
+│   │       ├── views/                 # 视图目录
+│   │       │   ├── AppEditorView.vue      # 编辑器主页面
+│   │       │   ├── AppListView.vue        # 应用列表
+│   │       │   └── AppPreviewView.vue     # 应用预览
+│   │       ├── stores/                # Pinia 状态仓库
+│   │       └── core/                  # 核心模块
+│   │
+│   ├── dashboard/               # @meteor3d/dashboard 统一入口
+│   │   ├── package.json
+│   │   ├── vite.config.js       # 端口 5172
+│   │   └── src/
+│   │       ├── App.vue
+│   │       ├── main.js
+│   │       └── views/
+│   │           └── HomeView.vue     # 入口主页
+│   │
+│   └── docs/                    # @meteor3d/docs 文档站点
 │       ├── package.json
-│       ├── vite.config.js
-│       └── src/
-│           ├── App.vue
-│           ├── main.js
-│           ├── config.js
-│           ├── components/            # 组件目录
-│           ├── views/                 # 视图目录
-│           ├── stores/                # Pinia 状态仓库
-│           └── core/                  # 核心模块
+│       ├── .vitepress/          # VitePress 配置
+│       ├── api/                 # API 文档
+│       ├── guide/               # 使用指南
+│       └── examples/            # 示例代码
 │
 └── meteor3d-server/             # 后端服务
     ├── app.js                   # Express 入口
@@ -185,13 +222,22 @@ Meteor3D/
         ├── models/              # Mongoose 数据模型
         │   ├── Asset.js             # 资产模型 (3D模型文件)
         │   ├── Scene.js             # 场景模型
-        │   └── SceneObject.js       # 场景对象模型
+        │   ├── SceneObject.js       # 场景对象模型
+        │   └── App.js               # 应用模型 (app-editor)
         ├── controllers/         # 控制器层
         │   ├── assetController.js   # 资产 CRUD
-        │   └── sceneController.js   # 场景 CRUD
-        └── routes/              # 路由定义
-            ├── assetRoutes.js
-            └── sceneRoutes.js
+        │   ├── sceneController.js   # 场景 CRUD
+        │   └── appController.js     # 应用 CRUD
+        ├── routes/              # 路由定义
+        │   ├── assetRoutes.js
+        │   ├── sceneRoutes.js
+        │   └── appRoutes.js
+        ├── pipeline/            # 资产处理管道
+        │   ├── index.js             # 管道入口
+        │   ├── queue.js             # 任务队列
+        │   └── processors/          # 格式转换处理器
+        └── services/            # 业务服务
+            └── basemapService.js    # 底图瓦片服务
 ```
 
 ---
@@ -224,6 +270,32 @@ Meteor3D/
 - 3D 模型自动生成缩略图
 - 计算最佳相机角度和位置
 
+### 6. loadScene (场景加载 API)
+- SDK 对外暴露的主入口函数
+- 支持场景 ID、容器、服务器地址等配置
+- 返回 Meteor3DInstance 实例用于交互控制
+
+### 7. HighlightManager (高亮管理器)
+- 模型点击高亮效果
+- 支持自定义高亮颜色
+
+### 8. LabelManager (标签管理器)
+- 基于 CSS2DRenderer 的 HTML 标签
+- 支持创建、更新、删除、显示/隐藏标签
+
+### 9. OutlineManager (描边管理器)
+- 模型轮廓描边效果
+- 支持描边颜色和宽度配置
+
+### 10. StatsManager (性能监视器)
+- 基于 three.js Stats 的 FPS/MS 显示
+- 可切换显示模式
+
+### 11. TriangleStatsManager (三角面统计)
+- 实时统计渲染三角面数
+- Draw Call 统计
+- 纹理显存统计
+
 ---
 
 ## 运行命令
@@ -241,8 +313,20 @@ pnpm dev:asset
 # 启动应用编辑器开发服务 (端口 5174)
 pnpm dev:app
 
+# 启动 Dashboard 统一入口 (端口 5172)
+pnpm dev:dashboard
+
+# 启动文档站点开发服务
+pnpm dev:docs
+
 # 启动后端服务 (端口 3001)
 cd meteor3d-server && npm run dev
+
+# 构建 Core SDK
+pnpm build:core
+
+# 构建文档站点
+pnpm build:docs
 
 # 构建所有包
 pnpm build:all

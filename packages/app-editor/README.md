@@ -77,13 +77,23 @@ src/
 │   │   ├── PropertyPanel.vue  # 属性面板
 │   │   ├── DataPanel.vue      # 数据面板
 │   │   └── InteractionPanel.vue # 交互面板 (enable/disable/toggle)
-│   └── widgets/
+│   └── widgets/               # 组件库 (共 12 个组件)
 │       ├── SceneWidget.vue    # 场景组件 (provide Core 实例)
 │       ├── StatsWidget.vue    # 性能监视器 (3D 逻辑组件)
 │       ├── ButtonWidget.vue   # 按钮 (2D)
-│       └── ...
+│       ├── TextWidget.vue     # 文本 (2D)
+│       ├── ImageWidget.vue    # 图片 (2D)
+│       ├── ClockWidget.vue    # 时钟 (2D)
+│       ├── ChartWidget.vue    # 图表 (2D)
+│       ├── EChartsWidget.vue  # ECharts 图表 (2D)
+│       ├── LabelWidget.vue    # 3D 标签 (3D 逻辑组件)
+│       ├── TourWidget.vue     # 漫游路径 (3D 逻辑组件)
+│       ├── HighlightWidget.vue # 模型高亮 (3D 逻辑组件)
+│       └── OutlineWidget.vue  # 模型描边 (3D 逻辑组件)
 └── views/
-    └── AppEditorView.vue      # 编辑器主视图
+    ├── AppEditorView.vue      # 编辑器主视图
+    ├── AppListView.vue        # 应用列表视图
+    └── AppPreviewView.vue     # 应用预览视图
 ```
 
 ---
@@ -270,11 +280,25 @@ pnpm --filter @meteor3d/app-editor build
 - [x] 3D 逻辑组件框架 (StatsWidget)
 - [x] 交互系统 (enable/disable/toggle)
 - [x] 场景就绪约束 (3D 组件依赖场景)
+- [x] 应用列表分页 (每页 5/10/20/30 条可选)
+- [x] **ECharts 代码编辑器** (自定义 JavaScript 配置)
+- [x] JavaScript 沙箱执行 (安全代码运行、错误行号提示)
+- [x] **3D 标签组件 (LabelWidget)**
+- [x] **漫游路径组件 (TourWidget)**
+- [x] **模型高亮组件 (HighlightWidget)**
+- [x] **模型描边组件 (OutlineWidget)**
+
+## ECharts 代码编辑器
+
+| 功能 | 说明 |
+|------|------|
+| 代码编辑 | 支持 JavaScript 语法高亮 |
+| 沙箱执行 | 禁用危险 API (fetch/eval/setTimeout 等) |
+| 错误定位 | 显示错误信息和行号 |
+| 大尺寸弹窗 | 80% 屏幕宽度，70vh 高度 |
 
 ## 待实现功能
 
-- [ ] 3D 标签组件 (LabelWidget)
-- [ ] 漫游路径组件 (TourWidget)
 - [ ] 数据面板 (数据源配置)
 - [ ] 组件层级管理 (z-index)
 - [ ] 撤销/重做
