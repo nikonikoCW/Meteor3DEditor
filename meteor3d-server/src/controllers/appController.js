@@ -2,10 +2,17 @@ const App = require('../models/App');
 const mongoose = require('mongoose');
 
 /**
- * 获取应用列表
+ * 获取应用列表（支持分页）
  */
 exports.getAppList = async (req, res) => {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const skip = (page - 1) * pageSize;
+
+        // 获取总数
+        const total = await App.countDocuments();
+
         const apps = await App.find({}, {
             appId: 1,
             name: 1,
@@ -14,11 +21,19 @@ exports.getAppList = async (req, res) => {
             lastModified: 1,
             'canvas.width': 1,
             'canvas.height': 1
-        }).sort({ lastModified: -1 });
+        }).sort({ lastModified: -1 })
+            .skip(skip)
+            .limit(pageSize);
 
         res.json({
             success: true,
-            apps
+            apps,
+            pagination: {
+                page,
+                pageSize,
+                total,
+                totalPages: Math.ceil(total / pageSize)
+            }
         });
     } catch (error) {
         console.error('获取应用列表失败:', error);

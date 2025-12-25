@@ -6,16 +6,21 @@ import { API_BASE_URL } from '../config';
 
 
 /**
- * 获取场景列表
- * @returns {Promise<Array>}
+ * 获取场景列表（支持分页）
+ * @param {number} page - 页码，默认 1
+ * @param {number} pageSize - 每页数量，默认 12
+ * @returns {Promise<{scenes: Array, pagination: Object}>}
  */
-export async function getScenes() {
+export async function getScenes(page = 1, pageSize = 12) {
     try {
-        const response = await fetch(`${API_BASE_URL}/scene/list`);
+        const response = await fetch(`${API_BASE_URL}/scene/list?page=${page}&pageSize=${pageSize}`);
         const data = await response.json();
 
         if (data.success) {
-            return data.scenes;
+            return {
+                scenes: data.scenes,
+                pagination: data.pagination
+            };
         } else {
             throw new Error(data.message);
         }

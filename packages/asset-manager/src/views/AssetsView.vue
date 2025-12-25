@@ -90,8 +90,48 @@
         </div>
       </div>
     </div>
+    <!-- 分页组件 -->
+    <div class="pagination" v-if="pagination?.total > 0">
+      <div class="page-size-selector">
+        <span>每页</span>
+        <select v-model="pagination.pageSize" @change="onPageSizeChange">
+          <option :value="5">5</option>
+          <option :value="10">10</option>
+          <option :value="20">20</option>
+          <option :value="30">30</option>
+        </select>
+        <span>条</span>
+      </div>
+      <button 
+        class="page-btn" 
+        :disabled="pagination.page <= 1"
+        @click="goToPage(pagination.page - 1)"
+      >
+        ‹ 上一页
+      </button>
+      <div class="page-numbers" v-if="pagination.totalPages > 1">
+        <button 
+          v-for="p in visiblePages" 
+          :key="p"
+          class="page-num"
+          :class="{ active: p === pagination.page }"
+          @click="goToPage(p)"
+        >
+          {{ p }}
+        </button>
+      </div>
+      <span v-else class="page-num active">1</span>
+      <button 
+        class="page-btn"
+        :disabled="pagination.page >= pagination.totalPages"
+        @click="goToPage(pagination.page + 1)"
+      >
+        下一页 ›
+      </button>
+      <span class="page-info">共 {{ pagination.total }} 个资产</span>
+    </div>
 
-    <div v-else class="empty-state">
+    <div v-if="assets.length === 0 && !uploading && pagination.total === 0" class="empty-state">
       <p>暂无资产</p>
       <p class="hint">点击上方"上传资产"按钮开始上传</p>
     </div>
@@ -120,8 +160,36 @@ const uploading = ref(false);
 const fileInput = ref(null);
 const uploadStatus = ref('正在上传...'); // 添加上传状态文本
 
+// 分页状态
+const pagination = ref({
+  page: 1,
+  pageSize: 10,
+  total: 0,
+  totalPages: 0
+});
+
 // ⚡ 性能优化：缩略图生成器单例，避免重复创建导致的资源泄漏
 let thumbnailGenerator = null;
+
+// 计算可见的页码
+const visiblePages = computed(() => {
+  const { page, totalPages } = pagination.value;
+  const pages = [];
+  const maxVisible = 5;
+  
+  let start = Math.max(1, page - Math.floor(maxVisible / 2));
+  let end = Math.min(totalPages, start + maxVisible - 1);
+  
+  if (end - start + 1 < maxVisible) {
+    start = Math.max(1, end - maxVisible + 1);
+  }
+  
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+  
+  return pages;
+});
 
 const filteredAssets = computed(() => {
   if (currentFilter.value === null) {
@@ -202,14 +270,28 @@ const handleFileSelect = async (event) => {
 
 const setFilter = (type) => {
   currentFilter.value = type;
+  loadAssets(1); // 切换筛选时回到第一页
 };
 
-const loadAssets = async () => {
+const loadAssets = async (page = pagination.value.page) => {
   try {
-    assets.value = await getAssets();
+    const result = await getAssets(currentFilter.value, page, pagination.value.pageSize);
+    assets.value = result.assets || [];
+    if (result.pagination) {
+      pagination.value = result.pagination;
+    }
   } catch (error) {
     console.error('加载资产失败:', error);
   }
+};
+
+const goToPage = (page) => {
+  if (page < 1 || page > pagination.value.totalPages) return;
+  loadAssets(page);
+};
+
+const onPageSizeChange = () => {
+  loadAssets(1);
 };
 
 const handleDownload = (asset) => {
@@ -342,7 +424,7 @@ const checkMissingThumbnails = async () => {
 };
 
 onMounted(() => {
-  loadAssets();
+  loadAssets(1);
   // 页面加载后静默检查并生成缺失的缩略图
   checkMissingThumbnails();
 });
@@ -605,5 +687,103 @@ onUnmounted(() => {
 
 .retry-btn:hover {
   background: #e0a800;
+}
+
+/* 分页样式 */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 30px;
+  background: #1a1a1a;
+  border-top: 1px solid #333;
+}
+
+.page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 13px;
+  margin-right: 20px;
+}
+
+.page-size-selector select {
+  padding: 6px 10px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.page-size-selector select:hover {
+  border-color: #0066cc;
+}
+
+.page-size-selector select:focus {
+  outline: none;
+  border-color: #0066cc;
+}
+
+.page-btn {
+  padding: 8px 16px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: #444;
+  border-color: #0066cc;
+  color: white;
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 4px;
+}
+
+.page-num {
+  width: 36px;
+  height: 36px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-num:hover {
+  background: #444;
+  color: white;
+}
+
+.page-num.active {
+  background: #0066cc;
+  border-color: #0066cc;
+  color: white;
+}
+
+.page-info {
+  color: #666;
+  font-size: 13px;
+  margin-left: 12px;
 }
 </style>

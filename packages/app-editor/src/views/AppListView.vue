@@ -13,7 +13,7 @@
     <main class="page-content">
       <div v-if="loading" class="loading">加载中...</div>
       
-      <div v-else-if="apps.length === 0" class="empty-state">
+      <div v-else-if="apps.length === 0 && pagination.total === 0" class="empty-state">
         <div class="empty-icon">📱</div>
         <p>暂无应用</p>
         <button class="create-btn" @click="onCreateApp">创建第一个应用</button>
@@ -39,25 +39,105 @@
         </div>
       </div>
     </main>
+
+    <!-- 分页组件（在 main 外部，固定底部） -->
+    <div class="pagination" v-if="pagination.total > 0">
+      <div class="page-size-selector">
+        <span>每页</span>
+        <select v-model="pagination.pageSize" @change="onPageSizeChange">
+          <option :value="5">5</option>
+          <option :value="10">10</option>
+          <option :value="20">20</option>
+          <option :value="30">30</option>
+        </select>
+        <span>条</span>
+      </div>
+      <button 
+        class="page-btn" 
+        :disabled="pagination.page <= 1"
+        @click="goToPage(pagination.page - 1)"
+      >
+        ‹ 上一页
+      </button>
+      <div class="page-numbers" v-if="pagination.totalPages > 1">
+        <button 
+          v-for="p in visiblePages" 
+          :key="p"
+          class="page-num"
+          :class="{ active: p === pagination.page }"
+          @click="goToPage(p)"
+        >
+          {{ p }}
+        </button>
+      </div>
+      <span v-else class="page-num active">1</span>
+      <button 
+        class="page-btn"
+        :disabled="pagination.page >= pagination.totalPages"
+        @click="goToPage(pagination.page + 1)"
+      >
+        下一页 ›
+      </button>
+      <span class="page-info">共 {{ pagination.total }} 个应用</span>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import * as appService from '../services/appService';
 
 const apps = ref([]);
 const loading = ref(true);
 
-const loadApps = async () => {
+// 分页状态
+const pagination = ref({
+  page: 1,
+  pageSize: 10,
+  total: 0,
+  totalPages: 0
+});
+
+// 计算可见的页码
+const visiblePages = computed(() => {
+  const { page, totalPages } = pagination.value;
+  const pages = [];
+  const maxVisible = 5;
+  
+  let start = Math.max(1, page - Math.floor(maxVisible / 2));
+  let end = Math.min(totalPages, start + maxVisible - 1);
+  
+  if (end - start + 1 < maxVisible) {
+    start = Math.max(1, end - maxVisible + 1);
+  }
+  
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+  
+  return pages;
+});
+
+const loadApps = async (page = pagination.value.page) => {
   loading.value = true;
   try {
-    apps.value = await appService.getAppList();
+    const result = await appService.getAppList(page, pagination.value.pageSize);
+    apps.value = result.apps;
+    pagination.value = result.pagination;
   } catch (error) {
     console.error('加载应用列表失败:', error);
   } finally {
     loading.value = false;
   }
+};
+
+const goToPage = (page) => {
+  if (page < 1 || page > pagination.value.totalPages) return;
+  loadApps(page);
+};
+
+const onPageSizeChange = () => {
+  loadApps(1);
 };
 
 const onCreateApp = async () => {
@@ -86,7 +166,7 @@ const onDeleteApp = async (app) => {
   
   try {
     await appService.deleteApp(app.appId);
-    apps.value = apps.value.filter(a => a.appId !== app.appId);
+    await loadApps(); // 刷新当前页
   } catch (error) {
     alert('删除失败: ' + error.message);
   }
@@ -105,13 +185,15 @@ const formatDate = (dateStr) => {
 };
 
 onMounted(() => {
-  loadApps();
+  loadApps(1);
 });
 </script>
 
 <style scoped>
 .app-list-page {
-  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
   background: #121212;
   color: white;
 }
@@ -166,7 +248,9 @@ onMounted(() => {
 }
 
 .page-content {
+  flex: 1;
   padding: 24px;
+  overflow-y: auto;
 }
 
 .loading, .empty-state {
@@ -279,5 +363,103 @@ onMounted(() => {
 
 .delete-btn:hover {
   color: #ff6b6b;
+}
+
+/* 分页样式 */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 30px;
+  background: #121212;
+  border-top: 1px solid #333;
+}
+
+.page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 13px;
+  margin-right: 20px;
+}
+
+.page-size-selector select {
+  padding: 6px 10px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.page-size-selector select:hover {
+  border-color: #42b983;
+}
+
+.page-size-selector select:focus {
+  outline: none;
+  border-color: #42b983;
+}
+
+.page-btn {
+  padding: 8px 16px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: #444;
+  border-color: #42b983;
+  color: white;
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 4px;
+}
+
+.page-num {
+  width: 36px;
+  height: 36px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-num:hover {
+  background: #444;
+  color: white;
+}
+
+.page-num.active {
+  background: #42b983;
+  border-color: #42b983;
+  color: white;
+}
+
+.page-info {
+  color: #666;
+  font-size: 13px;
+  margin-left: 12px;
 }
 </style>

@@ -41,8 +41,48 @@
         </div>
       </div>
     </div>
+    <!-- 分页组件（始终显示） -->
+    <div class="pagination" v-if="pagination.total > 0">
+      <div class="page-size-selector">
+        <span>每页</span>
+        <select v-model="pagination.pageSize" @change="onPageSizeChange">
+          <option :value="5">5</option>
+          <option :value="10">10</option>
+          <option :value="20">20</option>
+          <option :value="30">30</option>
+        </select>
+        <span>条</span>
+      </div>
+      <button 
+        class="page-btn" 
+        :disabled="pagination.page <= 1"
+        @click="goToPage(pagination.page - 1)"
+      >
+        ‹ 上一页
+      </button>
+      <div class="page-numbers" v-if="pagination.totalPages > 1">
+        <button 
+          v-for="p in visiblePages" 
+          :key="p"
+          class="page-num"
+          :class="{ active: p === pagination.page }"
+          @click="goToPage(p)"
+        >
+          {{ p }}
+        </button>
+      </div>
+      <span v-else class="page-num active">1</span>
+      <button 
+        class="page-btn"
+        :disabled="pagination.page >= pagination.totalPages"
+        @click="goToPage(pagination.page + 1)"
+      >
+        下一页 ›
+      </button>
+      <span class="page-info">共 {{ pagination.total }} 个场景</span>
+    </div>
 
-    <div v-else class="empty-state">
+    <div v-if="scenes.length === 0 && !loading" class="empty-state">
       <p>暂无场景</p>
       <p class="hint">点击上方"新建场景"按钮开始创建</p>
     </div>
@@ -69,7 +109,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { getScenes, createScene, deleteScene } from '../services/sceneService';
 import { message } from '../utils/message';
@@ -79,13 +119,57 @@ const scenes = ref([]);
 const showCreateModal = ref(false);
 const newScene = ref({ name: '', description: '' });
 const nameInput = ref(null);
+const loading = ref(false);
 
-const loadScenes = async () => {
+// 分页状态
+const pagination = ref({
+  page: 1,
+  pageSize: 10,
+  total: 0,
+  totalPages: 0
+});
+
+// 计算可见的页码
+const visiblePages = computed(() => {
+  const { page, totalPages } = pagination.value;
+  const pages = [];
+  const maxVisible = 5;
+  
+  let start = Math.max(1, page - Math.floor(maxVisible / 2));
+  let end = Math.min(totalPages, start + maxVisible - 1);
+  
+  if (end - start + 1 < maxVisible) {
+    start = Math.max(1, end - maxVisible + 1);
+  }
+  
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+  
+  return pages;
+});
+
+const loadScenes = async (page = pagination.value.page) => {
+  loading.value = true;
   try {
-    scenes.value = await getScenes();
+    const result = await getScenes(page, pagination.value.pageSize);
+    scenes.value = result.scenes;
+    pagination.value = result.pagination;
   } catch (error) {
     console.error('加载场景列表失败:', error);
+  } finally {
+    loading.value = false;
   }
+};
+
+const goToPage = (page) => {
+  if (page < 1 || page > pagination.value.totalPages) return;
+  loadScenes(page);
+};
+
+// 切换每页数量时重新加载
+const onPageSizeChange = () => {
+  loadScenes(1); // 回到第一页
 };
 
 const enterScene = (sceneId) => {
@@ -99,7 +183,7 @@ const handleCreate = async () => {
     await createScene(newScene.value.name, newScene.value.description);
     showCreateModal.value = false;
     newScene.value = { name: '', description: '' };
-    await loadScenes();
+    await loadScenes(1); // 创建后回到第一页
   } catch (error) {
     message.error('创建场景失败: ' + error.message);
   }
@@ -112,7 +196,7 @@ const handleDelete = async (scene) => {
 
   try {
     await deleteScene(scene.sceneId);
-    await loadScenes();
+    await loadScenes(); // 删除后刷新当前页
   } catch (error) {
     message.error('删除场景失败: ' + error.message);
   }
@@ -134,7 +218,7 @@ const focusInput = () => {
 };
 
 onMounted(() => {
-  loadScenes();
+  loadScenes(1);
 });
 </script>
 
@@ -390,5 +474,103 @@ onMounted(() => {
 .confirm-btn:disabled {
   background: #444;
   cursor: not-allowed;
+}
+
+/* 分页样式 */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 30px;
+  background: #1a1a1a;
+  border-top: 1px solid #333;
+}
+
+.page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 13px;
+  margin-right: 20px;
+}
+
+.page-size-selector select {
+  padding: 6px 10px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.page-size-selector select:hover {
+  border-color: #0066cc;
+}
+
+.page-size-selector select:focus {
+  outline: none;
+  border-color: #0066cc;
+}
+
+.page-btn {
+  padding: 8px 16px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: #444;
+  border-color: #0066cc;
+  color: white;
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 4px;
+}
+
+.page-num {
+  width: 36px;
+  height: 36px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-num:hover {
+  background: #444;
+  color: white;
+}
+
+.page-num.active {
+  background: #0066cc;
+  border-color: #0066cc;
+  color: white;
+}
+
+.page-info {
+  color: #666;
+  font-size: 13px;
+  margin-left: 12px;
 }
 </style>

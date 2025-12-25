@@ -35,21 +35,27 @@ export async function uploadAsset(file, thumbnail = null, onProgress) {
 }
 
 /**
- * 获取资产列表
+ * 获取资产列表（支持分页）
  * @param {string} type - 资产类型过滤 (可选)
- * @returns {Promise<Array>}
+ * @param {number} page - 页码，默认 1
+ * @param {number} pageSize - 每页数量，默认 10
+ * @returns {Promise<{assets: Array, pagination: Object}>}
  */
-export async function getAssets(type = null) {
+export async function getAssets(type = null, page = 1, pageSize = 10) {
     try {
-        const url = type
-            ? `${API_BASE_URL}/assets?type=${type}`
-            : `${API_BASE_URL}/assets`;
+        let url = `${API_BASE_URL}/assets?page=${page}&pageSize=${pageSize}`;
+        if (type) {
+            url += `&type=${type}`;
+        }
 
         const response = await fetch(url);
         const data = await response.json();
 
         if (data.success) {
-            return data.assets;
+            return {
+                assets: data.assets,
+                pagination: data.pagination
+            };
         } else {
             throw new Error(data.message);
         }
@@ -232,7 +238,8 @@ export async function uploadThumbnail(assetId, thumbnailBlob) {
  */
 export async function getAssetsWithoutThumbnail() {
     try {
-        const assets = await getAssets('model');
+        const result = await getAssets('model', 1, 100); // 获取所有模型
+        const assets = result.assets || [];
         // 过滤出处理完成但无缩略图的模型
         return assets.filter(asset =>
             asset.processingStatus === 'ready' &&

@@ -6,15 +6,20 @@ import { API_BASE_URL } from '../config';
  */
 
 /**
- * 获取应用列表
+ * 获取应用列表（支持分页）
+ * @param {number} page - 页码，默认 1
+ * @param {number} pageSize - 每页数量，默认 10
  */
-export async function getAppList() {
-    const response = await fetch(`${API_BASE_URL}/app/list`);
+export async function getAppList(page = 1, pageSize = 10) {
+    const response = await fetch(`${API_BASE_URL}/app/list?page=${page}&pageSize=${pageSize}`);
     const data = await response.json();
     if (!data.success) {
         throw new Error(data.error || '获取应用列表失败');
     }
-    return data.apps;
+    return {
+        apps: data.apps,
+        pagination: data.pagination
+    };
 }
 
 /**

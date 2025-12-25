@@ -4,14 +4,32 @@ const { v4: uuidv4 } = require('uuid');
 const { generateBaseMap } = require('../services/baseMapGenerator');
 
 /**
- * 获取场景列表
+ * 获取场景列表（支持分页）
  */
 exports.getScenes = async (req, res) => {
     try {
-        const scenes = await Scene.find().sort({ lastModified: -1 });
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 12;
+        const skip = (page - 1) * pageSize;
+
+        // 获取总数
+        const total = await Scene.countDocuments();
+
+        // 获取分页数据
+        const scenes = await Scene.find()
+            .sort({ lastModified: -1 })
+            .skip(skip)
+            .limit(pageSize);
+
         res.status(200).json({
             success: true,
-            scenes: scenes
+            scenes: scenes,
+            pagination: {
+                page,
+                pageSize,
+                total,
+                totalPages: Math.ceil(total / pageSize)
+            }
         });
     } catch (error) {
         console.error('获取场景列表失败:', error);

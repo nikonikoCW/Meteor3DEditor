@@ -75,19 +75,34 @@ exports.uploadAsset = async (req, res) => {
 };
 
 /**
- * 获取资产列表
+ * 获取资产列表（支持分页）
  */
 exports.getAssets = async (req, res) => {
     try {
         const { type } = req.query;
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const skip = (page - 1) * pageSize;
+
         const filter = type ? { type } : {};
 
-        const assets = await Asset.find(filter).sort({ createdAt: -1 });
+        // 获取总数
+        const total = await Asset.countDocuments(filter);
+
+        const assets = await Asset.find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(pageSize);
 
         res.status(200).json({
             success: true,
             assets: assets,
-            count: assets.length
+            pagination: {
+                page,
+                pageSize,
+                total,
+                totalPages: Math.ceil(total / pageSize)
+            }
         });
     } catch (error) {
         console.error('获取资产列表失败:', error);
