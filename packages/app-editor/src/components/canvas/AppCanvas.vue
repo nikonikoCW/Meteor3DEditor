@@ -216,6 +216,10 @@ const onDrop = (event) => {
 
   const def = getWidgetDefinition(type);
   const defaultSize = def?.config.defaultSize || { width: 200, height: 150 };
+  
+  // 默认启用逻辑：2D 组件默认开启，3D 组件默认关闭
+  const is3D = def?.config.category === '3d';
+  const defaultEnabled = !is3D;
 
   const newWidget = {
     id: crypto.randomUUID(),
@@ -223,8 +227,10 @@ const onDrop = (event) => {
     position: { x, y },
     size: { ...defaultSize },
     rotation: 0,
-    enabled: true,  // 显式设置初始启用状态
-    data: {}
+    enabled: defaultEnabled,
+    data: {
+      defaultEnabled: defaultEnabled
+    }
   };
 
   appStore.addWidget(newWidget);

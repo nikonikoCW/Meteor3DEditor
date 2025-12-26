@@ -17,6 +17,17 @@
         <label>类型</label>
         <span class="readonly">{{ getWidgetLabel(selectedWidget.type) }}</span>
       </div>
+      <div class="field checkbox-field">
+        <label>初始调用</label>
+        <label class="switch">
+          <input 
+            type="checkbox" 
+            v-model="selectedWidget.data.defaultEnabled" 
+            :disabled="disabled"
+          >
+          <span class="slider"></span>
+        </label>
+      </div>
     </div>
 
     <!-- 布局属性 (3D 组件不显示) -->
@@ -50,13 +61,11 @@
         </div>
       </div>
     </div>
-
     <!-- 动态渲染的特有属性 -->
     <div class="section" v-if="widgetProps.length > 0">
       <h4>组件配置</h4>
       <div v-for="prop in widgetProps" :key="prop.name" class="field">
         <label>{{ prop.label }}</label>
-        
         <!-- Select -->
         <select 
           v-if="prop.type === 'select'" 
@@ -102,6 +111,27 @@
             <span class="alpha-value">{{ Math.round(getAlpha(selectedWidget.data[prop.name]) * 100) }}%</span>
           </div>
         </div>
+
+        <!-- Button -->
+        <div v-else-if="prop.type === 'button'" class="button-wrapper">
+          <button 
+            @click="selectedWidget.data[prop.name] = Date.now()"
+            :disabled="disabled"
+            class="action-btn"
+          >
+            {{ prop.buttonLabel || '点击触发' }}
+          </button>
+        </div>
+
+        <!-- Textarea / JSON -->
+         
+        <textarea
+          v-else-if="prop.type === 'textarea' || prop.type === 'json'"
+          v-model="selectedWidget.data[prop.name]"
+          :disabled="disabled"
+          rows="6"
+          class="prop-textarea"
+        ></textarea>
 
         <!-- Text/Number -->
         <input 
@@ -255,6 +285,21 @@ h4 {
   margin-bottom: 0;
 }
 
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.checkbox-field label {
+  margin-bottom: 0;
+}
+
+.checkbox-field input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
 .row {
   display: flex;
   gap: 8px;
@@ -394,5 +439,93 @@ input:disabled, select:disabled {
   color: #888;
   width: 30px;
   text-align: right;
+}
+
+.action-btn {
+  width: 100%;
+  background: #42b983;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
+.action-btn:hover {
+  background: #3aa876;
+}
+
+.action-btn:active {
+  background: #2d7a5e;
+}
+
+.prop-textarea {
+  width: 100%;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  color: #ccc;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
+  resize: vertical;
+}
+
+.prop-textarea:focus {
+  outline: none;
+  border-color: #42b983;
+}
+
+/* Toggle Switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #444;
+  transition: 0.3s;
+  border-radius: 20px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #42b983;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+input:disabled + .slider {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

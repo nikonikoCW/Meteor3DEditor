@@ -6,7 +6,7 @@
     </div>
     <div class="tree-content">
       <div 
-        v-for="widget in widgets" 
+        v-for="widget in reversedWidgets" 
         :key="widget.id"
         class="tree-item"
         :class="{ selected: selectedWidget && selectedWidget.id === widget.id }"
@@ -27,9 +27,13 @@
 import { useAppStore } from '../../stores/appStore';
 import { storeToRefs } from 'pinia';
 import { getWidgetDefinition } from '../../core/widgetRegistry';
+import { computed } from 'vue';
 
 const appStore = useAppStore();
 const { widgets, selectedWidget } = storeToRefs(appStore);
+
+// 反转列表，让新添加的组件显示在最上面
+const reversedWidgets = computed(() => [...widgets.value].reverse());
 
 const getWidgetIcon = (type) => {
   const def = getWidgetDefinition(type);
@@ -54,11 +58,11 @@ const onDeleteWidget = (widget) => {
 
 <style scoped>
 .component-tree {
-  flex: 0 0 auto;
-  max-height: 200px;
+  flex: 1;
   display: flex;
   flex-direction: column;
   border-bottom: 1px solid #333;
+  overflow: hidden;
 }
 
 .tree-header {

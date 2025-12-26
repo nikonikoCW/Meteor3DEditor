@@ -115,12 +115,18 @@ export const useAppStore = defineStore('app', () => {
             appName.value = app.name;
             canvas.value = app.canvas || { width: 1920, height: 1080, background: '#1a1a1a' };
 
-            // 确保每个 widget 都有 enabled 属性（兼容旧数据）
-            widgets.value = (app.widgets || []).map(w => ({
-                ...w,
-                // 优先使用 enabled，如果没有则回退到 visible，都没有则默认 true
-                enabled: w.enabled !== undefined ? w.enabled : (w.visible !== false)
-            }));
+            // 确保每个 widget 都有 enabled 属性
+            widgets.value = (app.widgets || []).map(w => {
+                // 优先使用 data.defaultEnabled，如果没有则回退到 enabled (兼容旧数据)
+                const initialEnabled = w.data?.defaultEnabled !== undefined
+                    ? w.data.defaultEnabled
+                    : (w.enabled !== undefined ? w.enabled : (w.visible !== false));
+
+                return {
+                    ...w,
+                    enabled: initialEnabled
+                };
+            });
 
             hasUnsavedChanges.value = false;
             selectedWidget.value = null;

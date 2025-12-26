@@ -65,6 +65,7 @@ watch(() => props.enabled, (isEnabled) => {
 });
 
 // 组件挂载时，根据 enabled 状态决定是否启用
+// 组件挂载时，根据 enabled 状态决定是否启用
 onMounted(() => {
   if (props.enabled) {
     enable();

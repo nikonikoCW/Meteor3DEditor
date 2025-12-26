@@ -390,6 +390,41 @@ const highlightConfig = {
     ]
 };
 
+// 相机定位组件配置 (3D 逻辑组件)
+const cameraConfig = {
+    label: '相机定位',
+    icon: '📷',
+    category: '3d',
+    defaultSize: { width: 150, height: 80 },
+    minSize: { width: 80, height: 40 },
+    props: [
+        {
+            name: 'captureTrigger',
+            label: '获取当前视角',
+            type: 'button',
+            buttonLabel: '点击获取',
+            defaultValue: 0
+        },
+        {
+            name: 'viewData',
+            label: '视角数据',
+            type: 'json',
+            defaultValue: '{}',
+            description: 'JSON 格式的视角数据'
+        },
+        {
+            name: 'duration',
+            label: '动画时间(ms)',
+            type: 'number',
+            defaultValue: 2000,
+            min: 0
+        }
+    ],
+    actions: [
+        { name: 'enable', label: '恢复视角' }
+    ]
+};
+
 // 统一注册
 export function initRegistry() {
     // 场景组件
@@ -408,4 +443,5 @@ export function initRegistry() {
     registerWidget('Stats', statsConfig, () => import('../components/widgets/StatsWidget.vue'));
     registerWidget('Outline', outlineConfig, () => import('../components/widgets/OutlineWidget.vue'));
     registerWidget('Highlight', highlightConfig, () => import('../components/widgets/HighlightWidget.vue'));
+    registerWidget('Camera', cameraConfig, () => import('../components/widgets/CameraWidget.vue'));
 }
