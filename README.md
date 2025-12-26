@@ -90,7 +90,7 @@ pnpm dev:scene
 pnpm dev:asset
 
 # 启动后端服务 (端口 3001)
-cd meteor3d-server && npm run dev
+cd meteor3d-server && node app.js
 ```
 
 ---
