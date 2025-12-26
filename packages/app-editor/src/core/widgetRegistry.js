@@ -127,7 +127,9 @@ const chartConfig = {
     category: '2d',
     defaultSize: { width: 400, height: 300 },
     minSize: { width: 150, height: 100 },
-    props: [],
+    props: [
+        { name: 'zIndex', label: '层级', type: 'number', defaultValue: 1 }
+    ],
     dataConfig: [
         {
             name: 'code',
