@@ -19,6 +19,11 @@
 
 <body>
     <div id="canvas"></div>
+    <div style="position: fixed; top: 20px; left: 20px; z-index: 100; display: flex; gap: 10px;">
+        <button onclick="testGetViewCallback()">获取视角 (Callback)</button>
+        <button onclick="testGetViewAwait()">获取视角 (Await)</button>
+        <button onclick="testSetView()">恢复视角 (Animation)</button>
+    </div>
 
     <script src="./dist/meteor3d-core.umd.js"></script>
     <script>
@@ -87,6 +92,41 @@
         }).catch(err => {
             console.error('❌ 加载失败', err);
         });
+
+        // ========== 测试逻辑 ==========
+        let savedView = null;
+
+        function testGetViewCallback() {
+            if (!window.meteor3d) return;
+            window.meteor3d.getView((view) => {
+                console.log('📍 [Callback] 获取到视角:', view);
+                savedView = view;
+                alert('视角已保存 (Callback)');
+            });
+        }
+
+        async function testGetViewAwait() {
+            if (!window.meteor3d) return;
+            const view = await window.meteor3d.getView();
+            console.log('📍 [Await] 获取到视角:', view);
+            savedView = view;
+            alert('视角已保存 (Await)');
+        }
+
+        async function testSetView() {
+            if (!window.meteor3d || !savedView) {
+                alert('请先保存视角！');
+                return;
+            }
+            console.log('✈️ 开始飞行...');
+            const a = await window.meteor3d.setView({
+                position: savedView.position,
+                target: savedView.target,
+                duration: 2000
+            })
+            console.log('✈️ 飞行完成:', a);
+            alert('飞行完成！');
+        }
     </script>
 </body>
 

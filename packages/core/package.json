@@ -16,6 +16,7 @@
         "dev": "vite build --watch"
     },
     "dependencies": {
+        "@tweenjs/tween.js": "^25.0.0",
         "three": "^0.181.2"
     },
     "devDependencies": {

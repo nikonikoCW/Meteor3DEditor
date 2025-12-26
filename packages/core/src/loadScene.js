@@ -202,6 +202,10 @@ function createMeteor3DInstance(sceneManager, resizeObserver) {
         fitCameraToScene: () => sceneManager.fitCameraToScene(),
         /** 手动触发尺寸调整 */
         resize: (width, height) => sceneManager.onWindowResize(width, height),
+        /** 获取当前相机视角 */
+        getView: (callback) => sceneManager.getView(callback),
+        /** 设置相机视角 */
+        setView: (options) => sceneManager.setView(options),
 
         // ========== GIS 坐标转换 ==========
         /** 经纬度转世界坐标 */

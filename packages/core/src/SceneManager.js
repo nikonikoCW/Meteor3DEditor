@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
+import { Group, Tween, Easing } from '@tweenjs/tween.js';
 import { GisProjection } from './GisProjection.js';
 import { StatsManager } from './StatsManager.js';
 import { TriangleStatsManager } from './TriangleStatsManager.js';
@@ -17,6 +18,9 @@ export class SceneManager {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x333333); // 深灰色背景，便于观察
+
+        // 初始化 Tween Group
+        this.tweenGroup = new Group();
 
         // 网格辅助线
         // const gridHelper = new THREE.GridHelper(500, 30);
@@ -143,8 +147,17 @@ export class SceneManager {
      * 动画循环
      * 负责渲染场景和更新控制器
      */
-    animate() {
+    animate(time) {
         requestAnimationFrame(this.animate);
+
+        // Debug: Log every ~60 frames
+        if (!this.frameCount) this.frameCount = 0;
+        this.frameCount++;
+        if (this.frameCount % 60 === 0) {
+            // console.log('Animate loop running. Calling tweenUpdate.');
+        }
+
+        this.tweenGroup.update(time);
         this.statsManager.begin();
         this.controls.update();
 
@@ -453,6 +466,96 @@ export class SceneManager {
         this.camera.lookAt(center);
         this.controls.target.copy(center);
         this.controls.update();
+    }
+
+    /**
+     * 获取当前相机视角
+     * @param {Function} [callback] - 可选的回调函数，接收 view 对象
+     * @returns {{position: {x,y,z}, target: {x,y,z}}}
+     */
+    getView(callback) {
+        const view = {
+            position: {
+                x: this.camera.position.x,
+                y: this.camera.position.y,
+                z: this.camera.position.z
+            },
+            target: {
+                x: this.controls.target.x,
+                y: this.controls.target.y,
+                z: this.controls.target.z
+            }
+        };
+
+        if (callback && typeof callback === 'function') {
+            callback(view);
+        }
+
+        return view;
+    }
+
+    /**
+     * 设置相机视角（支持动画过渡）
+     * @param {Object} options - 配置选项
+     * @param {Object} options.position - 目标位置 {x, y, z}
+     * @param {Object} [options.target] - 目标观察点 {x, y, z}
+     * @param {number} [options.duration=1500] - 动画时长（毫秒），0 表示立即跳转
+     * @param {Function} [options.onComplete] - 完成回调
+     * @returns {Promise<void>}
+     */
+    setView(options) {
+        const { position, target, duration = 1500, onComplete } = options;
+
+        const endTarget = target || {
+            x: this.controls.target.x,
+            y: this.controls.target.y,
+            z: this.controls.target.z
+        };
+
+        // 立即跳转
+        if (duration <= 0) {
+            this.camera.position.set(position.x, position.y, position.z);
+            this.controls.target.set(endTarget.x, endTarget.y, endTarget.z);
+            this.controls.update();
+            if (onComplete) onComplete();
+            return Promise.resolve();
+        }
+
+        // 动画过渡（使用 Tween.js）
+        return new Promise((resolve) => {
+            const startPos = {
+                x: this.camera.position.x,
+                y: this.camera.position.y,
+                z: this.camera.position.z
+            };
+            const startTarget = {
+                x: this.controls.target.x,
+                y: this.controls.target.y,
+                z: this.controls.target.z
+            };
+
+            // 同时动画相机位置和观察点
+            new Tween(startPos, this.tweenGroup)
+                .to(position, duration)
+                .easing(Easing.Quadratic.Out)
+                .onUpdate(() => {
+                    this.camera.position.set(startPos.x, startPos.y, startPos.z);
+                })
+                .start();
+
+            new Tween(startTarget, this.tweenGroup)
+                .to(endTarget, duration)
+                .easing(Easing.Quadratic.Out)
+                .onUpdate(() => {
+                    this.controls.target.set(startTarget.x, startTarget.y, startTarget.z);
+                    this.controls.update();
+                })
+                .onComplete(() => {
+                    if (onComplete) onComplete();
+                    resolve();
+                })
+                .start();
+        });
     }
 
     /**
