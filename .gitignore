@@ -8,8 +8,9 @@ meteor3d-server/uploads/
 .DS_Store
 Thumbs.db
 
-# Environment Variables (本地覆盖)
+# Environment Variables
 .env*.local
+meteor3d-server/.env
 
 #web 包
 dist/
