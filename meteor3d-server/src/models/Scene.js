@@ -16,7 +16,14 @@ const SceneSchema = new mongoose.Schema({
     },
     description: String,
     thumbnail: String,
-    environmentUrl: String, // 新增：环境贴图 URL
+    environmentUrl: String, // 环境贴图 URL (本地相对路径)
+
+    // 云端绝对路径 (又拍云 CDN)
+    cloudUrls: {
+        environment: String,    // 又拍云环境贴图 URL
+        baseMap: String         // 又拍云底图 URL
+    },
+
     // GIS 配置
     gisConfig: {
         enable: {

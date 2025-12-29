@@ -54,7 +54,7 @@ const AssetSchema = new mongoose.Schema({
         type: String // 处理失败时的错误信息
     },
 
-    // 处理后的输出文件
+    // 处理后的输出文件 (本地相对路径)
     processedFiles: {
         compressed: String,      // 压缩后的 GLB 文件路径
         lod0: String,            // LOD0 高精度
@@ -66,6 +66,13 @@ const AssetSchema = new mongoose.Schema({
             '1k': String,
             '512': String
         }
+    },
+
+    // 云端绝对路径 (又拍云 CDN)
+    cloudUrls: {
+        compressed: String,      // 又拍云 compressed GLB URL
+        thumbnail: String,       // 又拍云缩略图 URL
+        file: String             // 又拍云原始文件 URL (HDRI/贴图)
     },
 
     // 预计算边界数据

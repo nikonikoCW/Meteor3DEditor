@@ -1,6 +1,7 @@
 const Asset = require('../models/Asset');
 const path = require('path');
 const fs = require('fs');
+const { uploadFile, deleteFile, extractRemotePath } = require('../services/upyunService');
 
 /**
  * 上传资产
@@ -51,6 +52,34 @@ exports.uploadAsset = async (req, res) => {
 
         const asset = new Asset(assetData);
         await asset.save();
+
+        // 如果有缩略图，上传到又拍云
+        if (thumbnailFile) {
+            const localPath = path.join(__dirname, '../../uploads/thumbnails', thumbnailFile.filename);
+            const remotePath = `/assets/thumbnails/${asset._id.toString()}.png`;
+            const thumbnailCloudUrl = await uploadFile(localPath, remotePath);
+            if (thumbnailCloudUrl) {
+                await Asset.findByIdAndUpdate(asset._id, {
+                    'cloudUrls.thumbnail': thumbnailCloudUrl
+                });
+                asset.cloudUrls = { thumbnail: thumbnailCloudUrl };
+            }
+        }
+
+        // HDRI 和贴图类型资产上传到又拍云
+        if (assetType === 'hdri' || assetType === 'texture') {
+            const localPath = mainFile.path;
+            const remotePath = `/assets/${assetType}/${asset._id.toString()}${ext}`;
+            const fileCloudUrl = await uploadFile(localPath, remotePath);
+            if (fileCloudUrl) {
+                await Asset.findByIdAndUpdate(asset._id, {
+                    'cloudUrls.file': fileCloudUrl
+                });
+                if (!asset.cloudUrls) asset.cloudUrls = {};
+                asset.cloudUrls.file = fileCloudUrl;
+                console.log(`[Upload] ${assetType} 已上传到云端: ${fileCloudUrl}`);
+            }
+        }
 
         // 如果是模型类型，加入处理队列
         if (assetType === 'model') {
@@ -224,7 +253,19 @@ exports.deleteAsset = async (req, res) => {
             }
         }
 
-        // 4. 删除数据库记录
+        // 4. 删除云端文件
+        if (asset.cloudUrls) {
+            if (asset.cloudUrls.compressed) {
+                const remotePath = extractRemotePath(asset.cloudUrls.compressed);
+                if (remotePath) await deleteFile(remotePath);
+            }
+            if (asset.cloudUrls.thumbnail) {
+                const remotePath = extractRemotePath(asset.cloudUrls.thumbnail);
+                if (remotePath) await deleteFile(remotePath);
+            }
+        }
+
+        // 5. 删除数据库记录
         await Asset.findByIdAndDelete(req.params.id);
 
         res.status(200).json({
@@ -376,22 +417,34 @@ exports.uploadThumbnail = async (req, res) => {
         // 更新缩略图路径
         const thumbnailPath = `/uploads/thumbnails/${req.file.filename}`;
 
-        // 如果已有旧缩略图，删除旧文件
+        // 如果已有旧缩略图，删除旧文件及云端文件
         if (asset.thumbnail) {
             const oldThumbnailPath = path.join(__dirname, '../../uploads/thumbnails', path.basename(asset.thumbnail));
             if (fs.existsSync(oldThumbnailPath)) {
                 fs.unlinkSync(oldThumbnailPath);
             }
+            // 删除旧的云端缩略图
+            if (asset.cloudUrls && asset.cloudUrls.thumbnail) {
+                const remotePath = extractRemotePath(asset.cloudUrls.thumbnail);
+                if (remotePath) await deleteFile(remotePath);
+            }
         }
 
+        // 上传到又拍云
+        const localPath = path.join(__dirname, '../../uploads/thumbnails', req.file.filename);
+        const remotePath = `/assets/thumbnails/${req.params.id}.png`;
+        const thumbnailCloudUrl = await uploadFile(localPath, remotePath);
+
         await Asset.findByIdAndUpdate(req.params.id, {
-            thumbnail: thumbnailPath
+            thumbnail: thumbnailPath,
+            'cloudUrls.thumbnail': thumbnailCloudUrl
         });
 
         res.status(200).json({
             success: true,
             message: '缩略图上传成功',
-            thumbnail: thumbnailPath
+            thumbnail: thumbnailPath,
+            cloudUrl: thumbnailCloudUrl
         });
     } catch (error) {
         console.error('上传缩略图失败:', error);

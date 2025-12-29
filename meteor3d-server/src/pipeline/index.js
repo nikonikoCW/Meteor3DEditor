@@ -5,6 +5,7 @@
 const Asset = require('../models/Asset');
 const assetQueue = require('./queue');
 const fs = require('fs');
+const path = require('path');
 
 // 导入处理器
 const { convertFormat } = require('./processors/formatConverter');
@@ -86,6 +87,16 @@ assetQueue.process('process', async (job) => {
         // 执行流水线
         context = await processAsset(asset);
 
+        // 上传 compressed 到又拍云
+        let compressedCloudUrl = null;
+        if (context.compressedPath) {
+            const { uploadFile } = require('../services/upyunService');
+            // 将相对路径转为绝对路径
+            const localPath = path.join(__dirname, '../..', context.compressedPath);
+            const remotePath = `/assets/compressed/${assetId}.glb`;
+            compressedCloudUrl = await uploadFile(localPath, remotePath);
+        }
+
         // 更新资产记录
         await Asset.findByIdAndUpdate(assetId, {
             processingStatus: 'ready',
@@ -96,6 +107,7 @@ assetQueue.process('process', async (job) => {
                 lod2: context.lods ? context.lods[2] : null,
                 textures: context.textures || {}
             },
+            'cloudUrls.compressed': compressedCloudUrl,
             bounds: context.bounds,
             stats: context.stats
         });

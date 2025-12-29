@@ -21,12 +21,14 @@
     "body-parser": "^2.2.1",
     "bull": "^4.16.5",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
     "draco3dgltf": "^1.5.7",
     "express": "^5.2.1",
     "meshoptimizer": "^1.0.0",
     "mongoose": "^9.0.0",
     "multer": "^2.0.2",
     "sharp": "0.32.6",
+    "upyun": "^3.4.6",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

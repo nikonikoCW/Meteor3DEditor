@@ -7,6 +7,8 @@ const axios = require('axios');
 const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
+const { uploadFile } = require('./upyunService');
+const Scene = require('../models/Scene');
 
 // 天地图配置
 const TIANDITU_TOKEN = 'd3940c4f1d55fdfb8b053ad7f1e0c80d';
@@ -203,8 +205,22 @@ async function generateBaseMap(bounds, sceneId) {
     console.log(`📐 最终尺寸: ${finalWidth} x ${finalHeight} 像素`);
     console.log('='.repeat(50));
 
+    // 上传到又拍云
+    const remotePath = `/scenes/${sceneId}/basemap.png`;
+    const baseMapCloudUrl = await uploadFile(outputPath, remotePath);
+
+    // 更新 Scene 的云端 URL
+    if (baseMapCloudUrl) {
+        await Scene.findOneAndUpdate(
+            { sceneId },
+            { 'cloudUrls.baseMap': baseMapCloudUrl }
+        );
+        console.log(`☁️ 底图已上传到云端: ${baseMapCloudUrl}`);
+    }
+
     return {
         url: `/uploads/basemaps/${sceneId}.png`,
+        cloudUrl: baseMapCloudUrl,
         width: finalWidth,
         height: finalHeight
     };

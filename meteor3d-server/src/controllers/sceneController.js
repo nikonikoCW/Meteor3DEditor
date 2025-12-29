@@ -2,6 +2,8 @@ const SceneObject = require('../models/SceneObject');
 const Scene = require('../models/Scene');
 const { v4: uuidv4 } = require('uuid');
 const { generateBaseMap } = require('../services/baseMapGenerator');
+const { uploadFile } = require('../services/upyunService');
+const path = require('path');
 
 /**
  * 获取场景列表（支持分页）
@@ -139,6 +141,17 @@ exports.saveScene = async (req, res) => {
         if (metadata.thumbnail) sceneData.thumbnail = metadata.thumbnail;
         if (metadata.environmentUrl !== undefined) sceneData.environmentUrl = metadata.environmentUrl; // 保存环境贴图 URL
         if (metadata.gisConfig !== undefined) sceneData.gisConfig = metadata.gisConfig; // 保存 GIS 配置
+
+        // 如果有新的环境贴图，上传到又拍云
+        if (metadata.environmentUrl) {
+            const localPath = path.join(__dirname, '../..', metadata.environmentUrl);
+            const ext = path.extname(metadata.environmentUrl);
+            const remotePath = `/scenes/${sceneId}/environment${ext}`;
+            const environmentCloudUrl = await uploadFile(localPath, remotePath);
+            if (environmentCloudUrl) {
+                sceneData['cloudUrls.environment'] = environmentCloudUrl;
+            }
+        }
 
         await Scene.findOneAndUpdate(
             { sceneId: sceneId },
