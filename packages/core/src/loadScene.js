@@ -71,11 +71,16 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
     const persistenceManager = new PersistenceManager(sceneManager, null, null, { dracoPath });
 
     // ========== 1. 加载环境贴图/天空盒 ==========
-    if (metadata.environmentUrl) {
-        try {
-            const envUrl = metadata.environmentUrl.startsWith('http')
+    // 优先使用云端 URL
+    const envUrl = metadata.cloudUrls?.environment
+        || (metadata.environmentUrl
+            ? (metadata.environmentUrl.startsWith('http')
                 ? metadata.environmentUrl
-                : `${serverUrl}${metadata.environmentUrl}`;
+                : `${serverUrl}${metadata.environmentUrl}`)
+            : null);
+
+    if (envUrl) {
+        try {
             await sceneManager.loadEnvironment(envUrl);
             console.log('✅ 环境贴图加载成功');
         } catch (error) {
@@ -98,9 +103,9 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
             sceneManager.setGridHelper(true, gisConfig.size, gisConfig.size);
         }
 
-        // 恢复底图显示
-        if (gisConfig.showBaseMap && gisConfig.baseMapUrl) {
-            const fullUrl = `${serverUrl}${gisConfig.baseMapUrl}`;
+        // 恢复底图显示，优先使用云端 URL
+        if (gisConfig.showBaseMap && (metadata.cloudUrls?.baseMap || gisConfig.baseMapUrl)) {
+            const fullUrl = metadata.cloudUrls?.baseMap || `${serverUrl}${gisConfig.baseMapUrl}`;
             sceneManager.setBaseMap(
                 fullUrl,
                 gisConfig.bounds,

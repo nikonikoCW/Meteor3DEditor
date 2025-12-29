@@ -134,7 +134,8 @@ const route = useRoute();
 const isConfigured = ref(false);
 const showGrid = ref(false);
 const showBaseMap = ref(false);
-const baseMapUrl = ref(null);
+const baseMapUrl = ref(null);  // 本地路径
+const cloudBaseMapUrl = ref(null);  // 云端 URL (优先使用)
 const isGeneratingBaseMap = ref(false);
 const showMapDialog = ref(false);
 const showRemoveWarning = ref(false);
@@ -222,6 +223,11 @@ const applyGisConfig = (cfg, options = {}) => {
   if (cfg.baseMapUrl) {
     baseMapUrl.value = cfg.baseMapUrl;
     showBaseMap.value = cfg.showBaseMap ?? false;
+  }
+  
+  // 更新云端底图 URL
+  if (cfg.cloudUrls?.baseMap) {
+    cloudBaseMapUrl.value = cfg.cloudUrls.baseMap;
   }
   
   // 更新 enable 状态
@@ -381,6 +387,10 @@ const generateBaseMapRequest = async () => {
 
     if (data.success) {
       baseMapUrl.value = data.baseMapUrl;
+      // 新增: 更新云端 URL
+      if (data.cloudUrl) {
+        cloudBaseMapUrl.value = data.cloudUrl;
+      }
       
       // 自动开启显示
       showBaseMap.value = true;
@@ -405,9 +415,9 @@ const handleBaseMapChange = () => {
   
   const sm = window.editor.sceneManager;
   
-  if (showBaseMap.value && baseMapUrl.value && gisConfig.bounds) {
-    // 显示底图
-    const fullUrl = `${ASSET_BASE_URL}${baseMapUrl.value}`;
+  if (showBaseMap.value && (cloudBaseMapUrl.value || baseMapUrl.value) && gisConfig.bounds) {
+    // 显示底图，优先使用云端 URL
+    const fullUrl = cloudBaseMapUrl.value || `${ASSET_BASE_URL}${baseMapUrl.value}`;
     sm.setBaseMap(fullUrl, gisConfig.bounds, gisConfig.size, true);
   } else {
     // 隐藏底图

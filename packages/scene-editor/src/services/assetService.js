@@ -179,36 +179,45 @@ export async function waitForProcessing(id, interval = 2000, maxAttempts = 60) {
 
 /**
  * 获取资产 URL（原始版本）
+ * 优先使用云端 URL，降级到本地路径
  * @param {Object} asset - 资产对象
  * @returns {string}
  */
 export function getAssetUrl(asset) {
+    // HDRI 和贴图类型，优先使用云端 file URL
+    if (asset.cloudUrls?.file) {
+        return asset.cloudUrls.file;
+    }
     return `${ASSET_BASE_URL}${asset.url}`;
 }
 
 /**
- * 获取压缩后的资产 URL（优先使用 compressed 版本）
+ * 获取压缩后的资产 URL（优先使用云端 compressed 版本）
  * 如果资产已处理完成且有 compressed 版本，返回压缩版本 URL
  * 否则返回原始 URL
  * @param {Object} asset - 资产对象
  * @returns {string}
  */
 export function getCompressedAssetUrl(asset) {
-    // 检查是否有处理后的压缩版本
+    // 优先使用云端 compressed URL
+    if (asset.cloudUrls?.compressed) {
+        return asset.cloudUrls.compressed;
+    }
+
+    // 降级到本地压缩版本
     if (asset.processingStatus === 'ready' &&
         asset.processedFiles &&
         asset.processedFiles.compressed) {
-        // processedFiles.compressed 存储的是相对路径，如 'uploads/processed/models/xxx_compressed.glb'
         return `${ASSET_BASE_URL}/${asset.processedFiles.compressed}`;
     }
 
     // 没有压缩版本，返回原始 URL
-    return `${ASSET_BASE_URL}${asset.url}`;
+    return getAssetUrl(asset);
 }
 
 /**
  * 获取模型的最佳加载 URL
- * 对于模型类型，优先使用 compressed 版本
+ * 对于模型类型，优先使用云端 compressed 版本
  * @param {Object} asset - 资产对象
  * @returns {string}
  */

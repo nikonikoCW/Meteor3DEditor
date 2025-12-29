@@ -48,7 +48,7 @@
         class="asset-card"
       >
             <div class="asset-preview">
-          <img v-if="asset.thumbnail" :src="ASSET_BASE_URL + asset.thumbnail" :alt="asset.name" class="asset-thumb">
+          <img v-if="asset.thumbnail" :src="getThumbnailUrl(asset)" :alt="asset.name" class="asset-thumb">
           <span v-else class="asset-icon">{{ getAssetIcon(asset.type) }}</span>
         </div>
         <div class="asset-info">
@@ -321,6 +321,18 @@ const getAssetIcon = (type) => {
     effect: '✨'
   };
   return icons[type] || '📦';
+};
+
+/**
+ * 获取缩略图 URL，优先使用云端 URL
+ */
+const getThumbnailUrl = (asset) => {
+  // 优先使用云端 URL
+  if (asset.cloudUrls?.thumbnail) {
+    return asset.cloudUrls.thumbnail;
+  }
+  // 降级到本地路径
+  return ASSET_BASE_URL + asset.thumbnail;
 };
 
 const formatFileSize = (bytes) => {

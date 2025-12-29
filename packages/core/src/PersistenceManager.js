@@ -374,12 +374,15 @@ export class PersistenceManager {
             this.editorStore.resetObjects();
         }
 
-        // 恢复环境贴图
-        if (sceneData.metadata && sceneData.metadata.environmentUrl) {
-            try {
-                await this.sceneManager.loadEnvironment(sceneData.metadata.environmentUrl);
-            } catch (error) {
-                console.warn('加载环境贴图失败:', error);
+        // 恢复环境贴图，优先使用云端 URL
+        if (sceneData.metadata) {
+            const envUrl = sceneData.metadata.cloudUrls?.environment || sceneData.metadata.environmentUrl;
+            if (envUrl) {
+                try {
+                    await this.sceneManager.loadEnvironment(envUrl);
+                } catch (error) {
+                    console.warn('加载环境贴图失败:', error);
+                }
             }
         }
 
@@ -388,10 +391,10 @@ export class PersistenceManager {
             const gisConfig = sceneData.metadata.gisConfig;
             this.sceneManager.setGisConfig(gisConfig);
 
-            // 自动恢复底图显示
-            if (gisConfig.showBaseMap && gisConfig.baseMapUrl) {
-                const baseUrl = this.dbManager.apiBaseUrl.replace('/api', '');
-                const fullUrl = `${baseUrl}${gisConfig.baseMapUrl}`;
+            // 自动恢复底图显示，优先使用云端 URL
+            if (gisConfig.showBaseMap && (sceneData.metadata.cloudUrls?.baseMap || gisConfig.baseMapUrl)) {
+                const fullUrl = sceneData.metadata.cloudUrls?.baseMap
+                    || `${this.dbManager.apiBaseUrl.replace('/api', '')}${gisConfig.baseMapUrl}`;
                 this.sceneManager.setBaseMap(
                     fullUrl,
                     gisConfig.bounds,

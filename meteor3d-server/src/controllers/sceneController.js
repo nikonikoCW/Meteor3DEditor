@@ -290,6 +290,7 @@ exports.generateBaseMapHandler = async (req, res) => {
             success: true,
             message: '底图生成成功',
             baseMapUrl: result.url,
+            cloudUrl: result.cloudUrl,  // 新增: 云端 URL
             width: result.width,
             height: result.height
         });
