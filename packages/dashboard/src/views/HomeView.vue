@@ -179,6 +179,12 @@
           <span class="divider">|</span>
           <a href="mailto:84675738@qq.com">联系我们</a>
         </div>
+        <div class="footer-partners">
+          <span class="partner-label">云存储服务支持</span>
+          <a href="https://www.upyun.com/?utm_source=lianmeng&utm_medium=referral" target="_blank">
+            <img src="/又拍云_logo3.png" alt="又拍云" class="partner-logo" />
+          </a>
+        </div>
         <div class="footer-copyright">
           © 2025 Meteor3DEditor. 保留所有权利。
         </div>
@@ -712,6 +718,30 @@ const getParticleStyle = (n) => {
 .footer-copyright {
   font-size: 14px;
   color: var(--text-secondary);
+}
+
+.footer-partners {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.partner-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.partner-logo {
+  height: 45px;
+  opacity: 1;
+  transition: transform 0.3s ease;
+}
+
+.partner-logo:hover {
+  transform: scale(1.05);
 }
 
 /* 响应式 */
