@@ -127,6 +127,9 @@ importers:
 
   packages/scene-editor:
     dependencies:
+      3d-tiles-renderer:
+        specifier: ^0.4.19
+        version: 0.4.19(three@0.181.2)
       '@meteor3d/core':
         specifier: workspace:*
         version: link:../core
@@ -160,6 +163,21 @@ importers:
         version: 8.0.5(vite@7.2.6)(vue@3.5.25)
 
 packages:
+
+  3d-tiles-renderer@0.4.19:
+    resolution: {integrity: sha512-emynINuVR+fvop+YN456zFcOdwwzRbKAXIKfvkF3avDIS4Sm3jhuTeGBaO754ghXI/xyjPup0ZSryQ7SUvO8AA==}
+    peerDependencies:
+      '@react-three/fiber': ^8.17.9 || ^9.0.0
+      react: ^18.3.1 || ^19.0.0
+      react-dom: ^18.3.1 || ^19.0.0
+      three: '>=0.167.0'
+    peerDependenciesMeta:
+      '@react-three/fiber':
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
 
   '@algolia/abtesting@1.12.2':
     resolution: {integrity: sha512-oWknd6wpfNrmRcH0vzed3UPX0i17o4kYLM5OMITyMVM2xLgaRbIafoxL0e8mcrNNb0iORCJA0evnNDKRYth5WQ==}
@@ -2566,6 +2584,10 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
+
+  3d-tiles-renderer@0.4.19(three@0.181.2):
+    dependencies:
+      three: 0.181.2
 
   '@algolia/abtesting@1.12.2':
     dependencies:

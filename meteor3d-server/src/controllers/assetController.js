@@ -220,8 +220,13 @@ exports.deleteAsset = async (req, res) => {
         console.log(`[Delete] 缩略图路径: ${asset.thumbnail}`);
         console.log(`[Delete] processedFiles:`, JSON.stringify(asset.processedFiles, null, 2));
 
-        // 1. 删除原始上传文件
-        safeUnlink(asset.filePath);
+        // tileset 类型不删除原始文件（只是注册，不是上传）
+        if (asset.type === 'tileset') {
+            console.log(`[Delete] tileset 类型，跳过原始文件删除`);
+        } else {
+            // 1. 删除原始上传文件
+            safeUnlink(asset.filePath);
+        }
 
         // 2. 删除缩略图
         safeUnlink(dbPathToFsPath(asset.thumbnail));
@@ -451,6 +456,60 @@ exports.uploadThumbnail = async (req, res) => {
         res.status(500).json({
             success: false,
             message: '上传缩略图失败',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * 注册 3D Tiles (Tileset)
+ * 只支持外部 URL（http/https）
+ */
+exports.registerTileset = async (req, res) => {
+    try {
+        const { name, tilesetUrl } = req.body;
+
+        // 参数校验
+        if (!name || !tilesetUrl) {
+            return res.status(400).json({
+                success: false,
+                message: '缺少必要参数: name 和 tilesetUrl'
+            });
+        }
+
+        // URL 必须是 http/https 开头
+        if (!tilesetUrl.startsWith('http://') && !tilesetUrl.startsWith('https://')) {
+            return res.status(400).json({
+                success: false,
+                message: 'URL 必须以 http:// 或 https:// 开头'
+            });
+        }
+
+        // 创建资产记录
+        const asset = new Asset({
+            name: name,
+            originalName: name,
+            type: 'tileset',
+            format: '3dtiles',
+            tilesetUrl: tilesetUrl,
+            processingStatus: 'skipped'
+        });
+
+        await asset.save();
+
+        console.log(`[Tileset] 已注册: ${name} -> ${tilesetUrl}`);
+
+        res.status(201).json({
+            success: true,
+            message: '3D Tiles 注册成功',
+            asset: asset
+        });
+
+    } catch (error) {
+        console.error('注册 3D Tiles 失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '注册 3D Tiles 失败',
             error: error.message
         });
     }

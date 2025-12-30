@@ -34,4 +34,7 @@ router.post('/:id/reprocess', assetController.reprocessAsset);
 // POST /api/assets/:id/thumbnail - 上传缩略图 (延迟生成)
 router.post('/:id/thumbnail', upload.single('thumbnail'), assetController.uploadThumbnail);
 
+// POST /api/assets/register-tileset - 注册 3D Tiles
+router.post('/register-tileset', assetController.registerTileset);
+
 module.exports = router;

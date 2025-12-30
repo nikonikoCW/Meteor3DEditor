@@ -2,9 +2,14 @@
   <div class="assets-view">
     <div class="header">
       <h1>📦 资产管理</h1>
-      <button class="upload-btn" @click="triggerFileInput">
-        <span>📤</span> 上传资产
-      </button>
+      <div class="header-actions">
+        <button class="upload-btn" @click="triggerFileInput">
+          <span>📤</span> 上传资产
+        </button>
+        <button class="register-btn" @click="showTilesetDialog = true">
+          <span>🌐</span> 注册 3D Tiles
+        </button>
+      </div>
       <input 
         ref="fileInput"
         type="file" 
@@ -39,6 +44,12 @@
       >
         HDRI
       </button>
+      <button 
+        :class="['filter-btn', { active: currentFilter === 'tileset' }]"
+        @click="setFilter('tileset')"
+      >
+        3D Tiles
+      </button>
     </div>
 
     <div class="assets-grid" v-if="assets.length > 0">
@@ -56,8 +67,8 @@
             {{ asset.originalName }}
           </div>
           <div class="asset-meta">
-            <span>{{ asset.format.toUpperCase() }}</span>
-            <span>{{ formatFileSize(asset.fileSize) }}</span>
+            <span>{{ asset.format ? asset.format.toUpperCase() : (asset.type === 'tileset' ? '3DTILES' : '-') }}</span>
+            <span v-if="asset.fileSize">{{ formatFileSize(asset.fileSize) }}</span>
             <span v-if="asset.processingStatus && asset.processingStatus !== 'skipped'" 
                   :class="['status-tag', asset.processingStatus]">
               {{ getStatusLabel(asset.processingStatus) }}
@@ -143,13 +154,45 @@
         <p>{{ uploadStatus }}</p>
       </div>
     </div>
+
+    <!-- 3D Tiles 注册对话框 -->
+    <div v-if="showTilesetDialog" class="dialog-overlay" @click.self="showTilesetDialog = false">
+      <div class="dialog">
+        <h3>🌐 注册 3D Tiles</h3>
+        
+        <div class="form-group">
+          <label>资产名称</label>
+          <input 
+            type="text" 
+            v-model="tilesetForm.name" 
+            placeholder="例如：深圳建筑模型"
+          />
+        </div>
+        
+        <div class="form-group">
+          <label>tileset.json URL</label>
+          <input 
+            type="text" 
+            v-model="tilesetForm.tilesetUrl" 
+            placeholder="https://example.com/3dtiles/tileset.json"
+          />
+        </div>
+        
+        <div class="dialog-actions">
+          <button class="btn-cancel" @click="showTilesetDialog = false">取消</button>
+          <button class="btn-primary" @click="handleRegisterTileset" :disabled="!canRegisterTileset">
+            确认注册
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { uploadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset, uploadThumbnail, getAssetsWithoutThumbnail } from '../services/assetService';
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
+import { uploadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset, uploadThumbnail, getAssetsWithoutThumbnail, registerTileset } from '../services/assetService';
 import { ASSET_BASE_URL } from '../config';
 import { ThumbnailGenerator } from '../utils/ThumbnailGenerator';
 import { message } from '../utils/message';
@@ -158,7 +201,14 @@ const assets = ref([]);
 const currentFilter = ref(null);
 const uploading = ref(false);
 const fileInput = ref(null);
-const uploadStatus = ref('正在上传...'); // 添加上传状态文本
+const uploadStatus = ref('正在上传...');
+
+// 3D Tiles 注册状态
+const showTilesetDialog = ref(false);
+const tilesetForm = reactive({
+  name: '',
+  tilesetUrl: ''
+});
 
 // 分页状态
 const pagination = ref({
@@ -197,6 +247,37 @@ const filteredAssets = computed(() => {
   }
   return assets.value.filter(asset => asset.type === currentFilter.value);
 });
+
+// 3D Tiles 注册表单验证
+const canRegisterTileset = computed(() => {
+  return tilesetForm.name.trim() && tilesetForm.tilesetUrl.trim();
+});
+
+// 处理 3D Tiles 注册
+const handleRegisterTileset = async () => {
+  if (!canRegisterTileset.value) return;
+
+  try {
+    const result = await registerTileset({
+      name: tilesetForm.name.trim(),
+      tilesetUrl: tilesetForm.tilesetUrl.trim()
+    });
+
+    if (result.success) {
+      message.success('3D Tiles 注册成功！');
+      showTilesetDialog.value = false;
+      // 重置表单
+      tilesetForm.name = '';
+      tilesetForm.tilesetUrl = '';
+      // 刷新列表
+      await loadAssets();
+    } else {
+      message.error('注册失败: ' + result.message);
+    }
+  } catch (error) {
+    message.error('注册失败: ' + error.message);
+  }
+};
 
 const triggerFileInput = () => {
   fileInput.value.click();
@@ -315,17 +396,15 @@ const handleDelete = async (asset) => {
 
 const getAssetIcon = (type) => {
   const icons = {
-    model: '🎨',
-    texture: '🖼️',
-    hdri: '🌅',
-    effect: '✨'
+    model: '\ud83c\udfa8',
+    texture: '\ud83d\uddbc\ufe0f',
+    hdri: '\ud83c\udf05',
+    effect: '\u2728',
+    tileset: '\ud83c\udf10'
   };
-  return icons[type] || '📦';
+  return icons[type] || '\ud83d\udce6';
 };
 
-/**
- * 获取缩略图 URL，优先使用云端 URL
- */
 const getThumbnailUrl = (asset) => {
   // 优先使用云端 URL
   if (asset.cloudUrls?.thumbnail) {
@@ -797,5 +876,127 @@ onUnmounted(() => {
   color: #666;
   font-size: 13px;
   margin-left: 12px;
+}
+
+/* Header Actions */
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.register-btn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.register-btn:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-1px);
+}
+
+/* Dialog */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background: #2a2a2a;
+  border-radius: 12px;
+  padding: 24px;
+  width: 480px;
+  max-width: 90vw;
+}
+
+.dialog h3 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  color: white;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  color: #aaa;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.form-group input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.form-group input[type="text"]:focus {
+  outline: none;
+  border-color: #0066cc;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.btn-cancel {
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid #444;
+  color: #aaa;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-cancel:hover {
+  border-color: #666;
+  color: white;
+}
+
+.btn-primary {
+  padding: 10px 20px;
+  background: #0066cc;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #0077dd;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

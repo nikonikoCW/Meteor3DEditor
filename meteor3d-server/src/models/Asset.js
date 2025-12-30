@@ -16,7 +16,7 @@ const AssetSchema = new mongoose.Schema({
     type: {
         type: String,
         required: true,
-        enum: ['model', 'texture', 'hdri', 'effect'], // 资产类型
+        enum: ['model', 'texture', 'hdri', 'effect', 'tileset'], // 资产类型 (新增 tileset)
         default: 'model'
     },
     format: {
@@ -25,21 +25,28 @@ const AssetSchema = new mongoose.Schema({
     },
     filePath: {
         type: String,
-        required: true
+        required: false // tileset 类型可能没有本地路径（外部 URL 注册）
     },
     fileSize: {
         type: Number,
-        required: true // 字节数
+        required: false // tileset 不记录文件大小
     },
     url: {
         type: String,
-        required: true // 访问 URL
+        required: false // tileset 使用 tilesetUrl
     },
     thumbnail: {
         type: String // 缩略图 URL（可选）
     },
     metadata: {
         type: mongoose.Schema.Types.Mixed // 额外的元数据
+    },
+
+    // ========== 3D Tiles (Tileset) 专用字段 ==========
+
+    // tileset.json 的访问 URL (本地或外部)
+    tilesetUrl: {
+        type: String // 例如: https://example.com/tileset.json 或 /data/tilesets/xxx/tileset.json
     },
 
     // ========== 流水线处理相关字段 ==========

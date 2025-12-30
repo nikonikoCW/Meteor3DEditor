@@ -251,3 +251,28 @@ export async function getAssetsWithoutThumbnail() {
         return [];
     }
 }
+
+/**
+ * 注册 3D Tiles (Tileset)
+ * @param {Object} options - 注册参数
+ * @param {string} options.name - 资产名称
+ * @param {string} options.tilesetUrl - tileset.json 的 URL
+ * @returns {Promise<Object>}
+ */
+export async function registerTileset({ name, tilesetUrl }) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/assets/register-tileset`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name, tilesetUrl })
+        });
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('注册 3D Tiles 失败:', error);
+        throw error;
+    }
+}

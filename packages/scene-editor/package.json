@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "3d-tiles-renderer": "^0.4.19",
     "@meteor3d/core": "workspace:*",
     "@tweenjs/tween.js": "^25.0.0",
     "leaflet": "^1.9.4",
