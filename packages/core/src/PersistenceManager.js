@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { TilesRenderer } from '3d-tiles-renderer';
 import { message } from './utils/message.js';
 
 /**
@@ -60,6 +61,38 @@ export class PersistenceManager {
     }
 
     /**
+     * ECEF 坐标转经纬度
+     * @param {number} x - ECEF X 坐标（米）
+     * @param {number} y - ECEF Y 坐标（米）
+     * @param {number} z - ECEF Z 坐标（米）
+     * @returns {{lng: number, lat: number, height: number}|null}
+     */
+    ecefToLngLat(x, y, z) {
+        // WGS84 椭球参数
+        const a = 6378137.0;  // 长半轴（米）
+        const e2 = 0.00669437999014;  // 第一偏心率的平方
+
+        const p = Math.sqrt(x * x + y * y);
+        const theta = Math.atan2(z * a, p * Math.sqrt(1 - e2) * a);
+
+        // 经度（弧度 -> 度）
+        const lng = Math.atan2(y, x) * 180 / Math.PI;
+
+        // 纬度（迭代计算）
+        const lat = Math.atan2(
+            z + e2 / (1 - e2) * a * Math.pow(Math.sin(theta), 3),
+            p - e2 * a * Math.pow(Math.cos(theta), 3)
+        ) * 180 / Math.PI;
+
+        // 高度（简化计算）
+        const sinLat = Math.sin(lat * Math.PI / 180);
+        const N = a / Math.sqrt(1 - e2 * sinLat * sinLat);
+        const height = p / Math.cos(lat * Math.PI / 180) - N;
+
+        return { lng, lat, height };
+    }
+
+    /**
      * 序列化对象
      * 将 Three.js 对象转换为可存储的 JSON 数据
      * @param {THREE.Object3D} object - 要序列化的对象
@@ -77,6 +110,18 @@ export class PersistenceManager {
                 rotation: { x: object.rotation.x, y: object.rotation.y, z: object.rotation.z },
                 scale: { x: object.scale.x, y: object.scale.y, z: object.scale.z },
                 modifications: this.extractModifications(object)
+            };
+        } else if (object.userData.modelType === 'Tileset') {
+            return {
+                id: object.uuid,
+                type: 'Tileset',
+                name: object.name || 'Tileset',
+                url: object.userData.modelUrl,
+                visible: object.visible,
+                position: { x: object.position.x, y: object.position.y, z: object.position.z },
+                rotation: { x: object.rotation.x, y: object.rotation.y, z: object.rotation.z },
+                scale: { x: object.scale.x, y: object.scale.y, z: object.scale.z },
+                gisCenter: object.userData.gisCenter || null  // 保存提取的 GIS 中心点
             };
         } else {
             return {
@@ -195,6 +240,15 @@ export class PersistenceManager {
                 this.applyModifications(model, data.modifications);
             }
             return model;
+        } else if (data.type === 'Tileset') {
+            const tileset = await this.loadTileset(data.url);
+            tileset.uuid = data.id;
+            tileset.name = data.name || 'Tileset';
+            if (data.visible !== undefined) tileset.visible = data.visible;
+            tileset.position.set(data.position.x, data.position.y, data.position.z);
+            tileset.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
+            tileset.scale.set(data.scale.x, data.scale.y, data.scale.z);
+            return tileset;
         } else {
             let geometry;
             if (data.geometry.type === 'BoxGeometry') {
@@ -269,6 +323,99 @@ export class PersistenceManager {
                     reject(new Error(errorMsg));
                 }
             );
+        });
+    }
+
+    /**
+     * 加载 3D Tiles (Tileset)
+     * @param {string} url - tileset.json 的 URL
+     * @returns {Promise<THREE.Group>} 包装 TilesRenderer 的 Group
+     */
+    async loadTileset(url) {
+        console.log('正在加载 3D Tiles:', url);
+
+        return new Promise((resolve, reject) => {
+            try {
+                const tilesRenderer = new TilesRenderer(url);
+                tilesRenderer.setCamera(this.sceneManager.camera);
+                tilesRenderer.setResolutionFromRenderer(this.sceneManager.camera, this.sceneManager.renderer);
+
+                // 创建包装 Group
+                const wrapper = new THREE.Group();
+                wrapper.add(tilesRenderer.group);
+                wrapper.userData.modelType = 'Tileset';
+                wrapper.userData.modelUrl = url;
+                wrapper.userData.tilesRenderer = tilesRenderer;
+                wrapper.name = 'Tileset';
+
+                // 监听加载完成，提取 GIS 信息并定位
+                const box3 = new THREE.Box3();
+                tilesRenderer.addEventListener('load-tile-set', () => {
+                    console.log('3D Tiles 加载完成:', url);
+
+                    // 尝试从 transform 提取 ECEF 坐标
+                    const rootTile = tilesRenderer.root;
+                    let tilesetLng = null;
+                    let tilesetLat = null;
+
+                    if (rootTile && rootTile.cached && rootTile.cached.transform) {
+                        const transform = rootTile.cached.transform;
+                        // transform 是 4x4 列主序矩阵，位置在 [12], [13], [14]
+                        const ecefX = transform.elements[12];
+                        const ecefY = transform.elements[13];
+                        const ecefZ = transform.elements[14];
+
+                        // ECEF 转经纬度
+                        const lngLat = this.ecefToLngLat(ecefX, ecefY, ecefZ);
+                        if (lngLat) {
+                            tilesetLng = lngLat.lng;
+                            tilesetLat = lngLat.lat;
+                            console.log(`3D Tiles GIS 信息: 经度 ${tilesetLng.toFixed(6)}°, 纬度 ${tilesetLat.toFixed(6)}°`);
+
+                            // 保存 GIS 信息到 userData
+                            wrapper.userData.gisCenter = { lng: tilesetLng, lat: tilesetLat };
+                        }
+                    }
+
+                    // 根据场景 GIS 配置决定定位方式
+                    if (this.sceneManager.gisProjection && tilesetLng !== null && tilesetLat !== null) {
+                        // 场景有 GIS 配置：将 tileset 定位到正确的地理位置
+                        const worldPos = this.sceneManager.lngLatToWorld(tilesetLng, tilesetLat, 0);
+                        if (worldPos) {
+                            // 先居中，然后偏移到目标位置
+                            if (tilesRenderer.getBoundingBox(box3)) {
+                                box3.getCenter(tilesRenderer.group.position);
+                                tilesRenderer.group.position.multiplyScalar(-1);
+                            }
+                            // 将 wrapper 移动到地理位置
+                            wrapper.position.copy(worldPos);
+                            console.log(`3D Tiles 已定位到场景坐标: (${worldPos.x.toFixed(2)}, ${worldPos.y.toFixed(2)}, ${worldPos.z.toFixed(2)})`);
+                        }
+                    } else {
+                        // 无 GIS 配置：居中到原点
+                        if (tilesRenderer.getBoundingBox(box3)) {
+                            box3.getCenter(tilesRenderer.group.position);
+                            tilesRenderer.group.position.multiplyScalar(-1);
+                        }
+                        console.log('3D Tiles 已居中到原点');
+                    }
+                });
+
+                tilesRenderer.addEventListener('load-tile-set-error', (event) => {
+                    console.error('3D Tiles 加载失败:', event);
+                });
+
+                // 注册到 SceneManager 的动画循环中更新
+                if (!this.sceneManager._tilesets) {
+                    this.sceneManager._tilesets = [];
+                }
+                this.sceneManager._tilesets.push(tilesRenderer);
+
+                resolve(wrapper);
+            } catch (error) {
+                console.error('3D Tiles 初始化失败:', error);
+                reject(error);
+            }
         });
     }
 

@@ -17,6 +17,7 @@
     },
     "dependencies": {
         "@tweenjs/tween.js": "^25.0.0",
+        "3d-tiles-renderer": "^0.3.39",
         "three": "^0.181.2"
     },
     "devDependencies": {

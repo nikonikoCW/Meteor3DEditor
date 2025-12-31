@@ -161,6 +161,13 @@ export class SceneManager {
         this.statsManager.begin();
         this.controls.update();
 
+        // 更新 3D Tiles
+        if (this._tilesets && this._tilesets.length > 0) {
+            for (const tilesRenderer of this._tilesets) {
+                tilesRenderer.update();
+            }
+        }
+
         // 如果有描边对象，使用后处理渲染；否则直接渲染
         const hasOutline = this.outlineManager.render();
         if (!hasOutline) {
@@ -709,8 +716,8 @@ export class SceneManager {
      * @param {boolean} visible - 是否显示底图
      */
     setBaseMap(url, bounds, size, visible) {
-        // 如果正在加载同一个 URL，直接返回
-        if (visible && url && this.baseMapLoading === url) {
+        // 如果正在加载同一个 URL 且 size 相同，直接返回
+        if (visible && url && this.baseMapLoading === url && this.baseMapLoadingSize === size) {
             return;
         }
 
@@ -727,16 +734,19 @@ export class SceneManager {
 
         if (!visible || !url || !bounds || !size) {
             this.baseMapLoading = null;
+            this.baseMapLoadingSize = null;
             return;
         }
 
-        // 标记正在加载
+        // 标记正在加载（包含 size）
         this.baseMapLoading = url;
+        this.baseMapLoadingSize = size;
 
-        // 加载底图纹理
+        // 加载底图纹理（添加时间戳防止缓存）
         const loader = new THREE.TextureLoader();
+        const urlWithCacheBust = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now();
         loader.load(
-            url,
+            urlWithCacheBust,
             (texture) => {
                 // 检查是否仍然是当前请求的 URL
                 if (this.baseMapLoading !== url) return;

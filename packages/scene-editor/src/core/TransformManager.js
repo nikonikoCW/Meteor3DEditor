@@ -56,6 +56,20 @@ export class TransformManager {
                     );
                     this.historyManager.execute(command);
                 }
+
+                // 触发 UI 更新事件
+                window.dispatchEvent(new CustomEvent('transform-changed', {
+                    detail: { object: this.controls.object }
+                }));
+            }
+        });
+
+        // 拖拽过程中实时更新（可选，用于实时更新 UI）
+        this.controls.addEventListener('objectChange', () => {
+            if (this.controls.object) {
+                window.dispatchEvent(new CustomEvent('transform-changed', {
+                    detail: { object: this.controls.object }
+                }));
             }
         });
 

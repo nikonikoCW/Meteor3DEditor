@@ -82,6 +82,16 @@ const onDrop = async (event) => {
       console.error('Failed to load GLTF model:', error);
       return;
     }
+  } else if (type === 'Tileset') {
+    // Load 3D Tiles
+    const url = event.dataTransfer.getData('url');
+    try {
+      object = await persistenceManager.loadTileset(url);
+      // 3D Tiles 已自动居中，无需额外位置设置
+    } catch (error) {
+      console.error('Failed to load 3D Tiles:', error);
+      return;
+    }
   } else {
     // Simple geometry
     let geometry, material;

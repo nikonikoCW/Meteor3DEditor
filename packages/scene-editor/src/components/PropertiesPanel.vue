@@ -24,7 +24,7 @@
     </div>
 
     <!-- Position -->
-    <div class="section">
+    <div class="section" :key="'pos-' + forceUpdateKey">
       <h4>位置 (Position)</h4>
       <div class="prop-row">
         <label>X</label>
@@ -41,7 +41,7 @@
     </div>
 
     <!-- Geographic Coordinates -->
-    <div class="section" v-if="isGisEnabled">
+    <div class="section" v-if="isGisEnabled" :key="'geo-' + forceUpdateKey">
       <h4>地理坐标 (Lat/Lng/Height)</h4>
       <div class="prop-row">
         <label>经度</label>
@@ -61,7 +61,7 @@
     </div>
 
     <!-- Rotation -->
-    <div class="section">
+    <div class="section" :key="'rot-' + forceUpdateKey">
       <h4>旋转 (Rotation)</h4>
       <div class="prop-row">
         <label>X</label>
@@ -78,7 +78,7 @@
     </div>
 
     <!-- Scale -->
-    <div class="section">
+    <div class="section" :key="'scale-' + forceUpdateKey">
       <h4>缩放 (Scale)</h4>
       <div class="prop-row">
         <label>X</label>
@@ -108,10 +108,13 @@ import { useEditorStore } from '../stores/editorStore';
 import { storeToRefs } from 'pinia';
 import * as THREE from 'three';
 import { TransformCommand } from '../core/CommandFactory';
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
 
 const editorStore = useEditorStore();
 const { selectedObject } = storeToRefs(editorStore);
+
+// 强制更新 key（用于触发 Vue 重新读取 Three.js 对象属性）
+const forceUpdateKey = ref(0);
 
 // Geographic coordinate refs
 const geoLng = ref(null);
@@ -153,6 +156,23 @@ watch(
 
 watch(selectedObject, () => {
   syncGeoFromPosition();
+});
+
+// 监听 TransformManager 的变换事件
+const handleTransformChanged = (event) => {
+  // 如果变换的对象是当前选中的对象，触发强制更新
+  if (event.detail?.object === selectedObject.value) {
+    forceUpdateKey.value++;
+    syncGeoFromPosition();
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('transform-changed', handleTransformChanged);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('transform-changed', handleTransformChanged);
 });
 
 // Update XYZ position from geographic coordinates

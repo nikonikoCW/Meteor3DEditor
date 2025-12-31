@@ -75,6 +75,34 @@
         🌅 {{ env.name }}
       </div>
     </div>
+
+    <!-- 3D Tiles 部分 -->
+    <div class="section">
+      <div class="section-header">
+        <h4>3D Tiles</h4>
+        <button class="refresh-btn" @click="loadAssets" title="刷新">🔄</button>
+      </div>
+      
+      <div v-if="loading" class="loading">
+        加载中...
+      </div>
+      
+      <div v-else-if="tilesets.length === 0" class="empty">
+        暂无 3D Tiles
+      </div>
+      
+      <div 
+        v-else
+        v-for="tileset in tilesets" 
+        :key="tileset._id"
+        class="item" 
+        draggable="true" 
+        @dragstart="onDragStart($event, 'Tileset', tileset.tilesetUrl)"
+        :title="tileset.originalName"
+      >
+        🌐 {{ tileset.name }}
+      </div>
+    </div>
   </div>
 </template>
 
@@ -84,6 +112,7 @@ import { getAssets, getAssetUrl as _getAssetUrl, getCompressedAssetUrl } from '.
 
 const models = ref([]);
 const environments = ref([]);
+const tilesets = ref([]);
 const loading = ref(false);
 
 const onDragStart = (event, type, url = null) => {
@@ -104,12 +133,14 @@ const getAssetUrl = (asset) => {
 const loadAssets = async () => {
   loading.value = true;
   try {
-    const [modelAssets, envAssets] = await Promise.all([
+    const [modelAssets, envAssets, tilesetAssets] = await Promise.all([
       getAssets('model'),
-      getAssets('hdri') // 尝试使用 'hdr' 作为类型，如果后端区分的话。或者尝试 'environment'
+      getAssets('hdri'),
+      getAssets('tileset')
     ]);
     models.value = modelAssets;
     environments.value = envAssets;
+    tilesets.value = tilesetAssets;
   } catch (error) {
     console.error('加载资产失败:', error);
   } finally {
