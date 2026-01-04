@@ -10,6 +10,7 @@ export class TileMapManager {
         this.tiles = new Map(); // key: "z_x_y", value: Mesh or { loading: true }
         this.center = { lon: 0, lat: 0 };
         this.zoom = 18; // Default high resolution
+        this.clippingEnabled = true;
 
         // Tianditu Token
         this.token = 'd3940c4f1d55fdfb8b053ad7f1e0c80d';
@@ -20,19 +21,25 @@ export class TileMapManager {
      * @param {number} centerLon 
      * @param {number} centerLat 
      * @param {number} sizeMeters Size of the viewing box
+     * @param {boolean} clippingEnabled Whether to clip the map to the box
      */
-    updateMap(centerLon, centerLat, sizeMeters) {
+    updateMap(centerLon, centerLat, sizeMeters, clippingEnabled = true) {
         this.center = { lon: centerLon, lat: centerLat };
+        this.clippingEnabled = clippingEnabled;
 
         // 1. Calculate Center in Web Mercator
         this.centerMercator = GisUtils.lonLatToWebMercator(centerLon, centerLat);
 
-        // 2. Determine Tile Range
+        // 2. Determine Tile Range and Optimal Zoom
         const halfSize = sizeMeters / 2;
         const minX = this.centerMercator.x - halfSize;
         const maxX = this.centerMercator.x + halfSize;
         const minY = this.centerMercator.y - halfSize;
         const maxY = this.centerMercator.y + halfSize;
+
+        // Auto-calculate Zoom to keep tile count reasonable (LOD)
+        this.zoom = this.calculateOptimalZoom(minX, maxX, minY, maxY);
+        console.log(`[TileMapManager] Auto-Zoom set to: ${this.zoom}`);
 
         this.minTile = GisUtils.webMercatorToTile(minX, maxY, this.zoom); // Top-Left
         this.maxTile = GisUtils.webMercatorToTile(maxX, minY, this.zoom); // Bottom-Right
@@ -51,6 +58,16 @@ export class TileMapManager {
         this.clearMap();
     }
 
+    setClipping(enabled) {
+        this.clippingEnabled = enabled;
+        this.tiles.forEach(tile => {
+            if (tile.isMesh) {
+                tile.material.clippingPlanes = enabled ? this.clippingPlanes : [];
+                tile.material.needsUpdate = true;
+            }
+        });
+    }
+
     /**
      * Update visible tiles based on camera frustum
      * @param {THREE.Camera} camera 
@@ -65,8 +82,6 @@ export class TileMapManager {
         frustum.setFromProjectionMatrix(projScreenMatrix);
 
         // Check all potential tiles
-        // Optimization: For very large ranges, we should calculate the camera footprint on ground
-        // instead of iterating all tiles. But for typical scene sizes (<10km), iteration is fine.
         for (let x = this.minTile.x; x <= this.maxTile.x; x++) {
             for (let y = this.minTile.y; y <= this.maxTile.y; y++) {
                 const key = `${this.zoom}_${x}_${y}`;
@@ -116,7 +131,7 @@ export class TileMapManager {
             const material = new THREE.MeshBasicMaterial({
                 map: texture,
                 side: THREE.DoubleSide,
-                clippingPlanes: this.clippingPlanes,
+                clippingPlanes: this.clippingEnabled ? this.clippingPlanes : [],
                 clipIntersection: false
             });
 
@@ -128,6 +143,24 @@ export class TileMapManager {
         }, undefined, () => {
             this.tiles.delete(key); // Retry on fail
         });
+    }
+
+    calculateOptimalZoom(minX, maxX, minY, maxY) {
+        const MAX_TILES = 100; // Target max visible tiles
+        let zoom = 18;
+
+        while (zoom > 10) {
+            const minTile = GisUtils.webMercatorToTile(minX, maxY, zoom);
+            const maxTile = GisUtils.webMercatorToTile(maxX, minY, zoom);
+            const cols = maxTile.x - minTile.x + 1;
+            const rows = maxTile.y - minTile.y + 1;
+
+            if (cols * rows <= MAX_TILES) {
+                break;
+            }
+            zoom--;
+        }
+        return zoom;
     }
 
     clearMap() {

@@ -16,6 +16,10 @@
         <label>Size (m):</label>
         <input type="number" v-model.number="size" step="100">
       </div>
+      <div class="control-group">
+        <label>Clipping:</label>
+        <input type="checkbox" v-model="clippingEnabled" @change="handleClippingChange">
+      </div>
       <button @click="updateMap">Generate Map</button>
       <div class="info">
         <p>Red Cube = Scene Center (0,0,0)</p>
@@ -30,14 +34,22 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { TileMapManager } from '../core/TileMapManager';
+import { GisUtils } from '../core/GisUtils';
 
 const canvasContainer = ref(null);
-const center = ref({ lon: 116.4074, lat: 39.9042 }); // Beijing
+const center = ref({ lon: 116.39139867165989, lat: 39.90321926881745 }); // Beijing
 const size = ref(500);
+const clippingEnabled = ref(true);
 
 let scene, camera, renderer, controls;
 let tileMapManager;
 let animationId;
+let markerSphere;
+
+const targetLocation = { 
+  lon: 116.39206488446678, 
+  lat: 39.899969381477916 
+};
 
 const initThree = () => {
   // Scene
@@ -71,6 +83,13 @@ const initThree = () => {
   cube.position.y = 5;
   scene.add(cube);
 
+  // Calibration Marker (Green Sphere)
+  const sphereGeo = new THREE.SphereGeometry(5, 32, 32);
+  const sphereMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+  markerSphere = new THREE.Mesh(sphereGeo, sphereMat);
+  markerSphere.position.y = 5;
+  scene.add(markerSphere);
+
   // Tile Map Manager
   tileMapManager = new TileMapManager(scene);
   
@@ -82,7 +101,23 @@ const initThree = () => {
 
 const updateMap = () => {
   if (tileMapManager) {
-    tileMapManager.updateMap(center.value.lon, center.value.lat, size.value);
+    tileMapManager.updateMap(center.value.lon, center.value.lat, size.value, clippingEnabled.value);
+    
+    // Update Marker Position
+    const pos = GisUtils.getRelativePosition(
+      targetLocation.lon, 
+      targetLocation.lat, 
+      center.value.lon, 
+      center.value.lat
+    );
+    markerSphere.position.set(pos.x, 5, pos.z);
+    console.log('Marker Position:', pos);
+  }
+};
+
+const handleClippingChange = () => {
+  if (tileMapManager) {
+    tileMapManager.setClipping(clippingEnabled.value);
   }
 };
 
