@@ -1,88 +1,185 @@
 <template>
   <div class="test-view">
-    <div class="header">
-      <h1>🌐 3D Tiles 测试</h1>
-      <div class="controls">
-        <input type="text" v-model="tilesetUrl" placeholder="tileset.json URL" class="url-input" />
-        <button @click="loadTileset">加载</button>
+    <div ref="canvasContainer" class="canvas-container"></div>
+    
+    <div class="controls-panel">
+      <h3>GIS Map Test</h3>
+      <div class="control-group">
+        <label>Longitude:</label>
+        <input type="number" v-model.number="center.lon" step="0.0001">
+      </div>
+      <div class="control-group">
+        <label>Latitude:</label>
+        <input type="number" v-model.number="center.lat" step="0.0001">
+      </div>
+      <div class="control-group">
+        <label>Size (m):</label>
+        <input type="number" v-model.number="size" step="100">
+      </div>
+      <button @click="updateMap">Generate Map</button>
+      <div class="info">
+        <p>Red Cube = Scene Center (0,0,0)</p>
+        <p>Map should be centered on the cube.</p>
       </div>
     </div>
-    <div ref="container" class="container"></div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { TilesRenderer } from '3d-tiles-renderer'
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { TileMapManager } from '../core/TileMapManager';
 
-const container = ref(null)
-const tilesetUrl = ref('https://file.threehub.cn/3dtiles/test/tileset.json')
+const canvasContainer = ref(null);
+const center = ref({ lon: 116.4074, lat: 39.9042 }); // Beijing
+const size = ref(500);
 
-let scene, camera, renderer, controls, tilesRenderer, animationId
+let scene, camera, renderer, controls;
+let tileMapManager;
+let animationId;
 
-const init = () => {
-  const box = container.value
+const initThree = () => {
+  // Scene
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x333333);
   
-  scene = new THREE.Scene()
-  camera = new THREE.PerspectiveCamera(75, box.clientWidth / box.clientHeight, 0.1, 1000)
-  camera.position.set(0, 30, 30)
+  // Camera
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 10000);
+  camera.position.set(0, 500, 500);
   
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, logarithmicDepthBuffer: true })
-  renderer.setSize(box.clientWidth, box.clientHeight)
-  box.appendChild(renderer.domElement)
+  // Renderer
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.localClippingEnabled = true; // IMPORTANT for map clipping
+  canvasContainer.value.appendChild(renderer.domElement);
   
-  controls = new OrbitControls(camera, renderer.domElement)
-  scene.add(new THREE.AxesHelper(1000))
+  // Controls
+  controls = new OrbitControls(camera, renderer.domElement);
   
-  animate()
-}
+  // Helpers
+  const axesHelper = new THREE.AxesHelper(100);
+  scene.add(axesHelper);
+  
+  const gridHelper = new THREE.GridHelper(1000, 20);
+  scene.add(gridHelper);
+  
+  // Center Marker (Red Cube)
+  const geometry = new THREE.BoxGeometry(10, 10, 10);
+  const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+  const cube = new THREE.Mesh(geometry, material);
+  cube.position.y = 5;
+  scene.add(cube);
 
-const loadTileset = () => {
-  // 移除旧的
-  if (tilesRenderer) {
-    scene.remove(tilesRenderer.group.parent)
-    tilesRenderer.dispose()
+  // Tile Map Manager
+  tileMapManager = new TileMapManager(scene);
+  
+  // Initial Map
+  updateMap();
+  
+  animate();
+};
+
+const updateMap = () => {
+  if (tileMapManager) {
+    tileMapManager.updateMap(center.value.lon, center.value.lat, size.value);
   }
-  
-  tilesRenderer = new TilesRenderer(tilesetUrl.value)
-  tilesRenderer.setCamera(camera)
-  tilesRenderer.setResolutionFromRenderer(camera, renderer)
-  
-  const model = new THREE.Group().add(tilesRenderer.group)
-  scene.add(model)
-  
-  const box3 = new THREE.Box3()
-  tilesRenderer.addEventListener('load-tile-set', () => {
-    if (tilesRenderer.getBoundingBox(box3)) {
-      box3.getCenter(tilesRenderer.group.position)
-      tilesRenderer.group.position.multiplyScalar(-1)
-    }
-  })
-}
+};
 
 const animate = () => {
-  animationId = requestAnimationFrame(animate)
-  if (tilesRenderer) tilesRenderer.update()
-  renderer.render(scene, camera)
-}
+  animationId = requestAnimationFrame(animate);
+  controls.update();
+  if (tileMapManager) {
+    tileMapManager.update(camera);
+  }
+  renderer.render(scene, camera);
+};
 
-onMounted(() => init())
-onUnmounted(() => {
-  cancelAnimationFrame(animationId)
-  tilesRenderer?.dispose()
-  renderer?.dispose()
-})
+const handleResize = () => {
+  if (camera && renderer) {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+};
+
+onMounted(() => {
+  initThree();
+  window.addEventListener('resize', handleResize);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize);
+  cancelAnimationFrame(animationId);
+  if (tileMapManager) tileMapManager.dispose();
+  if (renderer) renderer.dispose();
+});
 </script>
 
 <style scoped>
-.test-view { display: flex; flex-direction: column; height: 100vh; background: #1a1a1a; color: white; }
-.header { padding: 16px; background: #222; display: flex; align-items: center; gap: 20px; }
-.header h1 { margin: 0; font-size: 18px; }
-.controls { display: flex; gap: 10px; flex: 1; }
-.url-input { flex: 1; padding: 8px; background: #333; border: 1px solid #444; border-radius: 4px; color: white; }
-button { padding: 8px 16px; background: #0066cc; border: none; border-radius: 4px; color: white; cursor: pointer; }
-button:hover { background: #0077dd; }
-.container { flex: 1; }
+.test-view {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.canvas-container {
+  width: 100%;
+  height: 100%;
+}
+
+.controls-panel {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 8px;
+  color: white;
+  width: 300px;
+}
+
+.control-group {
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.control-group label {
+  margin-right: 10px;
+}
+
+.control-group input {
+  width: 150px;
+  padding: 5px;
+  background: #444;
+  border: 1px solid #666;
+  color: white;
+  border-radius: 4px;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  background: #0066cc;
+  border: none;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+button:hover {
+  background: #0077ee;
+}
+
+.info {
+  margin-top: 20px;
+  font-size: 12px;
+  color: #aaa;
+  border-top: 1px solid #555;
+  padding-top: 10px;
+}
 </style>
