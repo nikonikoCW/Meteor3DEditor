@@ -33,6 +33,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { GeoCoordinateSystem } from '../core/GeoCoordinateSystem';
 import { TileMapManager } from '../core/TileMapManager';
 import { GisUtils } from '../core/GisUtils';
 
@@ -43,6 +44,7 @@ const clippingEnabled = ref(true);
 
 let scene, camera, renderer, controls;
 let tileMapManager;
+let geoSystem; // Layer 1
 let animationId;
 let markerSphere;
 
@@ -73,8 +75,8 @@ const initThree = () => {
   const axesHelper = new THREE.AxesHelper(100);
   scene.add(axesHelper);
   
-  const gridHelper = new THREE.GridHelper(1000, 20);
-  scene.add(gridHelper);
+  // const gridHelper = new THREE.GridHelper(1000, 20);
+  // scene.add(gridHelper);
   
   // Center Marker (Red Cube)
   const geometry = new THREE.BoxGeometry(10, 10, 10);
@@ -90,8 +92,11 @@ const initThree = () => {
   markerSphere.position.y = 5;
   scene.add(markerSphere);
 
-  // Tile Map Manager
-  tileMapManager = new TileMapManager(scene);
+  // Initialize Layer 1: GeoCoordinateSystem
+  geoSystem = new GeoCoordinateSystem(center.value.lon, center.value.lat);
+
+  // Initialize Layer 2: TileMapManager (depends on Layer 1)
+  tileMapManager = new TileMapManager(scene, geoSystem);
   
   // Initial Map
   updateMap();
@@ -100,16 +105,15 @@ const initThree = () => {
 };
 
 const updateMap = () => {
-  if (tileMapManager) {
-    tileMapManager.updateMap(center.value.lon, center.value.lat, size.value, clippingEnabled.value);
+  if (tileMapManager && geoSystem) {
+    // Update GeoSystem Center (if changed)
+    geoSystem.setCenter(center.value.lon, center.value.lat);
+
+    // Update Map (only needs size and clipping now)
+    tileMapManager.updateMap(size.value, clippingEnabled.value);
     
-    // Update Marker Position
-    const pos = GisUtils.getRelativePosition(
-      targetLocation.lon, 
-      targetLocation.lat, 
-      center.value.lon, 
-      center.value.lat
-    );
+    // Update Marker Position using Layer 1
+    const pos = geoSystem.project(targetLocation.lon, targetLocation.lat);
     markerSphere.position.set(pos.x, 5, pos.z);
     console.log('Marker Position:', pos);
   }

@@ -2,13 +2,13 @@ import * as THREE from 'three';
 import { GisUtils } from './GisUtils';
 
 export class TileMapManager {
-    constructor(scene) {
+    constructor(scene, geoSystem) {
         this.scene = scene;
+        this.geoSystem = geoSystem; // Layer 1 dependency
         this.mapGroup = new THREE.Group();
         this.scene.add(this.mapGroup);
 
         this.tiles = new Map(); // key: "z_x_y", value: Mesh or { loading: true }
-        this.center = { lon: 0, lat: 0 };
         this.zoom = 18; // Default high resolution
         this.clippingEnabled = true;
 
@@ -18,24 +18,22 @@ export class TileMapManager {
 
     /**
      * Initialize or update the map configuration
-     * @param {number} centerLon 
-     * @param {number} centerLat 
      * @param {number} sizeMeters Size of the viewing box
      * @param {boolean} clippingEnabled Whether to clip the map to the box
      */
-    updateMap(centerLon, centerLat, sizeMeters, clippingEnabled = true) {
-        this.center = { lon: centerLon, lat: centerLat };
+    updateMap(sizeMeters, clippingEnabled = true) {
         this.clippingEnabled = clippingEnabled;
 
-        // 1. Calculate Center in Web Mercator
-        this.centerMercator = GisUtils.lonLatToWebMercator(centerLon, centerLat);
+        // 1. Get Center from GeoSystem (Source of Truth)
+        // We no longer pass lon/lat here, we trust the GeoSystem's center
+        const centerMercator = this.geoSystem.centerMercator;
 
         // 2. Determine Tile Range and Optimal Zoom
         const halfSize = sizeMeters / 2;
-        const minX = this.centerMercator.x - halfSize;
-        const maxX = this.centerMercator.x + halfSize;
-        const minY = this.centerMercator.y - halfSize;
-        const maxY = this.centerMercator.y + halfSize;
+        const minX = centerMercator.x - halfSize;
+        const maxX = centerMercator.x + halfSize;
+        const minY = centerMercator.y - halfSize;
+        const maxY = centerMercator.y + halfSize;
 
         // Auto-calculate Zoom to keep tile count reasonable (LOD)
         this.zoom = this.calculateOptimalZoom(minX, maxX, minY, maxY);
@@ -90,10 +88,10 @@ export class TileMapManager {
 
                 // Check Visibility
                 const bounds = GisUtils.tileToWebMercator(x, y, this.zoom);
-                const tileMinX = bounds.minX - this.centerMercator.x;
-                const tileMaxX = bounds.maxX - this.centerMercator.x;
-                const tileMinZ = -(bounds.maxY - this.centerMercator.y); // Top (larger Y) -> Smaller Z (negative)
-                const tileMaxZ = -(bounds.minY - this.centerMercator.y); // Bottom (smaller Y) -> Larger Z (negative)
+                const tileMinX = bounds.minX - this.geoSystem.centerMercator.x;
+                const tileMaxX = bounds.maxX - this.geoSystem.centerMercator.x;
+                const tileMinZ = -(bounds.maxY - this.geoSystem.centerMercator.y); // Top (larger Y) -> Smaller Z (negative)
+                const tileMaxZ = -(bounds.minY - this.geoSystem.centerMercator.y); // Bottom (smaller Y) -> Larger Z (negative)
 
                 // Create AABB for the tile (flat box)
                 const box = new THREE.Box3(
@@ -112,6 +110,11 @@ export class TileMapManager {
         // Mark as loading to prevent duplicate requests
         this.tiles.set(key, { loading: true });
 
+        // Use GisUtils to calculate scene positions directly if needed, 
+        // but here we already have the relative coordinates (minX, etc.) passed in from update()
+        // which were calculated using GisUtils.tileToWebMercator and the center offset.
+        // This aligns with the "Layer 2" philosophy where the loader relies on the math layer.
+
         const width = maxX - minX;
         const depth = maxZ - minZ; // Z size
 
@@ -121,6 +124,7 @@ export class TileMapManager {
         const centerX = (minX + maxX) / 2;
         const centerZ = (minZ + maxZ) / 2;
 
+        // Tianditu WMTS URL
         const url = `https://t0.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX=${this.zoom}&TILEROW=${y}&TILECOL=${x}&tk=${this.token}`;
 
         const loader = new THREE.TextureLoader();
@@ -138,10 +142,35 @@ export class TileMapManager {
             const mesh = new THREE.Mesh(geometry, material);
             mesh.position.set(centerX, 0, centerZ);
 
+            // Add annotation layer (cia_w) similar to the demo
+            this.loadAnnotation(x, y, width, depth, centerX, centerZ, mesh);
+
             this.mapGroup.add(mesh);
             this.tiles.set(key, mesh);
         }, undefined, () => {
             this.tiles.delete(key); // Retry on fail
+        });
+    }
+
+    loadAnnotation(x, y, width, depth, centerX, centerZ, parentMesh) {
+        const url = `https://t0.tianditu.gov.cn/cia_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cia&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX=${this.zoom}&TILEROW=${y}&TILECOL=${x}&tk=${this.token}`;
+
+        const loader = new THREE.TextureLoader();
+        loader.crossOrigin = 'anonymous';
+
+        loader.load(url, (texture) => {
+            texture.colorSpace = THREE.SRGBColorSpace;
+            const material = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                side: THREE.DoubleSide,
+                clippingPlanes: this.clippingEnabled ? this.clippingPlanes : [],
+                clipIntersection: false
+            });
+            const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, depth).rotateX(-Math.PI / 2), material);
+            // Slight offset to avoid z-fighting, relative to the parent tile
+            mesh.position.y = 0.05;
+            parentMesh.add(mesh);
         });
     }
 
