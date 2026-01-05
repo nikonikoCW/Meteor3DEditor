@@ -66,6 +66,10 @@ export class TileMapManager {
         });
     }
 
+    setVisible(visible) {
+        this.mapGroup.visible = visible;
+    }
+
     /**
      * Update visible tiles based on camera frustum
      * @param {THREE.Camera} camera 

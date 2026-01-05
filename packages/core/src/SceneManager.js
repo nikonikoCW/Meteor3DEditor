@@ -661,6 +661,7 @@ export class SceneManager {
             // 3. 更新地图状态
             const size = config.size || 1000;
             this.tileMapManager.updateMap(size, true);
+            this.tileMapManager.setVisible(config.showBaseMap ?? false);
 
             // 4. 网格辅助线
             const segments = Math.max(1, Math.round(size / 10));
