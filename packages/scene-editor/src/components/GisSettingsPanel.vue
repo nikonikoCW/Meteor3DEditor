@@ -28,14 +28,12 @@
             id="basemap-toggle" 
             v-model="showBaseMap" 
             @change="handleBaseMapChange"
-            :disabled="!isConfigured || isGeneratingBaseMap"
+            :disabled="!isConfigured"
           >
           <label for="basemap-toggle"></label>
         </div>
       </div>
-      <p class="hint" v-if="isGeneratingBaseMap">⚙️ 正在生成底图...</p>
-      <p class="hint" v-else-if="baseMapUrl">已加载影像底图</p>
-      <p class="hint" v-else-if="isConfigured">配置 GIS 后可生成底图</p>
+      <p class="hint" v-if="isConfigured">配置 GIS 后可生成底图</p>
     </div>
     <!-- 未配置状态 -->
     <div v-if="!isConfigured" class="section unconfigured-state">
@@ -123,8 +121,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
-import { GisProjection } from '@meteor3d/core';
-import { API_BASE_URL, ASSET_BASE_URL } from '../config';
+
 import MapSelectorDialog from './MapSelectorDialog.vue';
 
 // 路由
@@ -134,9 +131,6 @@ const route = useRoute();
 const isConfigured = ref(false);
 const showGrid = ref(false);
 const showBaseMap = ref(false);
-const baseMapUrl = ref(null);  // 本地路径
-const cloudBaseMapUrl = ref(null);  // 云端 URL (优先使用)
-const isGeneratingBaseMap = ref(false);
 const showMapDialog = ref(false);
 const showRemoveWarning = ref(false);
 const isAdjustMode = ref(false);
@@ -220,14 +214,8 @@ const applyGisConfig = (cfg, options = {}) => {
   }
   
   // 更新底图状态
-  if (cfg.baseMapUrl) {
-    baseMapUrl.value = cfg.baseMapUrl;
-    showBaseMap.value = cfg.showBaseMap ?? false;
-  }
-  
-  // 更新云端底图 URL
-  if (cfg.cloudUrls?.baseMap) {
-    cloudBaseMapUrl.value = cfg.cloudUrls.baseMap;
+  if (cfg.showBaseMap !== undefined) {
+    showBaseMap.value = cfg.showBaseMap;
   }
   
   // 更新 enable 状态
@@ -288,9 +276,6 @@ const handleMapConfirm = async (result) => {
 
   // 同步到 SceneManager
   syncToSceneManager();
-
-  // 自动生成底图
-  await generateBaseMapRequest();
 };
 
 // 地图取消回调
@@ -332,11 +317,14 @@ const syncToSceneManager = () => {
     enable: true, // 启用 GIS
     projection: 'WGS84',
     gridVisible: showGrid.value,
-    baseMapUrl: baseMapUrl.value,
     showBaseMap: showBaseMap.value
   });
 
-  sm.setGridHelper(showGrid.value, gisConfig.size, gisConfig.size, gridSegments, gridSegments);
+  // sm.setGridHelper 已经在 setGisConfig 内部调用了，这里可以保留也可以移除，
+  // 为了确保响应 showGrid 的变化，保留它作为单独的开关控制是合理的，
+  // 但 setGisConfig 已经处理了初始化。
+  // 这里我们只在 grid 变化时单独调用 setGridHelper，或者完全依赖 setGisConfig。
+  // 鉴于 handleGridChange 也会调用 setGridHelper，这里其实可以简化。
 };
 
 // 网格切换
@@ -358,71 +346,12 @@ const handleGridChange = () => {
   }
 };
 
-// 生成底图请求
-const generateBaseMapRequest = async () => {
-  if (!gisConfig.bounds || !window.editor?.sceneManager) return;
 
-  // 从路由获取 sceneId
-  const sceneId = route.params.sceneId;
-  if (!sceneId) {
-    console.warn('场景未保存，无法生成底图');
-    return;
-  }
-
-  isGeneratingBaseMap.value = true;
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/scene/basemap`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        sceneId: sceneId,
-        bounds: gisConfig.bounds
-      })
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-      baseMapUrl.value = data.baseMapUrl;
-      // 新增: 更新云端 URL
-      if (data.cloudUrl) {
-        cloudBaseMapUrl.value = data.cloudUrl;
-      }
-      
-      // 自动开启显示
-      showBaseMap.value = true;
-      
-      // 同步到 SceneManager（确保保存时包含 baseMapUrl）
-      syncToSceneManager();
-      
-      handleBaseMapChange();
-    } else {
-      console.error('底图生成失败:', data.message);
-    }
-  } catch (error) {
-    console.error('底图生成请求失败:', error);
-  } finally {
-    isGeneratingBaseMap.value = false;
-  }
-};
 
 // 底图显示切换
 const handleBaseMapChange = () => {
-  if (!window.editor?.sceneManager) return;
-  
-  const sm = window.editor.sceneManager;
-  
-  if (showBaseMap.value && (cloudBaseMapUrl.value || baseMapUrl.value) && gisConfig.bounds) {
-    // 显示底图，优先使用云端 URL
-    const fullUrl = cloudBaseMapUrl.value || `${ASSET_BASE_URL}${baseMapUrl.value}`;
-    sm.setBaseMap(fullUrl, gisConfig.bounds, gisConfig.size, true);
-  } else {
-    // 隐藏底图
-    sm.setBaseMap(null, null, null, false);
-  }
+  // 只要重新同步配置即可，syncToSceneManager 会处理 baseMapUrl 和 showBaseMap
+  syncToSceneManager();
 };
 
 onMounted(() => {

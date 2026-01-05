@@ -17,14 +17,14 @@
                 <div class="tooltip-inner">
                   <div class="tooltip-title">JSON 文件格式说明</div>
                   <pre class="tooltip-code">[
-  {
-    "lng": 121.4737,
-    "lat": 31.2304,
-    "height": 10,
-    "rotation": [0, 45, 0],
-    "scale": [1, 1, 1]
-  }
-]</pre>
+                    {
+                      "lng": 121.4737,
+                      "lat": 31.2304,
+                      "height": 10,
+                      "rotation": [0, 45, 0],
+                      "scale": [1, 1, 1]
+                    }
+                  ]</pre>
                   <button class="copy-btn" @click="copyExample">
                     {{ copied ? '✓ 已复制' : '📋 复制示例' }}
                   </button>

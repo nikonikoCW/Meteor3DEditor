@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { Group, Tween, Easing } from '@tweenjs/tween.js';
-import { GisProjection } from './GisProjection.js';
+import { GeoCoordinateSystem } from './GeoCoordinateSystem.js';
+import { TileMapManager } from './TileMapManager.js';
 import { StatsManager } from './StatsManager.js';
 import { TriangleStatsManager } from './TriangleStatsManager.js';
 import { LabelManager } from './LabelManager.js';
@@ -58,7 +59,8 @@ export class SceneManager {
 
         this.objects = []; // 跟踪所有可交互的对象
         this.environmentUrl = null; // 当前环境贴图 URL
-        this.gisProjection = null;
+        this.geoSystem = null;      // Layer 1: 坐标系统
+        this.tileMapManager = null; // Layer 2: 瓦片地图
         this.gisConfig = null;
         this.gridHelper = null; // 网格辅助平面
         this.gridVisible = false;
@@ -160,6 +162,11 @@ export class SceneManager {
         this.tweenGroup.update(time);
         this.statsManager.begin();
         this.controls.update();
+
+        // 更新 GIS 瓦片地图
+        if (this.tileMapManager) {
+            this.tileMapManager.update(this.camera);
+        }
 
         // 更新 3D Tiles
         if (this._tilesets && this._tilesets.length > 0) {
@@ -639,15 +646,32 @@ export class SceneManager {
 
         // 只有 enable 为 true 时才初始化投影
         if (this.gisConfig.enable) {
-            this.gisProjection = new GisProjection({
-                center: config.center
-            });
+            // 1. 初始化 Layer 1: 坐标系统
+            if (!this.geoSystem) {
+                this.geoSystem = new GeoCoordinateSystem(config.center.lng, config.center.lat);
+            } else {
+                this.geoSystem.setCenter(config.center.lng, config.center.lat);
+            }
 
-            const size = config.size || 30;
+            // 2. 初始化 Layer 2: 瓦片地图管理器
+            if (!this.tileMapManager) {
+                this.tileMapManager = new TileMapManager(this.scene, this.geoSystem);
+            }
+
+            // 3. 更新地图状态
+            const size = config.size || 1000;
+            this.tileMapManager.updateMap(size, true);
+
+            // 4. 网格辅助线
             const segments = Math.max(1, Math.round(size / 10));
             this.setGridHelper(this.gisConfig.gridVisible, size, size, segments, segments);
         } else {
-            this.gisProjection = null;
+            // 禁用 GIS
+            if (this.tileMapManager) {
+                this.tileMapManager.dispose();
+                this.tileMapManager = null;
+            }
+            this.geoSystem = null;
             this.setGridHelper(false);
         }
     }
@@ -660,7 +684,11 @@ export class SceneManager {
         if (this.gisConfig) {
             this.gisConfig.enable = false;
         }
-        this.gisProjection = null;
+        if (this.tileMapManager) {
+            this.tileMapManager.dispose();
+            this.tileMapManager = null;
+        }
+        this.geoSystem = null;
         this.setGridHelper(false);
         this.emitGisConfigUpdated();
     }
@@ -681,12 +709,12 @@ export class SceneManager {
      * @returns {THREE.Vector3|null} 世界坐标，GIS 未配置时返回 null
      */
     lngLatToWorld(lng, lat, height = 0) {
-        if (!this.gisProjection) {
+        if (!this.geoSystem) {
             console.warn('[Meteor3D] GIS 未配置，无法使用经纬度坐标转换。请先调用 setGisConfig() 配置 GIS 中心点。');
             return null;
         }
-        const { east, north, up } = this.gisProjection.lngLatToEnu(lng, lat, height);
-        return new THREE.Vector3(east, up, north);
+        const { x, y, z } = this.geoSystem.project(lng, lat, height);
+        return new THREE.Vector3(x, y, z);
     }
 
     /**
@@ -696,16 +724,14 @@ export class SceneManager {
      * @returns {{lng:number,lat:number,height:number}|null} GIS 未配置时返回 null
      */
     worldToLngLat(worldPos) {
-        if (!this.gisProjection) {
+        if (!this.geoSystem) {
             console.warn('[Meteor3D] GIS 未配置，无法使用坐标转换。请先调用 setGisConfig() 配置 GIS 中心点。');
             return null;
         }
         if (!worldPos) return null;
-        const east = worldPos.x;
-        const north = worldPos.z;
-        const up = worldPos.y;
-        const { lng, lat } = this.gisProjection.offsetMetersToLngLat(east, north);
-        return { lng, lat, height: up };
+
+        const { lon, lat } = this.geoSystem.unproject(worldPos.x, worldPos.z);
+        return { lng: lon, lat, height: worldPos.y };
     }
 
     /**
