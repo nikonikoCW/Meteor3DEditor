@@ -27,7 +27,7 @@
 - **卫星影像底图** - 自动加载瓦片地图，构建真实地理环境
 
 <p align="center">
-  <img src="./packages/docs/public/场景编辑器.jpg" alt="场景编辑器" width="800">
+  <img src="./packages/scene-editor/public/场景编辑器.jpg" alt="场景编辑器" width="800">
 </p>
 
 ### 📦 资产管理器 (Asset Manager)
@@ -47,8 +47,8 @@
 > **拖拽搭建 3D 数据可视化大屏，零代码交付！**
 
 <p align="center">
-  <img src="./packages/docs/public/状态-内测中-blue.svg" alt="内测中">
-  <img src="./packages/docs/public/授权-商业许可-orange.svg" alt="商业许可">
+  <img src="./packages/scene-editor/public/状态-内测中-blue.svg" alt="内测中">
+  <img src="./packages/scene-editor/public/授权-商业许可-orange.svg" alt="商业许可">
 </p>
 
 - 🎯 **可视化画布** - 自定义分辨率，适配各类大屏
@@ -57,7 +57,7 @@
 - 🚀 **一键预览** - 所见即所得，秒级部署上线
 
 <p align="center">
-  <img src="./packages/docs/public/应用编辑器.jpg" alt="应用编辑器" width="800">
+  <img src="./packages/scene-editor/public/应用编辑器.jpg" alt="应用编辑器" width="800">
 </p>
 
 ---
