@@ -9,6 +9,7 @@
         "dev:docs": "pnpm --filter @meteor3d/docs dev",
         "build:core": "pnpm --filter @meteor3d/core build",
         "build:docs": "pnpm --filter @meteor3d/docs build",
+        "dev:scene-webgpu": "pnpm --filter @meteor3d/scene-editor-webgpu dev",
         "build:all": "pnpm -r build"
     },
     "devDependencies": {
