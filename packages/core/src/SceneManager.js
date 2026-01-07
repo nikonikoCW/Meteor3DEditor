@@ -9,6 +9,8 @@ import { TriangleStatsManager } from './TriangleStatsManager.js';
 import { LabelManager } from './LabelManager.js';
 import { OutlineManager } from './OutlineManager.js';
 import { HighlightManager } from './HighlightManager.js';
+import { SnowManager } from './SnowManager.js';
+import { RainManager } from './RainManager.js';
 
 /**
  * 场景管理器
@@ -93,6 +95,12 @@ export class SceneManager {
         // 高亮管理器
         this.highlightManager = new HighlightManager();
 
+        // 雪效管理器
+        this.snowManager = new SnowManager(this.scene, this.camera);
+
+        // 雨效管理器
+        this.rainManager = new RainManager(this.renderer, this.scene, this.camera);
+
         // 事件系统
         this.events = {};
         this.isReady = false;
@@ -175,6 +183,11 @@ export class SceneManager {
             }
         }
 
+        // 雨效预渲染（捕捉背景 FBO）
+        if (this.rainManager) {
+            this.rainManager.preRender();
+        }
+
         // 如果有描边对象，使用后处理渲染；否则直接渲染
         const hasOutline = this.outlineManager.render();
         if (!hasOutline) {
@@ -184,6 +197,17 @@ export class SceneManager {
         if (this.labelManager) {
             this.labelManager.update();
         }
+
+        // 更新雪效
+        if (this.snowManager) {
+            this.snowManager.update(time);
+        }
+
+        // 更新雨效
+        if (this.rainManager) {
+            this.rainManager.update(time);
+        }
+
         this.statsManager.end();
     }
 
@@ -808,5 +832,72 @@ export class SceneManager {
                 this.baseMapLoading = null;
             }
         );
+    }
+
+    // ==================== 天气效果 API ====================
+
+    /**
+     * 设置下雪效果开关
+     * @param {boolean} enabled - 是否启用
+     * @param {Object} [config] - 可选的初始配置
+     * @param {number} [config.count] - 雪量 (100-30000)
+     * @param {number} [config.size] - 大小 (0.1-5.0)
+     * @param {number} [config.speed] - 速度 (0.0-5.0)
+     * @param {number} [config.opacity] - 透明度 (0.0-1.0)
+     * @param {string} [config.color] - 颜色 (hex string)
+     */
+    setSnow(enabled, config) {
+        if (this.snowManager) {
+            this.snowManager.setEnabled(enabled, config);
+        }
+    }
+
+    /**
+     * 更新下雪效果配置
+     * @param {Object} config - 配置对象
+     */
+    updateSnowConfig(config) {
+        if (this.snowManager) {
+            this.snowManager.updateConfig(config);
+        }
+    }
+
+    /**
+     * 获取下雪效果配置
+     * @returns {Object} 当前配置
+     */
+    getSnowConfig() {
+        return this.snowManager ? this.snowManager.getConfig() : null;
+    }
+
+    /**
+     * 设置下雨效果开关
+     * @param {boolean} enabled - 是否启用
+     * @param {Object} [config] - 可选的初始配置
+     * @param {number} [config.count] - 雨量 (100-50000)
+     * @param {number} [config.speed] - 速度 (0.0-10.0)
+     */
+    setRain(enabled, config) {
+        if (this.rainManager) {
+            this.rainManager.setEnabled(enabled, config);
+        }
+    }
+
+    /**
+     * 更新下雨效果配置
+     * @param {Object} config - 配置对象
+     */
+    updateRainConfig(config) {
+        if (this.rainManager) {
+            this.rainManager.updateConfig(config);
+        }
+    }
+
+    /**
+     * 获取下雨效果配置
+     * @returns {Object} 当前配置
+     */
+    getRainConfig() {
+        return this.rainManager ? this.rainManager.getConfig() : null;
     }
 }
