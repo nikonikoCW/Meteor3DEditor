@@ -280,6 +280,36 @@ function createMeteor3DInstance(sceneManager, resizeObserver) {
         /** 获取当前高亮对象的 UUID 列表 */
         getHighlightedObjects: () => sceneManager.getHighlightedObjects(),
 
+        // ========== 天气效果 ==========
+        /**
+         * 设置下雪效果
+         * @param {boolean} enabled - 是否启用
+         * @param {Object} [config] - 配置选项
+         * @param {number} [config.count=10000] - 雪量 (100-30000)
+         * @param {number} [config.size=1.0] - 大小 (0.1-5.0)
+         * @param {number} [config.speed=1.0] - 速度 (0.0-5.0)
+         * @param {number} [config.opacity=0.8] - 透明度 (0.0-1.0)
+         * @param {string} [config.color='#ffffff'] - 颜色
+         */
+        setSnow: (enabled, config) => sceneManager.setSnow(enabled, config),
+        /** 更新下雪配置 */
+        updateSnowConfig: (config) => sceneManager.updateSnowConfig(config),
+        /** 获取下雪配置 */
+        getSnowConfig: () => sceneManager.getSnowConfig(),
+
+        /**
+         * 设置下雨效果
+         * @param {boolean} enabled - 是否启用
+         * @param {Object} [config] - 配置选项
+         * @param {number} [config.count=10000] - 雨量 (100-50000)
+         * @param {number} [config.speed=2.0] - 雨速 (0.0-10.0)
+         */
+        setRain: (enabled, config) => sceneManager.setRain(enabled, config),
+        /** 更新下雨配置 */
+        updateRainConfig: (config) => sceneManager.updateRainConfig(config),
+        /** 获取下雨配置 */
+        getRainConfig: () => sceneManager.getRainConfig(),
+
         // ========== 生命周期 ==========
         /** 销毁实例，释放资源 */
         dispose: () => {

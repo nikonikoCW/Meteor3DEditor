@@ -42,3 +42,14 @@ Meteor3D SDK 提供了一套简洁的 API 用于 3D 场景开发。
 | `setGridHelper(visible, length, width)` | 设置网格辅助线 |
 | `setAxesHelper(visible, size)` | 设置坐标轴辅助线 |
 | `enableStats()` | 启用性能监控 |
+
+## 天气效果 API
+
+| 方法 | 说明 |
+|------|------|
+| `setSnow(enabled, config)` | 设置下雪效果 |
+| `updateSnowConfig(config)` | 更新下雪配置 |
+| `getSnowConfig()` | 获取下雪配置 |
+| `setRain(enabled, config)` | 设置下雨效果 |
+| `updateRainConfig(config)` | 更新下雨配置 |
+| `getRainConfig()` | 获取下雨配置 |
