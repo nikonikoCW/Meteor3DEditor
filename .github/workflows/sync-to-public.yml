@@ -52,18 +52,26 @@ jobs:
           # 移除 .github 目录
           rm -rf .github
 
-      - name: Push to public repo
+      - name: Push to public repos
         env:
           GITHUB_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+          GITEE_TOKEN: ${{ secrets.GITEE_REPO_TOKEN }}
         run: |
           git config user.name "nikonikoCW"
           git config user.email "84675738@qq.com"
           
-          # 删除原来的 origin 然后添加 public remote
-          git remote remove origin
-          git remote add origin https://nikonikoCW:${GITHUB_TOKEN}@github.com/nikonikoCW/Meteor3DEditor.git
-          
           git add -A
           git commit -m "Sync from private repo" --allow-empty
           
+          # 1. Push to GitHub
+          # 删除原来的 origin 然后添加 public remote
+          git remote remove origin
+          git remote add origin https://nikonikoCW:${GITHUB_TOKEN}@github.com/nikonikoCW/Meteor3DEditor.git
+          echo "Pushing to GitHub..."
+          git push origin HEAD:master --force
+          
+          # 2. Push to Gitee
+          # 修改 origin 为 Gitee 地址
+          git remote set-url origin https://CWniconico:${GITEE_TOKEN}@gitee.com/CWniconico/Meteor3DEditor.git
+          echo "Pushing to Gitee..."
           git push origin HEAD:master --force
