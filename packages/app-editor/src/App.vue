@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import AppEditorView from './views/AppEditorView.vue';
 import AppListView from './views/AppListView.vue';
 import AppPreviewView from './views/AppPreviewView.vue';
+import MessageContainer from './components/common/MessageContainer.vue';
 
 // 简单路由：根据 URL 参数决定显示哪个页面
 const currentView = ref('list');
@@ -36,6 +37,7 @@ window.addEventListener('popstate', () => {
   <AppPreviewView v-if="currentView === 'preview'" />
   <AppEditorView v-else-if="currentView === 'editor'" />
   <AppListView v-else />
+  <MessageContainer />
 </template>
 
 <style>

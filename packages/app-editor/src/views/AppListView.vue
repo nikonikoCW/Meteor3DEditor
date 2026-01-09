@@ -34,6 +34,7 @@
           </div>
           <div class="app-actions">
             <button class="edit-btn" @click="onEditApp(app.appId)">编辑</button>
+            <button class="share-btn" @click="onShareApp(app)">分享</button>
             <button class="delete-btn" @click="onDeleteApp(app)">删除</button>
           </div>
         </div>
@@ -86,6 +87,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import * as appService from '../services/appService';
+import { message } from '../utils/message';
 
 const apps = ref([]);
 const loading = ref(true);
@@ -157,6 +159,16 @@ const onCreateApp = async () => {
 
 const onEditApp = (appId) => {
   window.location.href = `/?appId=${appId}`;
+};
+
+const onShareApp = (app) => {
+  const url = `${window.location.origin}/?appId=${app.appId}&mode=preview`;
+  navigator.clipboard.writeText(url).then(() => {
+    message.success(`应用 "${app.name}" 的预览链接已复制到剪贴板！`);
+  }).catch(err => {
+    console.error('复制失败:', err);
+    message.error('复制链接失败，请手动复制地址栏链接。');
+  });
 };
 
 const onDeleteApp = async (app) => {
@@ -359,6 +371,14 @@ onMounted(() => {
 
 .edit-btn:hover {
   color: #42b983;
+}
+
+.share-btn {
+  border-right: 1px solid #333;
+}
+
+.share-btn:hover {
+  color: #00ccff;
 }
 
 .delete-btn:hover {
