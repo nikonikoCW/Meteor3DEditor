@@ -273,53 +273,112 @@ const labelConfig = {
     // 数据面板配置
     dataConfig: [
         {
-            name: 'template',
-            label: '标签模板',
-            type: 'code-editor',
-            language: 'html',
-            defaultValue: `
-            <div class="label">
-            <div class="title">{{name}}</div>
-            <div class="value">温度: {{temperature}}°C</div>
-            <div class="status {{statusClass}}">{{status}}</div>
-            </div>`,
-            description: '支持 {{variable}} 变量语法'
-        },
-        {
-            name: 'style',
-            label: '样式',
-            type: 'code-editor',
-            language: 'css',
-            defaultValue: `.label {
-  background: rgba(0, 0, 0, 0.8);
-  color: #ffffff;
-  padding: 8px 12px;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-}`
-        },
-        {
-            name: 'labels',
-            label: '标签数据',
-            type: 'json-editor',
-            defaultValue: [
-                { "id": "p1", "name": "监控点A", "temperature": 25.5, "status": "离线", "lng": 104.06506044769014, "lat": 30.550820587820624, "height": 60 },
-                { "id": "p3", "name": "监控点C", "temperature": 56.3, "status": "正常", "lng": 104.06506044769014, "lat": 30.550820587820624, "height": 30 },
-                { "id": "p2", "name": "监控点B", "temperature": -25.5, "status": "警告", "lng": 104.06596044769014, "lat": 30.550820587820624, "height": -20 }
-            ],
-            placeholder: `[
-            {
-                "id": "p1",
-                "name": "监控点A",
-                "temperature": 25.5,
-                "status": "正常",
-                "statusClass": "normal",
-                "lng": 120.1,
-                "lat": 30.2,
-                "height": 10
+            name: 'labelConfig',
+            label: '标签配置',
+            type: 'label-editor',
+            defaultValue: {
+                template: `
+<div class="label-container">
+  <div class="header">
+    <span class="title">{{name}}</span>
+    <div class="status-dot status-{{statusClass}}"></div>
+  </div>
+  <div class="content">
+    <div class="row">
+      <span class="label">设备状态</span>
+      <span class="value">{{status}}</span>
+    </div>
+    <div class="row">
+      <span class="label">当前温度</span>
+      <span class="value highlight">{{temperature}}°C</span>
+    </div>
+    <div class="row">
+      <span class="label">相对湿度</span>
+      <span class="value">{{humidity}}%</span>
+    </div>
+  </div>
+</div>`,
+                style: `.label-container {
+  background: rgba(20, 20, 30, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 220px;
+  color: #fff;
+  font-family: 'Inter', system-ui, sans-serif;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.label-container:hover {
+  transform: translateY(-5px);
+  border-color: rgba(66, 185, 131, 0.5);
+  box-shadow: 0 12px 40px rgba(66, 185, 131, 0.2);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ccc;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.status-normal { background: #42b983; color: #42b983; }
+.status-warning { background: #e6a23c; color: #e6a23c; }
+.status-error { background: #f56c6c; color: #f56c6c; }
+
+.content {
+  display: grid;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.label {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.value {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  font-feature-settings: "tnum";
+}
+
+.value.highlight {
+  color: #42b983;
+  font-weight: 600;
+}`,
+                labels: [
+                    { "id": "d1", "name": "大雁塔北广场", "status": "运行中", "statusClass": "normal", "temperature": 24.5, "humidity": 45, "lng": 108.95940826330946, "lat": 34.219739657625965, "height": 10 },
+                    { "id": "d2", "name": "大雁塔南广场", "status": "维护中", "statusClass": "warning", "temperature": 25.0, "humidity": 42, "lng": 108.964, "lat": 34.218, "height": 10 },
+                    { "id": "d3", "name": "步行街西侧", "status": "故障警告", "statusClass": "error", "temperature": 28.2, "humidity": 38, "lng": 108.960, "lat": 34.220, "height": 10 }
+                ]
             }
-            ]`
         }
     ],
     actions: [

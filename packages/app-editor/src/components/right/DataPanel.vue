@@ -20,6 +20,14 @@
           v-model="widgetData[item.name]"
           @update:modelValue="onDataChange(item.name, $event)"
         />
+
+        <!-- 标签编辑器 (新) -->
+        <DataLabelEditor
+          v-else-if="item.type === 'label-editor'"
+          :label="item.label"
+          v-model="widgetData[item.name]"
+          @update:modelValue="onDataChange(item.name, $event)"
+        />
         
         <!-- 文本输入 -->
         <div v-else-if="item.type === 'text'" class="data-field">
@@ -57,6 +65,7 @@ import { storeToRefs } from 'pinia';
 import { getWidgetDataConfig } from '../../core/widgetRegistry';
 import DataCodeEditor from './DataCodeEditor.vue';
 import DataJsonEditor from './DataJsonEditor.vue';
+import DataLabelEditor from './DataLabelEditor.vue';
 
 const appStore = useAppStore();
 const { selectedWidget, hasUnsavedChanges } = storeToRefs(appStore);
@@ -70,21 +79,33 @@ const dataConfig = computed(() => {
 // 组件数据的响应式包装
 const widgetData = computed(() => {
   if (!selectedWidget.value) return {};
+  return selectedWidget.value.data || {};
+});
+
+// 监听选中组件变化，初始化默认值
+watch(selectedWidget, (newWidget) => {
+  if (!newWidget) return;
+  
   // 确保 data 对象存在
-  if (!selectedWidget.value.data) {
-    selectedWidget.value.data = {};
+  if (!newWidget.data) {
+    newWidget.data = {};
   }
   
-  // 初始化默认值
-  const data = selectedWidget.value.data;
-  for (const item of dataConfig.value) {
-    if (data[item.name] === undefined && item.defaultValue !== undefined) {
-      data[item.name] = item.defaultValue;
+  const config = getWidgetDataConfig(newWidget.type);
+  let hasChanges = false;
+  
+  for (const item of config) {
+    if (newWidget.data[item.name] === undefined && item.defaultValue !== undefined) {
+      // 使用 JSON.parse(JSON.stringify()) 深拷贝默认值，防止引用共享
+      newWidget.data[item.name] = JSON.parse(JSON.stringify(item.defaultValue));
+      hasChanges = true;
     }
   }
   
-  return data;
-});
+  if (hasChanges) {
+    hasUnsavedChanges.value = true;
+  }
+}, { immediate: true, deep: true });
 
 // 数据变化处理
 const onDataChange = (name, value) => {

@@ -86,7 +86,7 @@ const createLabels = () => {
     return;
   }
 
-  const { template, style, labels } = props.data;
+  const { template, style, labels } = props.data.labelConfig || {};
   
   if (!labels || !Array.isArray(labels) || labels.length === 0) {
     console.log('[LabelWidget] No labels data');
