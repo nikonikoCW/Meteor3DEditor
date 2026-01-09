@@ -314,7 +314,7 @@ export class PersistenceManager {
                 },
                 (progress) => {
                     if (progress.total > 0) {
-                        console.log('加载进度:', (progress.loaded / progress.total * 100).toFixed(2) + '%');
+                        // console.log('加载进度:', (progress.loaded / progress.total * 100).toFixed(2) + '%');
                     }
                 },
                 (error) => {
@@ -332,7 +332,7 @@ export class PersistenceManager {
      * @returns {Promise<THREE.Group>} 包装 TilesRenderer 的 Group
      */
     async loadTileset(url) {
-        console.log('正在加载 3D Tiles:', url);
+        // console.log('正在加载 3D Tiles:', url);
 
         return new Promise((resolve, reject) => {
             try {
@@ -351,7 +351,7 @@ export class PersistenceManager {
                 // 监听加载完成，提取 GIS 信息并定位
                 const box3 = new THREE.Box3();
                 tilesRenderer.addEventListener('load-tile-set', () => {
-                    console.log('3D Tiles 加载完成:', url);
+                    // console.log('3D Tiles 加载完成:', url);
 
                     // 尝试从 transform 提取 ECEF 坐标
                     const rootTile = tilesRenderer.root;
@@ -370,7 +370,7 @@ export class PersistenceManager {
                         if (lngLat) {
                             tilesetLng = lngLat.lng;
                             tilesetLat = lngLat.lat;
-                            console.log(`3D Tiles GIS 信息: 经度 ${tilesetLng.toFixed(6)}°, 纬度 ${tilesetLat.toFixed(6)}°`);
+                            // console.log(`3D Tiles GIS 信息: 经度 ${tilesetLng.toFixed(6)}°, 纬度 ${tilesetLat.toFixed(6)}°`);
 
                             // 保存 GIS 信息到 userData
                             wrapper.userData.gisCenter = { lng: tilesetLng, lat: tilesetLat };
@@ -389,7 +389,7 @@ export class PersistenceManager {
                             }
                             // 将 wrapper 移动到地理位置
                             wrapper.position.copy(worldPos);
-                            console.log(`3D Tiles 已定位到场景坐标: (${worldPos.x.toFixed(2)}, ${worldPos.y.toFixed(2)}, ${worldPos.z.toFixed(2)})`);
+                            // console.log(`3D Tiles 已定位到场景坐标: (${worldPos.x.toFixed(2)}, ${worldPos.y.toFixed(2)}, ${worldPos.z.toFixed(2)})`);
                         }
                     } else {
                         // 无 GIS 配置：居中到原点
@@ -397,7 +397,7 @@ export class PersistenceManager {
                             box3.getCenter(tilesRenderer.group.position);
                             tilesRenderer.group.position.multiplyScalar(-1);
                         }
-                        console.log('3D Tiles 已居中到原点');
+                        // console.log('3D Tiles 已居中到原点');
                     }
                 });
 
