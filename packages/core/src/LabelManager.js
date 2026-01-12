@@ -65,18 +65,8 @@ export class LabelManager {
         element.innerHTML = content;
         element.style.pointerEvents = 'auto';
 
-        // 应用默认样式
-        const defaultStyle = {
-            background: 'rgba(0, 0, 0, 0.7)',
-            color: '#ffffff',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            fontSize: '12px',
-            whiteSpace: 'nowrap',
-            userSelect: 'none'
-        };
-
-        Object.assign(element.style, defaultStyle, style);
+        // 应用样式
+        Object.assign(element.style, style);
 
         // 创建 CSS2DObject
         const labelObject = new CSS2DObject(element);
