@@ -523,6 +523,25 @@ const snowConfig = {
     ]
 };
 
+
+
+// 面板组件配置 (2D 组件)
+const panelConfig = {
+    label: '面板',
+    icon: '🔲',
+    category: '2d',
+    defaultSize: { width: 400, height: 300 },
+    minSize: { width: 50, height: 50 },
+    props: [
+        { name: 'backgroundColor', label: '背景色', type: 'color-alpha', defaultValue: 'rgba(30, 30, 40, 0.8)' },
+        { name: 'borderRadius', label: '圆角', type: 'number', defaultValue: 8, min: 0 },
+        { name: 'borderWidth', label: '边框宽', type: 'number', defaultValue: 1, min: 0 },
+        { name: 'borderColor', label: '边框色', type: 'color-alpha', defaultValue: 'rgba(255, 255, 255, 0.1)' },
+        { name: 'backdropBlur', label: '毛玻璃', type: 'number', defaultValue: 0, min: 0, max: 50 },
+        { name: 'zIndex', label: '层级', type: 'number', defaultValue: 0 }
+    ]
+};
+
 // 统一注册
 export function initRegistry() {
     // 场景组件
@@ -534,6 +553,7 @@ export function initRegistry() {
     registerWidget('Image', imageConfig, () => import('../components/widgets/ImageWidget.vue'));
     registerWidget('Text', textConfig, () => import('../components/widgets/TextWidget.vue'));
     registerWidget('Clock', clockConfig, () => import('../components/widgets/ClockWidget.vue'));
+    registerWidget('Panel', panelConfig, () => import('../components/widgets/PanelWidget.vue'));
 
     // 3D 组件
     registerWidget('Label3D', labelConfig, () => import('../components/widgets/LabelWidget.vue'));
