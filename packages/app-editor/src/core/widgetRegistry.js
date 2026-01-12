@@ -486,6 +486,43 @@ const cameraConfig = {
     ]
 };
 
+// 下雨组件配置 (3D 逻辑组件)
+const rainConfig = {
+    label: '下雨效果',
+    icon: '🌧️',
+    category: '3d',
+    defaultSize: { width: 150, height: 80 },
+    minSize: { width: 80, height: 40 },
+    props: [
+        { name: 'count', label: '雨量', type: 'number', defaultValue: 10000, min: 100, max: 50000, step: 100 },
+        { name: 'speed', label: '速度', type: 'number', defaultValue: 2.0, min: 0, max: 10, step: 0.1 }
+    ],
+    actions: [
+        { name: 'enable', label: '开始下雨' },
+        { name: 'disable', label: '停止下雨' }
+    ]
+};
+
+// 下雪组件配置 (3D 逻辑组件)
+const snowConfig = {
+    label: '下雪效果',
+    icon: '❄️',
+    category: '3d',
+    defaultSize: { width: 150, height: 80 },
+    minSize: { width: 80, height: 40 },
+    props: [
+        { name: 'count', label: '雪量', type: 'number', defaultValue: 10000, min: 100, max: 30000, step: 100 },
+        { name: 'size', label: '大小', type: 'number', defaultValue: 1.0, min: 0.1, max: 5.0, step: 0.1 },
+        { name: 'speed', label: '速度', type: 'number', defaultValue: 1.0, min: 0, max: 5.0, step: 0.1 },
+        { name: 'opacity', label: '透明度', type: 'number', defaultValue: 0.8, min: 0, max: 1, step: 0.1 },
+        { name: 'color', label: '颜色', type: 'color', defaultValue: '#ffffff' }
+    ],
+    actions: [
+        { name: 'enable', label: '开始下雪' },
+        { name: 'disable', label: '停止下雪' }
+    ]
+};
+
 // 统一注册
 export function initRegistry() {
     // 场景组件
@@ -505,4 +542,6 @@ export function initRegistry() {
     registerWidget('Outline', outlineConfig, () => import('../components/widgets/OutlineWidget.vue'));
     registerWidget('Highlight', highlightConfig, () => import('../components/widgets/HighlightWidget.vue'));
     registerWidget('Camera', cameraConfig, () => import('../components/widgets/CameraWidget.vue'));
+    registerWidget('Rain', rainConfig, () => import('../components/widgets/RainWidget.vue'));
+    registerWidget('Snow', snowConfig, () => import('../components/widgets/SnowWidget.vue'));
 }
