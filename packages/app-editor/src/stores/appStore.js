@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, shallowRef, markRaw } from 'vue';
 import * as appService from '../services/appService';
 
 export const useAppStore = defineStore('app', () => {
@@ -19,7 +19,7 @@ export const useAppStore = defineStore('app', () => {
 
     // 场景状态
     const isSceneReady = ref(false);
-    const sceneInstance = ref(null);  // Core SDK 实例
+    const sceneInstance = shallowRef(null);  // Core SDK 实例 (使用 shallowRef 避免深度响应式)
 
     // 保存状态
     const isSaving = ref(false);
@@ -157,7 +157,7 @@ export const useAppStore = defineStore('app', () => {
     function setSceneReady(ready, instance = null) {
         isSceneReady.value = ready;
         if (instance) {
-            sceneInstance.value = instance;
+            sceneInstance.value = markRaw(instance); // 标记为非响应式
         }
         if (!ready) {
             sceneInstance.value = null;

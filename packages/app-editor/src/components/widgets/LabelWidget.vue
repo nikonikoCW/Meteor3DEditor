@@ -89,7 +89,7 @@ const createLabels = () => {
   const { template, style, labels } = props.data.labelConfig || {};
   
   if (!labels || !Array.isArray(labels) || labels.length === 0) {
-    console.log('[LabelWidget] No labels data');
+
     return;
   }
 
@@ -116,7 +116,7 @@ const createLabels = () => {
     }
   }
 
-  console.log(`[LabelWidget] Created ${createdLabelIds.value.length} labels`);
+
 };
 
 /**
@@ -139,7 +139,7 @@ const clearLabels = () => {
   // 移除样式
   removeStyle();
   
-  console.log('[LabelWidget] Labels cleared');
+  
 };
 
 /**
