@@ -278,101 +278,101 @@ const labelConfig = {
             type: 'label-editor',
             defaultValue: {
                 template: `
-<div class="label-container">
-  <div class="header">
-    <span class="title">{{name}}</span>
-    <div class="status-dot status-{{statusClass}}"></div>
-  </div>
-  <div class="content">
-    <div class="row">
-      <span class="label">设备状态</span>
-      <span class="value">{{status}}</span>
-    </div>
-    <div class="row">
-      <span class="label">当前温度</span>
-      <span class="value highlight">{{temperature}}°C</span>
-    </div>
-    <div class="row">
-      <span class="label">相对湿度</span>
-      <span class="value">{{humidity}}%</span>
-    </div>
-  </div>
-</div>`,
+                <div class="label-container">
+                <div class="header">
+                    <span class="title">{{name}}</span>
+                    <div class="status-dot status-{{statusClass}}"></div>
+                </div>
+                <div class="content">
+                    <div class="row">
+                    <span class="label">设备状态</span>
+                    <span class="value">{{status}}</span>
+                    </div>
+                    <div class="row">
+                    <span class="label">当前温度</span>
+                    <span class="value highlight">{{temperature}}°C</span>
+                    </div>
+                    <div class="row">
+                    <span class="label">相对湿度</span>
+                    <span class="value">{{humidity}}%</span>
+                    </div>
+                </div>
+                </div>`,
                 style: `.label-container {
-  background: rgba(20, 20, 30, 0.75);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-  padding: 16px;
-  min-width: 220px;
-  color: #fff;
-  font-family: 'Inter', system-ui, sans-serif;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s, box-shadow 0.2s;
-  pointer-events: auto;
-  user-select: none;
-}
+                background: rgba(20, 20, 30, 0.75);
+                backdrop-filter: blur(12px);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 12px;
+                padding: 16px;
+                min-width: 220px;
+                color: #fff;
+                font-family: 'Inter', system-ui, sans-serif;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                transition: transform 0.2s, box-shadow 0.2s;
+                pointer-events: auto;
+                user-select: none;
+                }
 
-.label-container:hover {
-  transform: translateY(-5px);
-  border-color: rgba(66, 185, 131, 0.5);
-  box-shadow: 0 12px 40px rgba(66, 185, 131, 0.2);
-}
+                .label-container:hover {
+                transform: translateY(-5px);
+                border-color: rgba(66, 185, 131, 0.5);
+                box-shadow: 0 12px 40px rgba(66, 185, 131, 0.2);
+                }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
+                .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                }
 
-.title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #fff;
-  letter-spacing: 0.5px;
-}
+                .title {
+                font-size: 15px;
+                font-weight: 600;
+                color: #fff;
+                letter-spacing: 0.5px;
+                }
 
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ccc;
-  box-shadow: 0 0 8px currentColor;
-}
+                .status-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: #ccc;
+                box-shadow: 0 0 8px currentColor;
+                }
 
-.status-normal { background: #42b983; color: #42b983; }
-.status-warning { background: #e6a23c; color: #e6a23c; }
-.status-error { background: #f56c6c; color: #f56c6c; }
+                .status-normal { background: #42b983; color: #42b983; }
+                .status-warning { background: #e6a23c; color: #e6a23c; }
+                .status-error { background: #f56c6c; color: #f56c6c; }
 
-.content {
-  display: grid;
-  gap: 8px;
-}
+                .content {
+                display: grid;
+                gap: 8px;
+                }
 
-.row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-}
+                .row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 13px;
+                }
 
-.label {
-  color: rgba(255, 255, 255, 0.6);
-}
+                .label {
+                color: rgba(255, 255, 255, 0.6);
+                }
 
-.value {
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
-  font-feature-settings: "tnum";
-}
+                .value {
+                font-weight: 500;
+                color: rgba(255, 255, 255, 0.9);
+                font-feature-settings: "tnum";
+                }
 
-.value.highlight {
-  color: #42b983;
-  font-weight: 600;
-}`,
+                .value.highlight {
+                color: #42b983;
+                font-weight: 600;
+                }`,
                 labels: [
                     { "id": "d1", "name": "大雁塔北广场", "status": "运行中", "statusClass": "normal", "temperature": 24.5, "humidity": 45, "lng": 108.95940826330946, "lat": 34.219739657625965, "height": 10 },
                     { "id": "d2", "name": "大雁塔南广场", "status": "维护中", "statusClass": "warning", "temperature": 25.0, "humidity": 42, "lng": 108.964, "lat": 34.218, "height": 10 },
@@ -525,6 +525,45 @@ const snowConfig = {
 
 
 
+// 能量盾组件配置 (3D 逻辑组件)
+const shieldConfig = {
+    label: '能量盾',
+    icon: '🛡️',
+    category: '3d',
+    defaultSize: { width: 150, height: 80 },
+    minSize: { width: 80, height: 40 },
+    props: [
+        { name: 'color', label: '颜色', type: 'color', defaultValue: '#00ff00' },
+        { name: 'scale', label: '缩放', type: 'number', defaultValue: 5, min: 0.1, step: 0.1 }
+    ],
+    dataConfig: [
+        {
+            name: 'config',
+            label: '高级配置',
+            type: 'json-editor',
+            defaultValue: [
+                {
+                    "id": "d_1",
+                    "lng": 116.39374398,
+                    "lat": 39.91217581,
+                    "height": 0
+                },
+                {
+                    "id": "d_2",
+                    "lng": 116.38299598,
+                    "lat": 39.90645336,
+                    "height": 0
+                }
+            ],
+            description: 'JSON 格式的额外配置'
+        }
+    ],
+    actions: [
+        { name: 'enable', label: '启用' },
+        { name: 'disable', label: '禁用' }
+    ]
+};
+
 // 面板组件配置 (2D 组件)
 const panelConfig = {
     label: '面板',
@@ -564,4 +603,5 @@ export function initRegistry() {
     registerWidget('Camera', cameraConfig, () => import('../components/widgets/CameraWidget.vue'));
     registerWidget('Rain', rainConfig, () => import('../components/widgets/RainWidget.vue'));
     registerWidget('Snow', snowConfig, () => import('../components/widgets/SnowWidget.vue'));
+    registerWidget('Shield', shieldConfig, () => import('../components/widgets/ShieldWidget.vue'));
 }
