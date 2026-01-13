@@ -581,6 +581,40 @@ const panelConfig = {
     ]
 };
 
+// 扩散扫描组件配置 (3D 逻辑组件)
+const scanConfig = {
+    label: '扩散扫描',
+    icon: '✨',
+    category: '3d',
+    defaultSize: { width: 150, height: 80 },
+    minSize: { width: 80, height: 40 },
+    props: [
+        { name: 'color', label: '颜色', type: 'color', defaultValue: '#ff3300' },
+        { name: 'scale', label: '缩放', type: 'number', defaultValue: 1, min: 0.1, step: 0.1 },
+        { name: 'repeat', label: '纹理重复', type: 'number', defaultValue: 3.0, min: 1.0, step: 0.5 }
+    ],
+    dataConfig: [
+        {
+            name: 'config',
+            label: '高级配置',
+            type: 'json-editor',
+            defaultValue: [
+                {
+                    "id": "p_1",
+                    "lng": 116.39374398,
+                    "lat": 39.91217581,
+                    "height": 0
+                }
+            ],
+            description: 'JSON 格式的额外配置'
+        }
+    ],
+    actions: [
+        { name: 'enable', label: '启用' },
+        { name: 'disable', label: '禁用' }
+    ]
+};
+
 // 统一注册
 export function initRegistry() {
     // 场景组件
@@ -604,4 +638,5 @@ export function initRegistry() {
     registerWidget('Rain', rainConfig, () => import('../components/widgets/RainWidget.vue'));
     registerWidget('Snow', snowConfig, () => import('../components/widgets/SnowWidget.vue'));
     registerWidget('Shield', shieldConfig, () => import('../components/widgets/ShieldWidget.vue'));
+    registerWidget('Scan', scanConfig, () => import('../components/widgets/ScanWidget.vue'));
 }

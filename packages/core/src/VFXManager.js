@@ -1,4 +1,5 @@
 import { ShieldEffect } from './effects/ShieldEffect.js';
+import { ScanEffect } from './effects/ScanEffect.js';
 
 /**
  * VFXManager - 特效系统管理器
@@ -14,7 +15,8 @@ export class VFXManager {
 
         // 注册可用特效
         this.effectTypes = {
-            'shield': ShieldEffect
+            'shield': ShieldEffect,
+            'scan': ScanEffect
         };
     }
 
