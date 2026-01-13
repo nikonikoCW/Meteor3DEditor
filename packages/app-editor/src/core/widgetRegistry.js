@@ -213,7 +213,7 @@ const imageConfig = {
 // 文本组件配置
 const textConfig = {
     label: '文本',
-    icon: '📝',
+    icon: '�',
     category: '2d',
     defaultSize: { width: 200, height: 60 },
     minSize: { width: 50, height: 20 },
@@ -584,7 +584,7 @@ const panelConfig = {
 // 扩散扫描组件配置 (3D 逻辑组件)
 const scanConfig = {
     label: '扩散扫描',
-    icon: '✨',
+    icon: '📡',
     category: '3d',
     defaultSize: { width: 150, height: 80 },
     minSize: { width: 80, height: 40 },

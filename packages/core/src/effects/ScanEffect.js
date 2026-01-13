@@ -11,7 +11,6 @@ export class ScanEffect extends BaseEffect {
     }
 
     init() {
-        debugger
         const {
             position = { x: 0, y: 0, z: 0 },
             scale = 1,

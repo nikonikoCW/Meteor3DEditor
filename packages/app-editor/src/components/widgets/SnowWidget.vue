@@ -65,11 +65,15 @@ watch(() => props.data, (newData) => {
   }
 }, { deep: true });
 
-onMounted(() => {
-  // 延迟执行以确保场景就绪
-  setTimeout(() => {
+// 监听场景就绪状态
+watch(() => appStore.isSceneReady, (isReady) => {
+  if (isReady && props.enabled) {
     applyConfig();
-  }, 100);
+  }
+}, { immediate: true });
+
+onMounted(() => {
+  // 依赖 isReady 监听
 });
 
 onBeforeUnmount(() => {

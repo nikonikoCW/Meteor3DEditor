@@ -118,14 +118,16 @@ watch(() => props.enabled, (isEnabled) => {
   }
 });
 
+// 监听场景就绪状态
+watch(() => appStore.isSceneReady, (isReady) => {
+  if (isReady && props.enabled) {
+    updateEffect();
+  }
+}, { immediate: true });
+
 // 组件挂载
 onMounted(() => {
-  if (props.enabled) {
-    // 延迟执行，确保场景已完全加载
-    setTimeout(() => {
-      updateEffect();
-    }, 500);
-  }
+  // 依赖 isReady 监听
 });
 
 // 组件卸载

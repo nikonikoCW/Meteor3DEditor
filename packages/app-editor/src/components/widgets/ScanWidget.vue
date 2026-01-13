@@ -117,15 +117,18 @@ watch(() => props.enabled, (isEnabled) => {
     clearEffects();
   }
 });
+console.log(sceneContext);
+
+// 监听场景就绪状态
+watch(() => appStore.isSceneReady, (isReady) => {
+  if (isReady && props.enabled) {
+    updateEffect();
+  }
+}, { immediate: true });
 
 // 生命周期
 onMounted(() => {
-  if (props.enabled) {
-    // 延迟一帧确保场景已就绪
-    setTimeout(() => {
-      updateEffect();
-    }, 100);
-  }
+  // 依赖 isReady 监听
 });
 
 onBeforeUnmount(() => {

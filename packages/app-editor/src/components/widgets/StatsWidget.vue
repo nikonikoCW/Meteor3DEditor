@@ -64,12 +64,16 @@ watch(() => props.enabled, (isEnabled) => {
   }
 });
 
-// 组件挂载时，根据 enabled 状态决定是否启用
-// 组件挂载时，根据 enabled 状态决定是否启用
-onMounted(() => {
-  if (props.enabled) {
+// 监听场景就绪状态
+watch(() => appStore.isSceneReady, (isReady) => {
+  if (isReady && props.enabled) {
     enable();
   }
+}, { immediate: true });
+
+// 组件挂载时，根据 enabled 状态决定是否启用
+onMounted(() => {
+  // 依赖 isReady 监听
 });
 
 // 组件卸载时禁用
