@@ -11,6 +11,7 @@ import { OutlineManager } from './OutlineManager.js';
 import { HighlightManager } from './HighlightManager.js';
 import { SnowManager } from './SnowManager.js';
 import { RainManager } from './RainManager.js';
+import { VFXManager } from './VFXManager.js';
 
 /**
  * 场景管理器
@@ -100,6 +101,9 @@ export class SceneManager {
 
         // 雨效管理器
         this.rainManager = new RainManager(this.renderer, this.scene, this.camera);
+
+        // 特效管理器
+        this.vfxManager = new VFXManager(this.scene);
 
         // 事件系统
         this.events = {};
@@ -206,6 +210,11 @@ export class SceneManager {
         // 更新雨效
         if (this.rainManager) {
             this.rainManager.update(time);
+        }
+
+        // 更新通用特效
+        if (this.vfxManager) {
+            this.vfxManager.update(time / 1000, time / 1000);
         }
 
         this.statsManager.end();

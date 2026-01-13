@@ -310,6 +310,24 @@ function createMeteor3DInstance(sceneManager, resizeObserver) {
         /** 获取下雨配置 */
         getRainConfig: () => sceneManager.getRainConfig(),
 
+        // ========== 特效系统 ==========
+        /**
+         * 创建特效
+         * @param {string} type - 特效类型 ('shield')
+         * @param {Object} config - 特效配置
+         * @returns {BaseEffect} 特效实例
+         */
+        createEffect: (type, config) => sceneManager.vfxManager.createEffect(type, config),
+
+        /**
+         * 移除特效
+         * @param {string} id - 特效 ID
+         */
+        removeEffect: (id) => sceneManager.vfxManager.removeEffect(id),
+
+        /** 特效管理器 */
+        vfxManager: sceneManager.vfxManager,
+
         // ========== 生命周期 ==========
         /** 销毁实例，释放资源 */
         dispose: () => {

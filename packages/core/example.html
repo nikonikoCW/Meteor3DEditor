@@ -23,6 +23,7 @@
         <button onclick="testGetViewCallback()">获取视角 (Callback)</button>
         <button onclick="testGetViewAwait()">获取视角 (Await)</button>
         <button onclick="testSetView()">恢复视角 (Animation)</button>
+        <button onclick="testVFX()">测试特效 (Shield)</button>
     </div>
 
     <script src="./dist/meteor3d-core.umd.js"></script>
@@ -46,48 +47,12 @@
             window.meteor3d = instance;
 
             // ========== 测试 isReady 状态 ==========
-            console.log('📌 instance.isReady =', instance.isReady);  // 应该是 true
+            console.log('📌 instance.isReady =', instance.isReady); // 应该是 true
 
             // ========== 测试事件监听 ==========
-            // 注意: loadScene 返回时场景已就绪，此时订阅 scene-ready 会错过事件
-            // 这个订阅主要用于后续动态切换场景的场景
             instance.on('scene-ready', (data) => {
                 console.log('🎉 [事件] scene-ready 被触发:', data);
             });
-
-            // ========== 可用 API 列表 ==========
-            // 基础状态与事件:
-            // instance.isReady                       - 场景是否就绪
-            // instance.on(event, callback)           - 订阅事件
-            // instance.off(event, callback)          - 取消订阅
-
-            // 性能监控:
-            // instance.enableStats() / disableStats() / toggleStats(bool)
-
-            // 三角形统计:
-            // instance.toggleTriangleStats(bool, callback)
-
-            // 相机控制:
-            // instance.fitCameraToScene()
-            // instance.resize(width, height)
-
-            // GIS 坐标:
-            // instance.lngLatToWorld(lng, lat, height)
-            // instance.worldToLngLat(worldPos)
-
-            // 辅助显示:
-            // instance.setGridHelper(visible, length, width)
-
-            // 标签 API:
-            // instance.createLabel({ position, content, style })
-            // instance.getLabels()
-            // instance.clearLabels()
-
-            // 生命周期:
-            // instance.dispose()
-
-            // 高级用法（不推荐）:
-            // instance._internal.sceneManager / scene / camera / renderer
 
         }).catch(err => {
             console.error('❌ 加载失败', err);
@@ -123,9 +88,22 @@
                 position: savedView.position,
                 target: savedView.target,
                 duration: 2000
-            })
+            });
             console.log('✈️ 飞行完成:', a);
             alert('飞行完成！');
+        }
+
+        function testVFX() {
+            if (!window.meteor3d) return;
+            window.meteor3d.enableStats();
+            console.log('✨ 创建能量盾特效...');
+            const shield = window.meteor3d.createEffect('shield', {
+                position: { x: 0, y: 5, z: 0 },
+                scale: 5,
+                color: '#00ff00'
+            });
+            console.log('✅ 特效创建成功:', shield);
+            alert('能量盾已创建！请查看场景中心上方。');
         }
     </script>
 </body>
