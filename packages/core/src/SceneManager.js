@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { Group, Tween, Easing } from '@tweenjs/tween.js';
 import { GeoCoordinateSystem } from './GeoCoordinateSystem.js';
@@ -12,6 +11,9 @@ import { HighlightManager } from './HighlightManager.js';
 import { SnowManager } from './SnowManager.js';
 import { RainManager } from './RainManager.js';
 import { VFXManager } from './VFXManager.js';
+import { CameraControlManager } from './CameraControlManager.js';
+import { OrbitCameraControl } from './controls/OrbitCameraControl.js';
+import { GhostCameraControl } from './controls/GhostCameraControl.js';
 
 /**
  * 场景管理器
@@ -54,8 +56,27 @@ export class SceneManager {
         this.renderer.toneMappingExposure = 1.0;
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-        this.controls.enableDamping = true;
+        // 相机控制管理器
+        this.controlManager = new CameraControlManager(this.camera, this.renderer.domElement);
+
+        // 注册轨道控制模式
+        const orbitControl = new OrbitCameraControl(this.camera, this.renderer.domElement);
+        this.controlManager.register('orbit', orbitControl);
+
+        // 注册幽灵控制模式
+        const ghostControl = new GhostCameraControl(this.camera, this.renderer.domElement);
+        this.controlManager.register('ghost', ghostControl);
+
+        // 默认使用轨道模式
+        this.controlManager.setMode('orbit');
+
+        // 监听模式切换事件
+        this.controlManager.onModeChange = (data) => {
+            this.emit('control-mode-changed', data);
+        };
+
+        // 兼容旧代码：保留 controls 引用指向当前 OrbitControls
+        this.controls = orbitControl.getOrbitControls();
 
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
@@ -108,6 +129,9 @@ export class SceneManager {
         // 事件系统
         this.events = {};
         this.isReady = false;
+
+        // 帧时间追踪（用于 delta 计算）
+        this.lastTime = 0;
 
         this.animate = this.animate.bind(this);
         this.animate();
@@ -164,16 +188,15 @@ export class SceneManager {
     animate(time) {
         requestAnimationFrame(this.animate);
 
-        // Debug: Log every ~60 frames
-        if (!this.frameCount) this.frameCount = 0;
-        this.frameCount++;
-        if (this.frameCount % 60 === 0) {
-            // console.log('Animate loop running. Calling tweenUpdate.');
-        }
+        // 计算帧间隔
+        const delta = (time - this.lastTime) / 1000;
+        this.lastTime = time;
 
         this.tweenGroup.update(time);
         this.statsManager.begin();
-        this.controls.update();
+
+        // 更新相机控制器
+        this.controlManager.update(delta);
 
         // 更新 GIS 瓦片地图
         if (this.tileMapManager) {
@@ -219,6 +242,38 @@ export class SceneManager {
 
         this.statsManager.end();
     }
+
+    // ==================== 相机控制 API ====================
+
+    /**
+     * 设置相机控制模式
+     * @param {'orbit'|'ghost'} mode - 控制模式
+     * @param {Object} options - 模式选项
+     * @param {boolean} options.pointerLock - (ghost 模式) 是否锁定鼠标
+     * @returns {boolean} 是否切换成功
+     * @example
+     * // 切换到轨道模式
+     * sceneManager.setControlMode('orbit');
+     * 
+     * // 切换到幽灵模式（不锁定鼠标，右键控制视角）
+     * sceneManager.setControlMode('ghost');
+     * 
+     * // 切换到幽灵模式（锁定鼠标）
+     * sceneManager.setControlMode('ghost', { pointerLock: true });
+     */
+    setControlMode(mode, options = {}) {
+        return this.controlManager.setMode(mode, options);
+    }
+
+    /**
+     * 获取当前相机控制模式
+     * @returns {'orbit'|'ghost'|null}
+     */
+    getControlMode() {
+        return this.controlManager.getMode();
+    }
+
+    // ==================== 性能监控 API ====================
 
     /**
      * 启用性能监视器

@@ -19,11 +19,17 @@
 
 <body>
     <div id="canvas"></div>
-    <div style="position: fixed; top: 20px; left: 20px; z-index: 100; display: flex; gap: 10px;">
+    <div style="position: fixed; top: 20px; left: 20px; z-index: 100; display: flex; gap: 10px; flex-wrap: wrap;">
         <button onclick="testGetViewCallback()">获取视角 (Callback)</button>
         <button onclick="testGetViewAwait()">获取视角 (Await)</button>
         <button onclick="testSetView()">恢复视角 (Animation)</button>
         <button onclick="testVFX()">测试特效 (Shield)</button>
+        <span style="width: 100%;"></span>
+        <button onclick="setOrbitMode()" id="btn-orbit" style="background: #4CAF50; color: white;">轨道模式 (Orbit)</button>
+        <button onclick="setGhostMode()" id="btn-ghost">幽灵模式 (Ghost)</button>
+        <button onclick="setGhostLockMode()" id="btn-ghost-lock">幽灵模式 + 锁定</button>
+        <span id="mode-display" style="line-height: 30px; color: white; background: #333; padding: 0 10px;">当前:
+            orbit</span>
     </div>
 
     <script src="./dist/meteor3d-core.umd.js"></script>
@@ -47,18 +53,54 @@
             window.meteor3d = instance;
 
             // ========== 测试 isReady 状态 ==========
-            console.log('📌 instance.isReady =', instance.isReady); // 应该是 true
+            console.log('📌 instance.isReady =', instance.isReady);
 
             // ========== 测试事件监听 ==========
             instance.on('scene-ready', (data) => {
                 console.log('🎉 [事件] scene-ready 被触发:', data);
             });
 
+            // ========== 监听控制模式切换 ==========
+            instance.on('control-mode-changed', (data) => {
+                console.log('🎮 [事件] control-mode-changed:', data);
+                updateModeDisplay(data.mode);
+            });
+
         }).catch(err => {
             console.error('❌ 加载失败', err);
         });
 
-        // ========== 测试逻辑 ==========
+        // ========== 相机控制模式测试 ==========
+        function updateModeDisplay(mode) {
+            document.getElementById('mode-display').textContent = '当前: ' + mode;
+            document.getElementById('btn-orbit').style.background = mode === 'orbit' ? '#4CAF50' : '';
+            document.getElementById('btn-orbit').style.color = mode === 'orbit' ? 'white' : '';
+            document.getElementById('btn-ghost').style.background = mode === 'ghost' ? '#2196F3' : '';
+            document.getElementById('btn-ghost').style.color = mode === 'ghost' ? 'white' : '';
+            document.getElementById('btn-ghost-lock').style.background = mode === 'ghost' ? '#2196F3' : '';
+            document.getElementById('btn-ghost-lock').style.color = mode === 'ghost' ? 'white' : '';
+        }
+
+        function setOrbitMode() {
+            if (!window.meteor3d) return;
+            window.meteor3d.setControlMode('orbit');
+            console.log('🎮 切换到轨道模式');
+        }
+
+        function setGhostMode() {
+            if (!window.meteor3d) return;
+            window.meteor3d.setControlMode('ghost');
+            console.log('🎮 切换到幽灵模式 (右键控制视角，WASD移动，QE升降)');
+            alert('幽灵模式已启用！\n\n操作说明：\n- 右键按住 + 鼠标移动：控制视角\n- WASD：前后左右移动\n- Q/E：下降/上升\n- Shift：加速');
+        }
+
+        function setGhostLockMode() {
+            if (!window.meteor3d) return;
+            window.meteor3d.setControlMode('ghost', { pointerLock: true });
+            console.log('🎮 切换到幽灵模式 (鼠标锁定)');
+        }
+
+        // ========== 原有测试逻辑 ==========
         let savedView = null;
 
         function testGetViewCallback() {

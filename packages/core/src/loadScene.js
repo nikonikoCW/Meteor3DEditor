@@ -211,6 +211,16 @@ function createMeteor3DInstance(sceneManager, resizeObserver) {
         getView: (callback) => sceneManager.getView(callback),
         /** 设置相机视角 */
         setView: (options) => sceneManager.setView(options),
+        /**
+         * 设置相机控制模式
+         * @param {'orbit'|'ghost'} mode - 控制模式
+         * @param {Object} [options] - 模式选项
+         * @param {boolean} [options.pointerLock] - (ghost 模式) 是否锁定鼠标
+         * @returns {boolean}
+         */
+        setControlMode: (mode, options) => sceneManager.setControlMode(mode, options),
+        /** 获取当前相机控制模式 */
+        getControlMode: () => sceneManager.getControlMode(),
 
         // ========== GIS 坐标转换 ==========
         /** 经纬度转世界坐标 */
