@@ -615,6 +615,37 @@ const scanConfig = {
     ]
 };
 
+// 相机控制模式组件配置 (3D 逻辑组件)
+const cameraControlConfig = {
+    label: '相机控制模式',
+    icon: '🎮',
+    category: '3d',
+    defaultSize: { width: 150, height: 80 },
+    minSize: { width: 80, height: 40 },
+    props: [
+        {
+            name: 'mode',
+            label: '控制模式',
+            type: 'select',
+            options: [
+                { label: '轨道模式 (Orbit)', value: 'orbit' },
+                { label: '幽灵模式 (Ghost)', value: 'ghost' }
+            ],
+            defaultValue: 'orbit'
+        },
+        {
+            name: 'pointerLock',
+            label: '锁定鼠标 (Ghost)',
+            type: 'switch',
+            defaultValue: false
+        }
+    ],
+    actions: [
+        { name: 'enable', label: '应用此模式' },
+        { name: 'disable', label: '重置为轨道' }
+    ]
+};
+
 // 统一注册
 export function initRegistry() {
     // 场景组件
@@ -639,4 +670,5 @@ export function initRegistry() {
     registerWidget('Snow', snowConfig, () => import('../components/widgets/SnowWidget.vue'));
     registerWidget('Shield', shieldConfig, () => import('../components/widgets/ShieldWidget.vue'));
     registerWidget('Scan', scanConfig, () => import('../components/widgets/ScanWidget.vue'));
+    registerWidget('CameraControl', cameraControlConfig, () => import('../components/widgets/CameraControlWidget.vue'));
 }

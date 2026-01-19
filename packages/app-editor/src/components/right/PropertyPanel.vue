@@ -64,11 +64,22 @@
     <!-- 动态渲染的特有属性 -->
     <div class="section" v-if="widgetProps.length > 0">
       <h4>组件配置</h4>
-      <div v-for="prop in widgetProps" :key="prop.name" class="field">
+      <div v-for="prop in widgetProps" :key="prop.name" class="field" :class="{ 'checkbox-field': prop.type === 'switch' }">
         <label>{{ prop.label }}</label>
+        
+        <!-- Switch (开关) -->
+        <label v-if="prop.type === 'switch'" class="switch">
+          <input 
+            type="checkbox" 
+            v-model="selectedWidget.data[prop.name]"
+            :disabled="disabled"
+          >
+          <span class="slider"></span>
+        </label>
+
         <!-- Select -->
         <select 
-          v-if="prop.type === 'select'" 
+          v-else-if="prop.type === 'select'" 
           v-model="selectedWidget.data[prop.name]"
           :disabled="disabled"
         >
