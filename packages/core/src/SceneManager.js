@@ -483,6 +483,37 @@ export class SceneManager {
         this.triangleStatsManager.markDirty();
     }
 
+    // ==================== BVH Helper 可视化 API ====================
+
+    /**
+     * 设置 BVH Helper 可视化
+     * @param {boolean} visible - 是否显示
+     * @param {number} depth - 显示深度层级 (0-20)
+     */
+    setBVHHelper(visible, depth = 10) {
+        if (visible) {
+            this.raycastManager.showBVHHelpers(this.scene, this.objects, depth);
+        } else {
+            this.raycastManager.hideBVHHelpers(this.scene);
+        }
+    }
+
+    /**
+     * 更新 BVH Helper 显示深度
+     * @param {number} depth - 深度层级 (0-20)
+     */
+    updateBVHDepth(depth) {
+        this.raycastManager.updateBVHDepth(depth);
+    }
+
+    /**
+     * 获取 BVH Helper 是否可见
+     * @returns {boolean}
+     */
+    isBVHHelperVisible() {
+        return this.raycastManager.isBVHHelpersVisible();
+    }
+
     /**
      * 处理窗口大小调整
      * 更新相机纵横比和渲染器尺寸

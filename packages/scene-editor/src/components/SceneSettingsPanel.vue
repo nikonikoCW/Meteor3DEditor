@@ -84,6 +84,25 @@
       <div class="hint" v-if="showAxes">
         显示 XYZ 坐标轴（红=X 绿=Y 蓝=Z）
       </div>
+
+      <div class="prop-row switch-row" style="margin-top: 12px;">
+        <label>BVH 可视化</label>
+        <div class="switch-container">
+          <label class="switch">
+            <input type="checkbox" v-model="showBVH" @change="onBVHToggle">
+            <span class="slider"></span>
+          </label>
+          <span class="switch-label">{{ showBVH ? '开启' : '关闭' }}</span>
+        </div>
+      </div>
+      <div class="bvh-depth-control" v-if="showBVH">
+        <div class="depth-row">
+          <span class="depth-label">显示深度</span>
+          <span class="depth-value">{{ bvhDepth }}</span>
+        </div>
+        <input type="range" v-model.number="bvhDepth" @input="onBVHDepthChange" min="1" max="20" step="1">
+        <div class="hint">调整 BVH 包围盒显示的层级深度</div>
+      </div>
     </div>
     
     <div class="debug-info">
@@ -120,6 +139,12 @@ const triangleStats = reactive({
 // 坐标轴开关状态
 const showAxes = ref(false);
 
+// BVH 可视化开关状态
+const showBVH = ref(false);
+
+// BVH 显示深度
+const bvhDepth = ref(10);
+
 // 切换性能监视器
 const onStatsToggle = () => {
   if (window.editor && window.editor.sceneManager) {
@@ -150,10 +175,25 @@ const onAxesToggle = () => {
   }
 };
 
-// 组件卸载时关闭统计
+// 切换 BVH 可视化
+const onBVHToggle = () => {
+  if (window.editor && window.editor.sceneManager) {
+    window.editor.sceneManager.setBVHHelper(showBVH.value, bvhDepth.value);
+  }
+};
+
+// 更新 BVH 深度
+const onBVHDepthChange = () => {
+  if (window.editor && window.editor.sceneManager && showBVH.value) {
+    window.editor.sceneManager.updateBVHDepth(bvhDepth.value);
+  }
+};
+
+// 组件卸载时关闭统计和 BVH Helper
 onBeforeUnmount(() => {
   if (window.editor && window.editor.sceneManager) {
     window.editor.sceneManager.toggleTriangleStats(false);
+    window.editor.sceneManager.setBVHHelper(false);
   }
 });
 </script>
@@ -345,5 +385,62 @@ input:checked + .slider:before {
   color: #4CAF50;
   font-weight: 500;
   font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* BVH 深度控制样式 */
+.bvh-depth-control {
+  margin-top: 8px;
+  padding: 8px;
+  background: #1a1a1a;
+  border-radius: 4px;
+  border: 1px solid #333;
+}
+
+.depth-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.depth-label {
+  font-size: 11px;
+  color: #888;
+}
+
+.depth-value {
+  font-size: 12px;
+  color: #4CAF50;
+  font-weight: 500;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.bvh-depth-control input[type="range"] {
+  width: 100%;
+  height: 4px;
+  background: #444;
+  border-radius: 2px;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.bvh-depth-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: #4CAF50;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.bvh-depth-control input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: #4CAF50;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
 }
 </style>

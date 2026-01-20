@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { MeshBVH, acceleratedRaycast } from 'three-mesh-bvh';
+import { MeshBVH, acceleratedRaycast, MeshBVHHelper } from 'three-mesh-bvh';
 
 // 扩展 Mesh 的 raycast 方法使用 BVH 加速
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
@@ -15,6 +15,15 @@ export class RaycastManager {
 
         /** @type {THREE.Raycaster} */
         this.raycaster = new THREE.Raycaster();
+
+        /** @type {Map<THREE.Mesh, MeshBVHHelper>} BVH Helper 映射 */
+        this.bvhHelpers = new Map();
+
+        /** @type {number} 当前显示深度 */
+        this.helperDepth = 10;
+
+        /** @type {boolean} Helper 是否可见 */
+        this.helpersVisible = false;
     }
 
     /**
@@ -125,4 +134,71 @@ export class RaycastManager {
             }
         });
     }
+
+    // ==================== BVH Helper 可视化 ====================
+
+    /**
+     * 显示 BVH Helper
+     * @param {THREE.Scene} scene - 场景
+     * @param {THREE.Object3D[]} objects - 要显示 Helper 的对象
+     * @param {number} depth - 显示深度层级
+     */
+    showBVHHelpers(scene, objects, depth = 10) {
+        this.helperDepth = depth;
+        this.helpersVisible = true;
+
+        objects.forEach(obj => {
+            obj.traverse((child) => {
+                if (child.isMesh && child.geometry && child.geometry.boundsTree) {
+                    if (this.bvhHelpers.has(child)) {
+                        // 已有 Helper，更新深度
+                        const helper = this.bvhHelpers.get(child);
+                        helper.depth = depth;
+                        helper.update();
+                    } else {
+                        // 创建新 Helper
+                        const helper = new MeshBVHHelper(child, depth);
+                        scene.add(helper);
+                        this.bvhHelpers.set(child, helper);
+                    }
+                }
+            });
+        });
+    }
+
+    /**
+     * 隐藏并移除所有 BVH Helper
+     * @param {THREE.Scene} scene - 场景
+     */
+    hideBVHHelpers(scene) {
+        this.helpersVisible = false;
+
+        this.bvhHelpers.forEach((helper, mesh) => {
+            scene.remove(helper);
+            helper.dispose();
+        });
+        this.bvhHelpers.clear();
+    }
+
+    /**
+     * 更新 BVH Helper 深度
+     * @param {number} depth - 新的深度层级
+     */
+    updateBVHDepth(depth) {
+        this.helperDepth = depth;
+
+        this.bvhHelpers.forEach((helper) => {
+            helper.depth = depth;
+            helper.update();
+        });
+    }
+
+    /**
+     * 检查 Helper 是否可见
+     * @returns {boolean}
+     */
+    isBVHHelpersVisible() {
+        return this.helpersVisible;
+    }
 }
+
