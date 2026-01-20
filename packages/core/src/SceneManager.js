@@ -14,6 +14,7 @@ import { VFXManager } from './VFXManager.js';
 import { CameraControlManager } from './CameraControlManager.js';
 import { OrbitCameraControl } from './controls/OrbitCameraControl.js';
 import { GhostCameraControl } from './controls/GhostCameraControl.js';
+import { RaycastManager } from './RaycastManager.js';
 
 /**
  * 场景管理器
@@ -126,12 +127,19 @@ export class SceneManager {
         // 特效管理器
         this.vfxManager = new VFXManager(this.scene);
 
+        // 射线检测管理器
+        this.raycastManager = new RaycastManager();
+
         // 事件系统
         this.events = {};
         this.isReady = false;
 
         // 帧时间追踪（用于 delta 计算）
         this.lastTime = 0;
+
+        // 点击事件监听
+        this._onCanvasClick = this._onCanvasClick.bind(this);
+        this.canvas.addEventListener('click', this._onCanvasClick);
 
         this.animate = this.animate.bind(this);
         this.animate();
@@ -273,6 +281,120 @@ export class SceneManager {
         return this.controlManager.getMode();
     }
 
+    // ==================== 射线检测 API ====================
+
+    /**
+     * 处理 Canvas 点击事件
+     * @private
+     */
+    _onCanvasClick(event) {
+        // 只处理左键点击
+        if (event.button !== 0) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const screenPosition = new THREE.Vector2(
+            ((event.clientX - rect.left) / rect.width) * 2 - 1,
+            -((event.clientY - rect.top) / rect.height) * 2 + 1
+        );
+
+        // 执行射线检测
+        const intersects = this.raycastManager.raycast(
+            screenPosition,
+            this.camera,
+            this.objects
+        );
+
+        // 构建事件数据
+        const clickData = {
+            // 屏幕坐标
+            screenPosition: { x: event.clientX, y: event.clientY },
+            // 原始事件
+            originalEvent: event,
+            // 命中对象
+            object: null,
+            // 世界坐标
+            worldPosition: null,
+            // 精确交点
+            point: null,
+            // 命中的面
+            face: null,
+            // 经纬度（GIS 模式）
+            lngLat: null
+        };
+
+        if (intersects.length > 0) {
+            const hit = intersects[0];
+            clickData.object = hit.object;
+            clickData.point = hit.point;
+            clickData.face = hit.face;
+            clickData.worldPosition = {
+                x: hit.point.x,
+                y: hit.point.y,
+                z: hit.point.z
+            };
+
+            // 转换经纬度（如果 GIS 模式可用）
+            if (this.geoSystem) {
+                const lngLat = this.worldToLngLat(hit.point);
+                if (lngLat) {
+                    clickData.lngLat = lngLat;
+                }
+            }
+        } else {
+            // 未命中对象，与 Y=0 平面相交
+            const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+            const groundPoint = this.raycastManager.raycastPlane(
+                screenPosition,
+                this.camera,
+                plane
+            );
+            if (groundPoint) {
+                clickData.worldPosition = {
+                    x: groundPoint.x,
+                    y: groundPoint.y,
+                    z: groundPoint.z
+                };
+                clickData.point = groundPoint;
+
+                if (this.geoSystem) {
+                    const lngLat = this.worldToLngLat(groundPoint);
+                    if (lngLat) {
+                        clickData.lngLat = lngLat;
+                    }
+                }
+            }
+        }
+
+        // 触发事件
+        this.emit('scene-click', clickData);
+    }
+
+    /**
+     * 执行射线检测
+     * @param {THREE.Vector2} screenPosition - 归一化屏幕坐标 (-1 到 1)
+     * @param {Object} options - 选项
+     * @param {boolean} options.recursive - 是否递归检测子对象
+     * @returns {THREE.Intersection[]}
+     */
+    raycastObjects(screenPosition, options = {}) {
+        return this.raycastManager.raycast(
+            screenPosition,
+            this.camera,
+            this.objects,
+            options
+        );
+    }
+
+    /**
+     * 与 Y=0 平面相交
+     * @param {THREE.Vector2} screenPosition - 归一化屏幕坐标
+     * @returns {THREE.Vector3|null}
+     */
+    raycastGround(screenPosition) {
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        return this.raycastManager.raycastPlane(screenPosition, this.camera, plane);
+    }
+
     // ==================== 性能监控 API ====================
 
     /**
@@ -407,6 +529,9 @@ export class SceneManager {
         this.scene.add(object);
         this.objects.push(object);
         this.markTriangleStatsDirty();
+
+        // 自动构建 BVH 以加速射线检测
+        this.raycastManager.buildBVH(object);
     }
 
     /**
@@ -414,6 +539,9 @@ export class SceneManager {
      * @param {THREE.Object3D} object - 要移除的对象
      */
     removeObject(object) {
+        // 销毁 BVH
+        this.raycastManager.disposeBVH(object);
+
         this.scene.remove(object);
         this.objects = this.objects.filter(obj => obj !== object);
         this.markTriangleStatsDirty();

@@ -40,8 +40,29 @@ let dbManager = null;
 window.editor = {};
 
 
+/**
+ * 计算拖放位置
+ * 优先检测场景对象表面，fallback 到 Y=0 平面
+ */
+const getDropPosition = (event) => {
+  const rect = canvas.value.getBoundingClientRect();
+  const screenPos = new THREE.Vector2(
+    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+    -((event.clientY - rect.top) / rect.height) * 2 + 1
+  );
+
+  // 优先检测场景对象
+  const intersects = sceneManager.raycastObjects(screenPos, { recursive: true });
+  if (intersects.length > 0) {
+    return intersects[0].point.clone();
+  }
+
+  // Fallback: 与 Y=0 平面相交
+  const groundPoint = sceneManager.raycastGround(screenPos);
+  return groundPoint || new THREE.Vector3(0, 0, 0);
+};
+
 const onDrop = async (event) => {
-  // ... (onDrop implementation remains the same)
   const type = event.dataTransfer.getData('type');
   if (!type) return;
 
@@ -63,21 +84,9 @@ const onDrop = async (event) => {
     try {
       object = await persistenceManager.loadGLTFModel(url);
       
-      // Calculate drop position
-      const rect = canvas.value.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-      
-      const raycaster = new THREE.Raycaster();
-      raycaster.setFromCamera(new THREE.Vector2(x, y), sceneManager.camera);
-      
-      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-      const target = new THREE.Vector3();
-      raycaster.ray.intersectPlane(plane, target);
-      
-      if (target) {
-        object.position.copy(target);
-      }
+      // 使用统一的放置位置计算
+      const dropPosition = getDropPosition(event);
+      object.position.copy(dropPosition);
     } catch (error) {
       console.error('Failed to load GLTF model:', error);
       return;
@@ -107,22 +116,10 @@ const onDrop = async (event) => {
     if (geometry && material) {
       object = new THREE.Mesh(geometry, material);
       
-      // Calculate drop position
-      const rect = canvas.value.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-      
-      const raycaster = new THREE.Raycaster();
-      raycaster.setFromCamera(new THREE.Vector2(x, y), sceneManager.camera);
-      
-      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-      const target = new THREE.Vector3();
-      raycaster.ray.intersectPlane(plane, target);
-      
-      if (target) {
-        object.position.copy(target);
-        object.position.y += 0.5;
-      }
+      // 使用统一的放置位置计算
+      const dropPosition = getDropPosition(event);
+      object.position.copy(dropPosition);
+      object.position.y += 0.5; // 基础几何体偏移半个高度
     }
   }
 

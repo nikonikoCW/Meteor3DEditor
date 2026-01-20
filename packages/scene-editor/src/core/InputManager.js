@@ -2,14 +2,14 @@ import * as THREE from 'three';
 
 /**
  * 输入管理器
- * 处理鼠标点击、射线检测和对象选择
+ * 处理鼠标点击和对象选择
+ * 使用 SceneManager 的 BVH 加速射线检测
  */
 export class InputManager {
     constructor(sceneManager, editorStore, transformManager) {
         this.sceneManager = sceneManager;
         this.editorStore = editorStore;
         this.transformManager = transformManager;
-        this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
 
         this.canvas = sceneManager.renderer.domElement;
@@ -31,10 +31,8 @@ export class InputManager {
         this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-        this.raycaster.setFromCamera(this.mouse, this.sceneManager.camera);
-
-        // 对所有对象（包括子节点）进行射线检测
-        const intersects = this.raycaster.intersectObjects(this.sceneManager.objects, true);
+        // 使用 SceneManager 的 BVH 加速射线检测
+        const intersects = this.sceneManager.raycastObjects(this.mouse, { recursive: true });
 
         if (intersects.length > 0) {
             // 直接选中被点击的对象（可能是子节点）
@@ -45,3 +43,4 @@ export class InputManager {
         }
     }
 }
+

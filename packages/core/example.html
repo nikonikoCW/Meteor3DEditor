@@ -66,9 +66,21 @@
                 updateModeDisplay(data.mode);
             });
 
+            // ========== 监听场景点击事件 ==========
+            instance.on('scene-click', (data) => {
+                console.log('🖱️ [事件] scene-click:', data);
+
+                window.meteor3d.createEffect('shield', {
+                    position: data.worldPosition,
+                    scale: 5,
+                    color: '#00ff00'
+                });
+            });
+
         }).catch(err => {
             console.error('❌ 加载失败', err);
         });
+
 
         // ========== 相机控制模式测试 ==========
         function updateModeDisplay(mode) {

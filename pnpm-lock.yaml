@@ -95,6 +95,9 @@ importers:
       three:
         specifier: ^0.181.2
         version: 0.181.2
+      three-mesh-bvh:
+        specifier: ^0.9.7
+        version: 0.9.7(three@0.181.2)
     devDependencies:
       vite:
         specifier: ^7.2.4
@@ -2554,6 +2557,11 @@ packages:
 
   tabbable@6.3.0:
     resolution: {integrity: sha512-EIHvdY5bPLuWForiR/AN2Bxngzpuwn1is4asboytXtpTgsArc+WmSJKVLlhdh71u7jFcryDqB2A8lQvj78MkyQ==}
+
+  three-mesh-bvh@0.9.7:
+    resolution: {integrity: sha512-EYSJbykeAjhVxwZjuUYq/kelIbqBoV9sbAgvZ+j1xCgZyNYSkr51WDJWS4WIfK2OX6YcjBGoTicX4RoOVQzx0g==}
+    peerDependencies:
+      three: '>= 0.159.0'
 
   three-stdlib@2.35.14:
     resolution: {integrity: sha512-kpCaEg59M9usFTgHC+YZNKvx7nMoLI2zQxZBV8pjoNW6vNZmGyXpaLBL09A2oLCsS3KepgMFkOuk6lRoebTNvA==}
@@ -5523,6 +5531,10 @@ snapshots:
       react: 18.3.1
 
   tabbable@6.3.0: {}
+
+  three-mesh-bvh@0.9.7(three@0.181.2):
+    dependencies:
+      three: 0.181.2
 
   three-stdlib@2.35.14(three@0.181.2):
     dependencies:

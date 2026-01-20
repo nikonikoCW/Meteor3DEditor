@@ -222,6 +222,26 @@ function createMeteor3DInstance(sceneManager, resizeObserver) {
         /** 获取当前相机控制模式 */
         getControlMode: () => sceneManager.getControlMode(),
 
+        // ========== 射线检测 API ==========
+        /**
+         * 场景点击事件 - 通过 on('scene-click', callback) 订阅
+         * @event scene-click
+         * @param {Object} data - 事件数据
+         * @param {Object} data.worldPosition - 世界坐标 {x, y, z}
+         * @param {Object|null} data.lngLat - 经纬度 {lng, lat, height}
+         * @param {THREE.Object3D|null} data.object - 命中的对象
+         * @param {THREE.Vector3|null} data.point - 精确交点
+         */
+        /**
+         * 执行射线检测
+         * @param {Object} screenPosition - 归一化屏幕坐标 {x, y} (-1到1)
+         * @param {Object} options - 选项
+         * @returns {THREE.Intersection[]}
+         */
+        raycastObjects: (screenPosition, options) => sceneManager.raycastObjects(screenPosition, options),
+        /** 与地面(Y=0)相交 */
+        raycastGround: (screenPosition) => sceneManager.raycastGround(screenPosition),
+
         // ========== GIS 坐标转换 ==========
         /** 经纬度转世界坐标 */
         lngLatToWorld: (lng, lat, height) => sceneManager.lngLatToWorld(lng, lat, height),
