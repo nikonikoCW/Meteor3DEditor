@@ -30,6 +30,8 @@
         <button onclick="setGhostLockMode()" id="btn-ghost-lock">幽灵模式 + 锁定</button>
         <span id="mode-display" style="line-height: 30px; color: white; background: #333; padding: 0 10px;">当前:
             orbit</span>
+        <span style="width: 100%;"></span>
+        <button onclick="toggleStats()" id="btn-stats">性能统计 (OFF)</button>
     </div>
 
     <script src="./dist/meteor3d-core.umd.js"></script>
@@ -81,6 +83,30 @@
             console.error('❌ 加载失败', err);
         });
 
+
+        // ========== 性能统计切换 ==========
+        let statsEnabled = false;
+        function toggleStats() {
+            if (!window.meteor3d) return;
+            statsEnabled = !statsEnabled;
+
+            if (statsEnabled) {
+                window.meteor3d.enableStats();
+                window.meteor3d.toggleTriangleStats(true, (stats) => {
+                    console.log(`📊 GPU渲染: ${stats.rendered.toLocaleString()} | 总计: ${stats.total.toLocaleString()} | DrawCalls: ${stats.drawCalls} | 纹理: ${stats.textureCount}`);
+                });
+                document.getElementById('btn-stats').textContent = '性能统计 (ON)';
+                document.getElementById('btn-stats').style.background = '#4CAF50';
+                document.getElementById('btn-stats').style.color = 'white';
+            } else {
+                window.meteor3d.disableStats();
+                window.meteor3d.toggleTriangleStats(false);
+                document.getElementById('btn-stats').textContent = '性能统计 (OFF)';
+                document.getElementById('btn-stats').style.background = '';
+                document.getElementById('btn-stats').style.color = '';
+            }
+            console.log('📊 性能统计:', statsEnabled ? '开启' : '关闭');
+        }
 
         // ========== 相机控制模式测试 ==========
         function updateModeDisplay(mode) {

@@ -297,11 +297,15 @@ export class SceneManager {
             -((event.clientY - rect.top) / rect.height) * 2 + 1
         );
 
-        // 执行射线检测
+        // 执行射线检测（包括场景对象和影像地图）
+        const raycastTargets = [...this.objects];
+        if (this.tileMapManager && this.tileMapManager.mapGroup.visible) {
+            raycastTargets.push(this.tileMapManager.mapGroup);
+        }
         const intersects = this.raycastManager.raycast(
             screenPosition,
             this.camera,
-            this.objects
+            raycastTargets
         );
 
         // 构建事件数据
@@ -374,14 +378,22 @@ export class SceneManager {
      * @param {THREE.Vector2} screenPosition - 归一化屏幕坐标 (-1 到 1)
      * @param {Object} options - 选项
      * @param {boolean} options.recursive - 是否递归检测子对象
+     * @param {boolean} options.includeTileMap - 是否包含影像地图，默认 true
      * @returns {THREE.Intersection[]}
      */
     raycastObjects(screenPosition, options = {}) {
+        const { includeTileMap = true, ...raycastOptions } = options;
+
+        const targets = [...this.objects];
+        if (includeTileMap && this.tileMapManager && this.tileMapManager.mapGroup.visible) {
+            targets.push(this.tileMapManager.mapGroup);
+        }
+
         return this.raycastManager.raycast(
             screenPosition,
             this.camera,
-            this.objects,
-            options
+            targets,
+            raycastOptions
         );
     }
 
