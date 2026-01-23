@@ -24,6 +24,7 @@
         <button onclick="testGetViewAwait()">获取视角 (Await)</button>
         <button onclick="testSetView()">恢复视角 (Animation)</button>
         <button onclick="testVFX()">测试特效 (Shield)</button>
+        <button onclick="testLine()">测试流动线 (Line)</button>
         <span style="width: 100%;"></span>
         <button onclick="setOrbitMode()" id="btn-orbit" style="background: #4CAF50; color: white;">轨道模式 (Orbit)</button>
         <button onclick="setGhostMode()" id="btn-ghost">幽灵模式 (Ghost)</button>
@@ -72,11 +73,11 @@
             instance.on('scene-click', (data) => {
                 console.log('🖱️ [事件] scene-click:', data);
 
-                window.meteor3d.createEffect('shield', {
-                    position: data.worldPosition,
-                    scale: 5,
-                    color: '#00ff00'
-                });
+                // window.meteor3d.createEffect('shield', {
+                //     position: data.worldPosition,
+                //     scale: 5,
+                //     color: '#00ff00'
+                // });
             });
 
         }).catch(err => {
@@ -184,6 +185,30 @@
             });
             console.log('✅ 特效创建成功:', shield);
             alert('能量盾已创建！请查看场景中心上方。');
+        }
+
+        // ========== 流动线测试 ==========
+        function testLine() {
+            if (!window.meteor3d) return;
+            console.log('〰️ 创建流动线...');
+
+            const points = [
+                { x: -10, y: 1, z: 10 },
+                { x: 10, y: 1, z: 10 },
+                { x: 10, y: 1, z: -10 },
+                { x: 0, y: 15, z: -10 },
+                { x: -10, y: 1, z: -10 },
+                { x: -10, y: 1, z: 10 }
+            ];
+
+            window.meteor3d.createLine({
+                points: points,
+                textureUrl: 'http://localhost:3003/assets/jiantou2.png',
+                width: 2.0,
+                speed: 2.0,
+                repeat: 25
+            });
+            console.log('✅ 流动线创建成功');
         }
     </script>
 </body>

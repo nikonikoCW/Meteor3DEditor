@@ -11,6 +11,7 @@ import { HighlightManager } from './HighlightManager.js';
 import { SnowManager } from './SnowManager.js';
 import { RainManager } from './RainManager.js';
 import { VFXManager } from './VFXManager.js';
+import { LineManager } from './LineManager.js';
 import { CameraControlManager } from './CameraControlManager.js';
 import { OrbitCameraControl } from './controls/OrbitCameraControl.js';
 import { GhostCameraControl } from './controls/GhostCameraControl.js';
@@ -24,28 +25,24 @@ export class SceneManager {
     constructor(canvas) {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x333333); // 深灰色背景，便于观察
+        this.scene.background = new THREE.Color(0x000000); // 深灰色背景，便于观察
 
         // 初始化 Tween Group
         this.tweenGroup = new Group();
 
-        // 网格辅助线
-        // const gridHelper = new THREE.GridHelper(500, 30);
-        // this.scene.add(gridHelper);
-
         // 环境光
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // 增强环境光
-        this.scene.add(ambientLight);
+        // const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // 增强环境光
+        // this.scene.add(ambientLight);
 
-        // 平行光
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
-        directionalLight.position.set(10, 20, 10);
-        this.scene.add(directionalLight);
+        // // 平行光
+        // const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        // directionalLight.position.set(10, 20, 10);
+        // this.scene.add(directionalLight);
 
-        // 增加补光
-        const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        fillLight.position.set(-10, 10, -10);
-        this.scene.add(fillLight);
+        // // 增加补光
+        // const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        // fillLight.position.set(-10, 10, -10);
+        // this.scene.add(fillLight);
 
         this.camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 10000);
         this.camera.position.set(5, 5, 5);
@@ -126,6 +123,9 @@ export class SceneManager {
 
         // 特效管理器
         this.vfxManager = new VFXManager(this.scene);
+
+        // 流动线管理器
+        this.lineManager = new LineManager(this.scene);
 
         // 射线检测管理器
         this.raycastManager = new RaycastManager();
@@ -246,6 +246,11 @@ export class SceneManager {
         // 更新通用特效
         if (this.vfxManager) {
             this.vfxManager.update(time / 1000, time / 1000);
+        }
+
+        // 更新流动线
+        if (this.lineManager) {
+            this.lineManager.update(delta);
         }
 
         this.statsManager.end();

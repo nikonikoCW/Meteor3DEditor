@@ -358,6 +358,32 @@ function createMeteor3DInstance(sceneManager, resizeObserver) {
         /** 特效管理器 */
         vfxManager: sceneManager.vfxManager,
 
+        // ========== 流动线 API ==========
+        /**
+         * 创建流动线
+         * @param {Object} options - 配置选项
+         * @param {THREE.Vector3[]} options.points - 路径点数组
+         * @param {string} options.textureUrl - 纹理图片 URL
+         * @param {number} [options.width=2.0] - 线条宽度
+         * @param {number} [options.radius=1.0] - 转角圆角半径
+         * @param {number} [options.speed=1.0] - 流动速度
+         * @param {number} [options.repeat=10.0] - 纹理重复次数
+         * @param {number} [options.opacity=1.0] - 透明度
+         * @returns {string} 线条 ID
+         */
+        createLine: (options) => sceneManager.lineManager.createLine(options),
+
+        /**
+         * 移除流动线
+         * @param {string} id - 线条 ID
+         */
+        removeLine: (id) => sceneManager.lineManager.removeLine(id),
+
+        /**
+         * 清除所有流动线
+         */
+        clearLines: () => sceneManager.lineManager.clear(),
+
         // ========== 生命周期 ==========
         /** 销毁实例，释放资源 */
         dispose: () => {
