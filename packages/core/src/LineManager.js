@@ -31,7 +31,10 @@ export class LineManager {
             width = 2.0,
             radius = 2.0,
             speed = 1.5,
-            repeat = 25.0
+            repeat = 25.0,
+            breathStart = 0.5, // 呼吸效果起始值
+            breathEnd = 1.0,   // 呼吸效果结束值
+            breathFrequency = 2.0 // 呼吸频率，0 为不呼吸
         } = options;
 
         if (!points || points.length < 2) {
@@ -68,6 +71,9 @@ export class LineManager {
             uniform float uTime;
             uniform float uRepeat;
             uniform float uSpeed;
+            uniform float uBreathStart;
+            uniform float uBreathEnd;
+            uniform float uBreathFrequency;
             varying vec2 vUv;
 
             void main() {
@@ -77,10 +83,14 @@ export class LineManager {
                 
                 vec4 color = texture2D(uTexture, scr);
 
-                float factor = abs(sin(uTime*2.0));
-                float breath = mix(0.5,1.0,factor);
+                float breath = 1.0;
+                if (uBreathFrequency > 0.0) {
+                    float factor = abs(sin(uTime * uBreathFrequency));
+                    breath = mix(uBreathStart, uBreathEnd, factor);
+                }
+                
                 // 增强亮度（发光感）
-                gl_FragColor = vec4(color.rgb, color.a);
+                gl_FragColor = vec4(color.rgb, color.a * breath);
             }
         `;
 
@@ -89,7 +99,10 @@ export class LineManager {
                 uTexture: { value: texture },
                 uTime: { value: 0 },
                 uSpeed: { value: speed },
-                uRepeat: { value: repeat }
+                uRepeat: { value: repeat },
+                uBreathStart: { value: breathStart },
+                uBreathEnd: { value: breathEnd },
+                uBreathFrequency: { value: breathFrequency }
             },
             vertexShader: vertexShader,
             fragmentShader: fragmentShader,
