@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧城市数字孪生指挥中心</title>
+    <style>
+        :root {
+            --primary-color: #00f3ff;
+            --secondary-color: #0066ff;
+            --bg-color: rgba(10, 15, 30, 0.85);
+            --panel-bg: rgba(0, 20, 40, 0.6);
+            --border-color: rgba(0, 243, 255, 0.3);
+            --text-color: #e0f7ff;
+            --accent-green: #00ffb2;
+            --accent-orange: #ffb84d;
+            --accent-red: #ff4d6d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            overflow: hidden;
+            background-color: #000;
+            color: var(--text-color);
+        }
+
+        body.theme-day {
+            --panel-bg: rgba(10, 30, 60, 0.55);
+            --border-color: rgba(0, 153, 255, 0.35);
+            --text-color: #dff2ff;
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+        }
+
+        /* UI Overlay Layer */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            /* Allow clicks to pass through to canvas */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        /* Common Panel Styles */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            pointer-events: auto;
+            /* Re-enable clicks for panels */
+            padding: 15px;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.1);
+            position: relative;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+        }
+
+        .panel::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+        }
+
+        .panel-subtitle {
+            font-size: 12px;
+            color: rgba(224, 247, 255, 0.7);
+            margin-top: -8px;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .panel-title::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background: var(--primary-color);
+            margin-right: 10px;
+            transform: skewX(-20deg);
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 80px;
+            background: linear-gradient(180deg, rgba(0, 10, 20, 0.9) 0%, rgba(0, 10, 20, 0) 100%);
+            margin: -20px -20px 0 -20px;
+            padding: 0 40px;
+            pointer-events: auto;
+        }
+
+        .header-title {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(to right, #fff, var(--primary-color));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 243, 255, 0.5);
+        }
+
+        .header-time {
+            font-size: 24px;
+            font-family: 'Courier New', monospace;
+            color: var(--primary-color);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            display: flex;
+            justify-content: space-between;
+            flex: 1;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Left Panel */
+        .left-panel {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid var(--secondary-color);
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .kpi {
+            padding: 12px;
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            background: rgba(0, 0, 0, 0.25);
+        }
+
+        .kpi-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .kpi-label {
+            font-size: 12px;
+            color: rgba(224, 247, 255, 0.7);
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            padding: 4px 8px;
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            background: rgba(0, 243, 255, 0.08);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green);
+        }
+
+        .status-dot.warn {
+            background: var(--accent-orange);
+            box-shadow: 0 0 8px var(--accent-orange);
+        }
+
+        .status-dot.alert {
+            background: var(--accent-red);
+            box-shadow: 0 0 8px var(--accent-red);
+        }
+
+        .location-list {
+            list-style: none;
+        }
+
+        .location-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(0, 243, 255, 0.05);
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .location-item:hover {
+            background: rgba(0, 243, 255, 0.15);
+            border-color: var(--primary-color);
+            transform: translateX(5px);
+        }
+
+        /* Right Panel */
+        .right-panel {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn {
+            background: rgba(0, 102, 255, 0.2);
+            border: 1px solid var(--secondary-color);
+            color: var(--text-color);
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .btn-sm {
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+
+        .btn-outline {
+            background: rgba(0, 243, 255, 0.08);
+            border-color: rgba(0, 243, 255, 0.3);
+        }
+
+        .btn:hover {
+            background: var(--secondary-color);
+            box-shadow: 0 0 15px var(--secondary-color);
+        }
+
+        .btn.active {
+            background: var(--primary-color);
+            color: #000;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 15px var(--primary-color);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            padding: 6px 0;
+            border-bottom: 1px dashed rgba(0, 243, 255, 0.15);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-value {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .log-list {
+            list-style: none;
+            max-height: 130px;
+            overflow: hidden;
+        }
+
+        .log-item {
+            font-size: 12px;
+            padding: 6px 8px;
+            margin-bottom: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 2px solid rgba(0, 243, 255, 0.4);
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 180px;
+        }
+
+        .chart-container.tall {
+            height: 220px;
+        }
+
+        .view-section {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .view-section.active {
+            display: flex;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: 11px;
+            padding: 2px 6px;
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            margin-left: 6px;
+            color: var(--primary-color);
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 243, 255, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 12px rgba(0, 243, 255, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 243, 255, 0);
+            }
+        }
+
+        /* Bottom Bar */
+        .bottom-bar {
+            position: fixed;
+            left: 50%;
+            bottom: 60px;
+            transform: translateX(-50%);
+            height: 48px;
+            width: min(900px, 80vw);
+            background: rgba(0, 20, 40, 0.75);
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 0 18px;
+            pointer-events: auto;
+            z-index: 20;
+        }
+
+        .bottom-tabs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .tab-btn {
+            padding: 6px 14px;
+            font-size: 12px;
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            background: rgba(0, 243, 255, 0.08);
+            color: var(--text-color);
+            cursor: pointer;
+            border-radius: 999px;
+        }
+
+        .tab-btn.active {
+            background: var(--primary-color);
+            color: #000;
+            border-color: var(--primary-color);
+        }
+
+        .ticker {
+            white-space: nowrap;
+            overflow: hidden;
+            width: 100%;
+            flex: 1;
+            font-size: 12px;
+            color: rgba(224, 247, 255, 0.8);
+        }
+
+        .ticker-content {
+            display: inline-block;
+            animation: ticker 20s linear infinite;
+        }
+
+        @keyframes ticker {
+            0% {
+                transform: translateX(100%);
+            }
+
+            100% {
+                transform: translateX(-100%);
+            }
+        }
+
+        /* Loading Screen */
+        #loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s;
+        }
+
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--secondary-color);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loading-screen">
+        <div class="loader"></div>
+        <div id="loading-text" style="color: var(--primary-color); letter-spacing: 2px;">SYSTEM INITIALIZING...</div>
+    </div>
+
+    <div id="canvas"></div>
+
+    <div id="ui-layer">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-title">METEOR 3D // CITY BRAIN</div>
+            <div class="header-time" id="clock">00:00:00</div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Panel -->
+            <div class="left-panel">
+                <div class="view-section active" data-view="stats">
+                <div class="panel">
+                    <div class="panel-title">城市概况</div>
+                    <div class="panel-subtitle">City Overview & Live KPIs</div>
+                    <div class="kpi-grid">
+                        <div class="kpi">
+                            <div class="kpi-value" id="kpi-population">2,450,000</div>
+                            <div class="kpi-label">总人口</div>
+                        </div>
+                        <div class="kpi">
+                            <div class="kpi-value" id="kpi-traffic">85,432</div>
+                            <div class="kpi-label">今日车流</div>
+                        </div>
+                        <div class="kpi">
+                            <div class="kpi-value" id="kpi-power">92%</div>
+                            <div class="kpi-label">能耗指数</div>
+                        </div>
+                        <div class="kpi">
+                            <div class="kpi-value" id="kpi-air" style="color: var(--accent-green);">优 (35)</div>
+                            <div class="kpi-label">空气质量</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">能耗结构</div>
+                    <div class="panel-subtitle">Energy Mix</div>
+                    <div id="chart-energy" class="chart-container"></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">态势监控</div>
+                    <div class="panel-subtitle">City Pulse & Risk Signals</div>
+                    <div class="stat-item">
+                        <span class="tag"><span class="status-dot"></span>核心区稳定</span>
+                        <span class="stat-value" id="kpi-risk">低风险</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="tag"><span class="status-dot warn"></span>道路拥堵指数</span>
+                        <span class="stat-value" id="kpi-congestion">0.42</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="tag"><span class="status-dot"></span>应急响应</span>
+                        <span class="stat-value" id="kpi-response">在线</span>
+                    </div>
+                    <div class="panel-subtitle" style="margin-top: 12px;">快速导航</div>
+                    <ul class="location-list">
+                        <li class="location-item" onclick="flyTo('center')">📍 市中心 (City Center)</li>
+                        <li class="location-item" onclick="flyTo('park')">🌳 科技园 (Tech Park)</li>
+                        <li class="location-item" onclick="flyTo('port')">⚓️ 港口区 (Harbor)</li>
+                    </ul>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">交通趋势</div>
+                    <div class="panel-subtitle">Realtime Flow</div>
+                    <div id="chart-traffic" class="chart-container tall"></div>
+                </div>
+
+                </div>
+
+                <div class="view-section" data-view="patrol">
+                    <div class="panel">
+                        <div class="panel-title">巡逻概况</div>
+                        <div class="panel-subtitle">Patrol Overview</div>
+                        <div class="stat-item">
+                            <span>在线人员</span>
+                            <span class="stat-value">128</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>巡逻车组</span>
+                            <span class="stat-value">36</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>无人机</span>
+                            <span class="stat-value">12</span>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">巡逻路线</div>
+                        <div class="panel-subtitle">Active Routes</div>
+                        <ul class="location-list">
+                            <li class="location-item">A-01 核心区环线 <span class="badge">执行中</span></li>
+                            <li class="location-item">B-07 科技园巡线 <span class="badge">执行中</span></li>
+                            <li class="location-item">C-03 港口巡检 <span class="badge">待出发</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">巡逻动态</div>
+                        <div class="panel-subtitle">Realtime Patrol Logs</div>
+                        <ul class="log-list">
+                            <li class="log-item">[巡逻] B-07 抵达关键节点 #14</li>
+                            <li class="log-item">[巡逻] A-01 上报道路拥堵</li>
+                            <li class="log-item">[无人机] U-3 电量 68%</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="view-section" data-view="security">
+                    <div class="panel">
+                        <div class="panel-title">安防告警</div>
+                        <div class="panel-subtitle">Security Alerts</div>
+                        <ul class="log-list">
+                            <li class="log-item">[门禁] 西区出入口异常刷卡</li>
+                            <li class="log-item">[视频] 重点区域识别到可疑聚集</li>
+                            <li class="log-item">[烟感] 商业区监测正常</li>
+                        </ul>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">重点区域</div>
+                        <div class="panel-subtitle">Hot Zones</div>
+                        <ul class="location-list">
+                            <li class="location-item">行政中心 <span class="badge">重点</span></li>
+                            <li class="location-item">港口物流区 <span class="badge">高频</span></li>
+                            <li class="location-item">地铁枢纽 <span class="badge">重点</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">门禁状态</div>
+                        <div class="panel-subtitle">Access Control</div>
+                        <div class="stat-item">
+                            <span>在线门禁</span>
+                            <span class="stat-value">98%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>异常告警</span>
+                            <span class="stat-value" style="color: var(--accent-orange);">3</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>安防联动</span>
+                            <span class="stat-value">正常</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel -->
+            <div class="right-panel">
+                <div class="view-section active" data-view="stats">
+                <div class="panel">
+                    <div class="panel-title">环境控制</div>
+                    <div class="panel-subtitle">Weather & Atmosphere</div>
+                    <div class="control-grid">
+                        <div class="btn" id="btn-rain" onclick="toggleEffect('rain')">🌧️ 降雨</div>
+                        <div class="btn" id="btn-snow" onclick="toggleEffect('snow')">❄️ 降雪</div>
+                        <div class="btn" id="btn-day" onclick="setMode('day')">☀️ 白天</div>
+                        <div class="btn" id="btn-night" onclick="setMode('night')">🌙 夜晚</div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">特效图层</div>
+                    <div class="panel-subtitle">VFX & Signal Layers</div>
+                    <div class="control-grid">
+                        <div class="btn" id="btn-shield" onclick="createShield()">🛡️ 能量盾</div>
+                        <div class="btn" id="btn-flow" onclick="createFlowLines()">〰️ 交通流</div>
+                        <div class="btn" id="btn-stats" onclick="toggleStats()">📊 性能监控</div>
+                        <div class="btn" id="btn-cameras" onclick="toggleCameras()">📹 区域摄像头</div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">告警动态</div>
+                    <div class="panel-subtitle">Realtime Alerts</div>
+                    <ul class="log-list" id="alert-log">
+                        <li class="log-item">[系统] 交通摄像头 #23 已接入</li>
+                        <li class="log-item">[能耗] 东区负荷提升 6%</li>
+                        <li class="log-item">[安防] 重点区域巡检正常</li>
+                    </ul>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">相机与交互</div>
+                    <div class="panel-subtitle">Camera Modes & Tools</div>
+                    <div class="control-grid">
+                        <div class="btn btn-outline" id="btn-orbit" onclick="setControlMode('orbit')">🧭 轨道模式</div>
+                        <div class="btn btn-outline" id="btn-ghost" onclick="setControlMode('ghost')">🛸 漫游模式</div>
+                        <div class="btn btn-outline btn-sm" onclick="toggleGrid()">🧩 网格</div>
+                        <div class="btn btn-outline btn-sm" onclick="toggleAxes()">🧭 坐标轴</div>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; gap: 10px;">
+                        <div class="btn btn-sm" onclick="fitView()">🎯 自动聚焦</div>
+                        <div class="btn btn-sm" onclick="toggleTriangleStats()">📐 三角统计</div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">场景诊断</div>
+                    <div class="panel-subtitle">GIS & Object Insights</div>
+                    <div class="info-row">
+                        <span>对象数量</span>
+                        <span class="info-value" id="info-objects">0</span>
+                    </div>
+                    <div class="info-row">
+                        <span>渲染三角面</span>
+                        <span class="info-value" id="info-triangles">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span>经纬度</span>
+                        <span class="info-value" id="info-lnglat">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span>世界坐标</span>
+                        <span class="info-value" id="info-worldpos">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span>选中对象</span>
+                        <span class="info-value" id="info-object">-</span>
+                    </div>
+                </div>
+                </div>
+
+                <div class="view-section" data-view="patrol">
+                    <div class="panel">
+                        <div class="panel-title">巡逻调度</div>
+                        <div class="panel-subtitle">Patrol Dispatch</div>
+                        <div class="control-grid">
+                            <div class="btn">▶️ 启动巡逻</div>
+                            <div class="btn btn-outline">⏸️ 暂停</div>
+                            <div class="btn">📌 派发任务</div>
+                            <div class="btn btn-outline">🛰️ 无人机</div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">巡逻资源</div>
+                        <div class="panel-subtitle">Resources</div>
+                        <div class="info-row">
+                            <span>在线车辆</span>
+                            <span class="info-value">42</span>
+                        </div>
+                        <div class="info-row">
+                            <span>在岗人员</span>
+                            <span class="info-value">128</span>
+                        </div>
+                        <div class="info-row">
+                            <span>无人机</span>
+                            <span class="info-value">12</span>
+                        </div>
+                        <div class="info-row">
+                            <span>任务完成率</span>
+                            <span class="info-value">94%</span>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">巡逻通讯</div>
+                        <div class="panel-subtitle">Comms Status</div>
+                        <div class="stat-item">
+                            <span>公网链路</span>
+                            <span class="stat-value" style="color: var(--accent-green);">稳定</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>专网链路</span>
+                            <span class="stat-value">99.2%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>应急频道</span>
+                            <span class="stat-value">待命</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="view-section" data-view="security">
+                    <div class="panel">
+                        <div class="panel-title">安防联动</div>
+                        <div class="panel-subtitle">Security Orchestration</div>
+                        <div class="control-grid">
+                            <div class="btn">🚨 一键报警</div>
+                            <div class="btn btn-outline">🔒 区域封控</div>
+                            <div class="btn">🧯 消防联动</div>
+                            <div class="btn btn-outline">🛰️ 应急广播</div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">视频墙</div>
+                        <div class="panel-subtitle">Camera Wall</div>
+                        <div class="control-grid">
+                            <div class="btn btn-outline">中心区</div>
+                            <div class="btn btn-outline">科技园</div>
+                            <div class="btn btn-outline">港口区</div>
+                            <div class="btn btn-outline">轨道枢纽</div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">事件处置</div>
+                        <div class="panel-subtitle">Incident Response</div>
+                        <div class="info-row">
+                            <span>处置中事件</span>
+                            <span class="info-value">6</span>
+                        </div>
+                        <div class="info-row">
+                            <span>平均响应</span>
+                            <span class="info-value">3.2 min</span>
+                        </div>
+                        <div class="info-row">
+                            <span>处置完成率</span>
+                            <span class="info-value">91%</span>
+                        </div>
+                        <div class="info-row">
+                            <span>高优先级</span>
+                            <span class="info-value" style="color: var(--accent-orange);">2</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div class="bottom-bar">
+            <div class="bottom-tabs">
+                <button class="tab-btn active" id="tab-stats" onclick="setViewMode('stats')">统计</button>
+                <button class="tab-btn" id="tab-patrol" onclick="setViewMode('patrol')">巡逻</button>
+                <button class="tab-btn" id="tab-security" onclick="setViewMode('security')">安防</button>
+            </div>
+            <div class="ticker">
+                <div class="ticker-content">
+                    [SYSTEM] 连接服务器成功... 数据同步中... 警报：无异常... 天气：晴转多云... 交通状况：畅通...
+                    [NEWS] 智慧城市项目二期工程正式启动... 新一代 AI 交通信号灯投入使用...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <script src="./dist/meteor3d-core.umd.js"></script>
+    <script>
+        // ========== 时钟逻辑 ==========
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('en-GB');
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // ========== 图表逻辑 ==========
+        let energyChart = null;
+        let trafficChart = null;
+        let trafficSeries = [62, 68, 66, 72, 70, 78, 76, 82, 80, 86, 84, 90];
+
+        function initCharts() {
+            if (!window.echarts) return;
+            const energyEl = document.getElementById('chart-energy');
+            const trafficEl = document.getElementById('chart-traffic');
+            if (!energyEl || !trafficEl) return;
+
+            energyChart = window.echarts.init(energyEl);
+            trafficChart = window.echarts.init(trafficEl);
+
+            energyChart.setOption({
+                backgroundColor: 'transparent',
+                tooltip: { trigger: 'item' },
+                series: [
+                    {
+                        type: 'pie',
+                        radius: ['55%', '75%'],
+                        avoidLabelOverlap: false,
+                        label: { color: '#e0f7ff', fontSize: 11 },
+                        labelLine: { length: 8, length2: 6 },
+                        data: [
+                            { value: 38, name: '市政设施' },
+                            { value: 26, name: '交通系统' },
+                            { value: 18, name: '产业园区' },
+                            { value: 10, name: '公共服务' },
+                            { value: 8, name: '其他' }
+                        ],
+                        itemStyle: {
+                            borderColor: 'rgba(0, 15, 30, 0.6)',
+                            borderWidth: 2
+                        }
+                    }
+                ],
+                color: ['#00f3ff', '#4d7cff', '#00ffb2', '#ffb84d', '#ff4d6d']
+            });
+
+            trafficChart.setOption({
+                backgroundColor: 'transparent',
+                grid: { left: 32, right: 14, top: 20, bottom: 24 },
+                xAxis: {
+                    type: 'category',
+                    data: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'],
+                    axisLine: { lineStyle: { color: 'rgba(0,243,255,0.4)' } },
+                    axisLabel: { color: 'rgba(224,247,255,0.8)', fontSize: 10 }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLine: { show: false },
+                    splitLine: { lineStyle: { color: 'rgba(0,243,255,0.15)' } },
+                    axisLabel: { color: 'rgba(224,247,255,0.7)', fontSize: 10 }
+                },
+                tooltip: { trigger: 'axis' },
+                series: [
+                    {
+                        type: 'line',
+                        smooth: true,
+                        data: trafficSeries,
+                        lineStyle: { color: '#00f3ff', width: 2 },
+                        areaStyle: { color: 'rgba(0,243,255,0.2)' },
+                        symbol: 'circle',
+                        symbolSize: 6,
+                        itemStyle: { color: '#00f3ff' }
+                    }
+                ]
+            });
+        }
+
+        function updateCharts() {
+            if (!trafficChart) return;
+            const nextValue = Math.max(55, Math.min(95, trafficSeries[trafficSeries.length - 1] + (Math.random() - 0.4) * 8));
+            trafficSeries = trafficSeries.slice(1).concat(Math.round(nextValue));
+            trafficChart.setOption({ series: [{ data: trafficSeries }] });
+        }
+
+        function resizeCharts() {
+            if (energyChart) energyChart.resize();
+            if (trafficChart) trafficChart.resize();
+        }
+
+        window.addEventListener('resize', resizeCharts);
+        initCharts();
+
+        // ========== 3D 场景逻辑 ==========
+        let meteorInstance = null;
+        const container = document.getElementById('canvas');
+        const ui = {
+            kpiPopulation: document.getElementById('kpi-population'),
+            kpiTraffic: document.getElementById('kpi-traffic'),
+            kpiPower: document.getElementById('kpi-power'),
+            kpiAir: document.getElementById('kpi-air'),
+            kpiRisk: document.getElementById('kpi-risk'),
+            kpiCongestion: document.getElementById('kpi-congestion'),
+            kpiResponse: document.getElementById('kpi-response'),
+            alertLog: document.getElementById('alert-log'),
+            infoObjects: document.getElementById('info-objects'),
+            infoTriangles: document.getElementById('info-triangles'),
+            infoLngLat: document.getElementById('info-lnglat'),
+            infoWorldPos: document.getElementById('info-worldpos'),
+            infoObject: document.getElementById('info-object'),
+            btnRain: document.getElementById('btn-rain'),
+            btnSnow: document.getElementById('btn-snow'),
+            btnDay: document.getElementById('btn-day'),
+            btnNight: document.getElementById('btn-night'),
+            btnStats: document.getElementById('btn-stats'),
+            btnShield: document.getElementById('btn-shield'),
+            btnFlow: document.getElementById('btn-flow'),
+            btnCameras: document.getElementById('btn-cameras'),
+            btnOrbit: document.getElementById('btn-orbit'),
+            btnGhost: document.getElementById('btn-ghost'),
+            loadingText: document.getElementById('loading-text'),
+            tabStats: document.getElementById('tab-stats'),
+            tabPatrol: document.getElementById('tab-patrol'),
+            tabSecurity: document.getElementById('tab-security')
+        };
+
+        const state = {
+            weather: { rain: false, snow: false },
+            mode: 'night',
+            statsEnabled: false,
+            triangleEnabled: false,
+            gridVisible: false,
+            axesVisible: false,
+            controlMode: 'orbit',
+            selectedUuid: null,
+            shieldId: null,
+            flowLineIds: [],
+            cameraLabelsActive: false,
+            cameraLabelIds: [],
+            clickLabelId: null,
+            viewMode: 'stats'
+        };
+
+        const kpiBase = {
+            population: 2450000,
+            traffic: 85432,
+            power: 92,
+            air: 35,
+            congestion: 0.42
+        };
+
+        // 预设视角 (Mock Data)
+        const views = {
+            center: { position: { x: 0, y: 50, z: 50 }, target: { x: 0, y: 0, z: 0 } },
+            park: { position: { x: 50, y: 30, z: 0 }, target: { x: 20, y: 0, z: 0 } },
+            port: { position: { x: -50, y: 40, z: 20 }, target: { x: -20, y: 0, z: 0 } }
+        };
+
+        const cameraPoints = [
+            { id: 'CAM-01', name: '市中心广场', status: '在线', position: { x: 10, y: 8, z: -5 } },
+            { id: 'CAM-02', name: '科技园北门', status: '在线', position: { x: 45, y: 6, z: 12 } },
+            { id: 'CAM-03', name: '港口物流区', status: '离线', position: { x: -40, y: 8, z: 30 } },
+            { id: 'CAM-04', name: '高架路段', status: '在线', position: { x: -15, y: 10, z: -35 } },
+            { id: 'CAM-05', name: '地铁枢纽', status: '在线', position: { x: 28, y: 7, z: -18 } }
+        ];
+
+        console.log('🚀 初始化系统...');
+
+        Meteor3D.loadScene({
+            sceneId: '8c56a55f-9211-49e8-8442-835b50c7f67e',
+            serverUrl: 'http://localhost:3001',
+            container: container,
+            config: {
+                dracoPath: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/'
+            }
+        }).then(instance => {
+            console.log('✅ 场景加载完成');
+            meteorInstance = instance;
+            window.meteor3d = instance; // 方便调试
+
+            // 隐藏 Loading
+            document.getElementById('loading-screen').style.opacity = 0;
+            setTimeout(() => {
+                document.getElementById('loading-screen').style.display = 'none';
+            }, 500);
+
+            setMode('night');
+            setControlMode('orbit');
+            refreshObjectCount();
+
+            meteorInstance.on('scene-click', handleSceneClick);
+
+        }).catch(err => {
+            console.error('❌ 系统启动失败', err);
+            if (ui.loadingText) {
+                ui.loadingText.innerText = 'SYSTEM ERROR: CONNECTION FAILED';
+                ui.loadingText.style.color = 'red';
+            }
+        });
+
+        // ========== 交互功能 ==========
+        function setButtonActive(element, active) {
+            if (!element) return;
+            if (active) {
+                element.classList.add('active');
+            } else {
+                element.classList.remove('active');
+            }
+        }
+
+        function formatNumber(value) {
+            return value.toLocaleString('en-US');
+        }
+
+        function formatCoord(value) {
+            if (value === null || value === undefined) return '-';
+            return Number(value).toFixed(4);
+        }
+
+        function updateKPIs() {
+            kpiBase.traffic = Math.max(60000, kpiBase.traffic + Math.round((Math.random() - 0.45) * 800));
+            kpiBase.power = Math.min(99, Math.max(65, kpiBase.power + (Math.random() - 0.5) * 1.5));
+            kpiBase.air = Math.min(80, Math.max(15, kpiBase.air + (Math.random() - 0.5) * 2));
+            kpiBase.congestion = Math.min(0.95, Math.max(0.12, kpiBase.congestion + (Math.random() - 0.5) * 0.06));
+
+            ui.kpiPopulation.innerText = formatNumber(kpiBase.population);
+            ui.kpiTraffic.innerText = formatNumber(kpiBase.traffic);
+            ui.kpiPower.innerText = `${kpiBase.power.toFixed(0)}%`;
+            ui.kpiAir.innerText = `优 (${kpiBase.air.toFixed(0)})`;
+            ui.kpiCongestion.innerText = kpiBase.congestion.toFixed(2);
+
+            if (kpiBase.congestion > 0.7) {
+                ui.kpiRisk.innerText = '中风险';
+                ui.kpiRisk.style.color = 'var(--accent-orange)';
+            } else {
+                ui.kpiRisk.innerText = '低风险';
+                ui.kpiRisk.style.color = 'var(--accent-green)';
+            }
+        }
+
+        function refreshObjectCount() {
+            if (!meteorInstance || !meteorInstance._internal) return;
+            const sceneManager = meteorInstance._internal.sceneManager;
+            if (sceneManager && Array.isArray(sceneManager.objects)) {
+                ui.infoObjects.innerText = sceneManager.objects.length;
+            }
+        }
+
+        function setViewMode(mode) {
+            state.viewMode = mode;
+            const sections = document.querySelectorAll('.view-section');
+            sections.forEach((section) => {
+                const view = section.getAttribute('data-view');
+                section.classList.toggle('active', view === mode);
+            });
+
+            if (ui.tabStats) ui.tabStats.classList.toggle('active', mode === 'stats');
+            if (ui.tabPatrol) ui.tabPatrol.classList.toggle('active', mode === 'patrol');
+            if (ui.tabSecurity) ui.tabSecurity.classList.toggle('active', mode === 'security');
+
+            if (mode === 'stats') {
+                resizeCharts();
+            }
+        }
+
+        setViewMode('stats');
+
+        function removeLabelById(labelId) {
+            if (!labelId || !meteorInstance?._internal?.sceneManager?.labelManager) return;
+            meteorInstance._internal.sceneManager.labelManager.removeLabel(labelId);
+        }
+
+        // 1. 飞行跳转
+        function flyTo(location) {
+            if (!meteorInstance) return;
+            const view = views[location];
+            if (view) {
+                console.log(`✈️ 飞向: ${location}`);
+                meteorInstance.setView({
+                    position: view.position,
+                    target: view.target,
+                    duration: 2000
+                });
+            } else {
+                // 如果没有预设，就随机飞一下演示
+                meteorInstance.setView({
+                    position: { x: (Math.random() - 0.5) * 100, y: 50, z: (Math.random() - 0.5) * 100 },
+                    target: { x: 0, y: 0, z: 0 },
+                    duration: 2000
+                });
+            }
+        }
+
+        // 2. 能量盾特效
+        function createShield() {
+            if (!meteorInstance) return;
+            if (state.shieldId) {
+                meteorInstance.removeEffect(state.shieldId);
+                state.shieldId = null;
+                setButtonActive(ui.btnShield, false);
+                return;
+            }
+            const effect = meteorInstance.createEffect('shield', {
+                position: { x: 0, y: 5, z: 0 },
+                scale: 10,
+                color: '#00f3ff'
+            });
+            state.shieldId = effect?.id || null;
+            setButtonActive(ui.btnShield, !!state.shieldId);
+            console.log('🛡️ 能量盾已部署');
+        }
+
+        // 3. 交通流特效
+        function createFlowLines() {
+            if (!meteorInstance) return;
+            if (state.flowLineIds.length > 0) {
+                state.flowLineIds.forEach(id => meteorInstance.removeLine(id));
+                state.flowLineIds = [];
+                setButtonActive(ui.btnFlow, false);
+                return;
+            }
+
+            // 创建几条随机路线
+            const routes = [
+                [
+                    { x: -50, y: 2, z: 50 },
+                    { x: 0, y: 2, z: 0 },
+                    { x: 50, y: 2, z: -50 }
+                ],
+                [
+                    { x: 50, y: 2, z: 50 },
+                    { x: 0, y: 2, z: 0 },
+                    { x: -50, y: 2, z: -50 }
+                ]
+            ];
+
+            routes.forEach((points) => {
+                const lineId = meteorInstance.createLine({
+                    points: points,
+                    textureUrl: 'http://localhost:3003/assets/jiantou2.png',
+                    width: 2.0,
+                    radius: 5.0,
+                    speed: 1.5 + Math.random(),
+                    repeat: 20,
+                    breathStart: 0.3,
+                    breathEnd: 1.0,
+                    breathFrequency: 2.0
+                });
+                if (lineId) state.flowLineIds.push(lineId);
+            });
+            setButtonActive(ui.btnFlow, state.flowLineIds.length > 0);
+            console.log('〰️ 交通流监测已开启');
+        }
+
+        // 4. 环境控制
+        function toggleEffect(type) {
+            if (!meteorInstance) return;
+
+            if (type === 'rain') {
+                state.weather.rain = !state.weather.rain;
+                meteorInstance.setRain(state.weather.rain, {
+                    count: 12000,
+                    speed: 2.5
+                });
+                setButtonActive(ui.btnRain, state.weather.rain);
+            }
+
+            if (type === 'snow') {
+                state.weather.snow = !state.weather.snow;
+                meteorInstance.setSnow(state.weather.snow, {
+                    count: 10000,
+                    size: 1.1,
+                    speed: 1.2,
+                    opacity: 0.8,
+                    color: '#eaf7ff'
+                });
+                setButtonActive(ui.btnSnow, state.weather.snow);
+            }
+        }
+
+        function setMode(mode) {
+            state.mode = mode;
+            document.body.classList.toggle('theme-day', mode === 'day');
+            setButtonActive(ui.btnDay, mode === 'day');
+            setButtonActive(ui.btnNight, mode === 'night');
+
+            if (meteorInstance && meteorInstance._internal) {
+                const renderer = meteorInstance._internal.renderer;
+                if (renderer) {
+                    renderer.toneMappingExposure = mode === 'day' ? 1.1 : 0.7;
+                }
+            }
+        }
+
+        // 5. 性能监控
+        function toggleStats() {
+            if (!meteorInstance) return;
+            state.statsEnabled = !state.statsEnabled;
+            if (state.statsEnabled) {
+                meteorInstance.enableStats();
+            } else {
+                meteorInstance.disableStats();
+            }
+            setButtonActive(ui.btnStats, state.statsEnabled);
+        }
+
+        // 6. 相机控制
+        function setControlMode(mode) {
+            if (!meteorInstance) return;
+            state.controlMode = mode;
+            meteorInstance.setControlMode(mode, mode === 'ghost' ? { pointerLock: false } : {});
+            setButtonActive(ui.btnOrbit, mode === 'orbit');
+            setButtonActive(ui.btnGhost, mode === 'ghost');
+        }
+
+        function fitView() {
+            if (!meteorInstance) return;
+            meteorInstance.fitCameraToScene();
+        }
+
+        function toggleGrid() {
+            if (!meteorInstance) return;
+            state.gridVisible = !state.gridVisible;
+            const size = meteorInstance._internal?.sceneManager?.gisConfig?.size || 300;
+            meteorInstance.setGridHelper(state.gridVisible, size, size);
+        }
+
+        function toggleAxes() {
+            if (!meteorInstance) return;
+            state.axesVisible = !state.axesVisible;
+            meteorInstance.setAxesHelper(state.axesVisible, 20);
+        }
+
+        function toggleTriangleStats() {
+            if (!meteorInstance) return;
+            state.triangleEnabled = !state.triangleEnabled;
+            if (state.triangleEnabled) {
+                meteorInstance.toggleTriangleStats(true, (stats) => {
+                    ui.infoTriangles.innerText = `${formatNumber(stats.rendered)} / ${formatNumber(stats.total)}`;
+                }, 200);
+            } else {
+                meteorInstance.toggleTriangleStats(false);
+                ui.infoTriangles.innerText = '-';
+            }
+        }
+
+        function handleSceneClick(data) {
+            if (!data) return;
+            if (data.lngLat) {
+                ui.infoLngLat.innerText = `${formatCoord(data.lngLat.lng)}, ${formatCoord(data.lngLat.lat)}`;
+            }
+            if (data.worldPosition) {
+                ui.infoWorldPos.innerText = `${formatCoord(data.worldPosition.x)}, ${formatCoord(data.worldPosition.y)}, ${formatCoord(data.worldPosition.z)}`;
+            }
+
+            if (meteorInstance && data.object) {
+                meteorInstance.disableHighlight();
+                meteorInstance.disableOutline();
+                meteorInstance.enableHighlight(data.object.uuid, { color: 0x00ffff, intensity: 0.6 });
+                meteorInstance.enableOutline(data.object.uuid, { color: 0x00ffff, thickness: 1, strength: 3 });
+                const name = data.object.name || data.object.userData?.modelType || 'Object';
+                ui.infoObject.innerText = `${name} (${data.object.uuid.slice(0, 8)})`;
+                state.selectedUuid = data.object.uuid;
+            } else {
+                ui.infoObject.innerText = '-';
+            }
+
+            if (meteorInstance && data.worldPosition) {
+                removeLabelById(state.clickLabelId);
+                const labelId = meteorInstance.createLabel({
+                    position: data.worldPosition,
+                    content: `<div>事件点位<br/>${new Date().toLocaleTimeString('en-GB')}</div>`,
+                    style: {
+                        padding: '6px 10px',
+                        background: 'rgba(0, 20, 40, 0.8)',
+                        border: '1px solid rgba(0, 243, 255, 0.4)',
+                        color: '#e0f7ff',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        boxShadow: '0 0 12px rgba(0, 243, 255, 0.3)'
+                    },
+                    offset: { x: 0, y: -20 }
+                });
+                state.clickLabelId = labelId;
+            }
+        }
+
+        function toggleCameras() {
+            if (!meteorInstance) return;
+            state.cameraLabelsActive = !state.cameraLabelsActive;
+            setButtonActive(ui.btnCameras, state.cameraLabelsActive);
+
+            if (!state.cameraLabelsActive) {
+                state.cameraLabelIds.forEach(removeLabelById);
+                state.cameraLabelIds = [];
+                return;
+            }
+
+            state.cameraLabelIds = cameraPoints.map((camera) => {
+                const isOnline = camera.status === '在线';
+                return meteorInstance.createLabel({
+                    position: camera.position,
+                    content: `
+                        <div style="min-width: 140px;">
+                            <div style="font-weight: 700; color: ${isOnline ? '#00ffb2' : '#ff4d6d'};">
+                                ${camera.id} · ${isOnline ? '在线' : '离线'}
+                            </div>
+                            <div style="margin-top: 4px;">${camera.name}</div>
+                            <div style="margin-top: 4px; font-size: 11px; opacity: 0.8;">
+                                码流: 2.5Mbps · 延迟: ${isOnline ? '35ms' : '--'}
+                            </div>
+                        </div>
+                    `,
+                    style: {
+                        padding: '8px 10px',
+                        background: 'rgba(0, 15, 30, 0.85)',
+                        border: `1px solid ${isOnline ? 'rgba(0, 255, 178, 0.5)' : 'rgba(255, 77, 109, 0.5)'}`,
+                        color: '#e0f7ff',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        boxShadow: `0 0 12px ${isOnline ? 'rgba(0, 255, 178, 0.35)' : 'rgba(255, 77, 109, 0.35)'}`
+                    },
+                    offset: { x: 0, y: -26 }
+                });
+            }).filter(Boolean);
+        }
+
+        function pushAlert(message) {
+            if (!ui.alertLog) return;
+            const item = document.createElement('li');
+            item.className = 'log-item';
+            item.textContent = message;
+            ui.alertLog.prepend(item);
+            while (ui.alertLog.children.length > 4) {
+                ui.alertLog.removeChild(ui.alertLog.lastChild);
+            }
+        }
+
+        setInterval(() => {
+            updateKPIs();
+            refreshObjectCount();
+            updateCharts();
+        }, 2000);
+
+        setInterval(() => {
+            const alerts = [
+                '[交通] 主干道流量提升 8%',
+                '[安防] 巡检队列已更新',
+                '[能耗] 核心区负荷下降 3%',
+                '[市政] 路灯能耗优化完成',
+                '[应急] 预案演练已完成'
+            ];
+            const message = alerts[Math.floor(Math.random() * alerts.length)];
+            pushAlert(message);
+        }, 6000);
+
+        updateKPIs();
+    </script>
+</body>
+
+</html>

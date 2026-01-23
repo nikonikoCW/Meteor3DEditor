@@ -27,6 +27,7 @@ jobs:
           rm -rf packages/docs
           rm -rf packages/core-webgpu
           rm -rf packages/scene-editor-webgpu
+          rm -rf packages/core/dashboard.html
           
           # 删除所有 .md 文件 (但保留根目录 README.md)
           find . -name "*.md" -type f ! -name "README.md" -delete
