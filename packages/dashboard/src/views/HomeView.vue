@@ -76,7 +76,7 @@
         <div class="product-card" @click="navigateTo('app-editor')">
           <div class="card-glow"></div>
           <div class="product-icon">📊</div>
-          <h3 class="product-title">应用编辑器</h3>
+          <h3 class="product-title">大屏应用编辑器</h3>
           <p class="product-desc">
             大屏可视化项目开发，拖拽式页面搭建，数据绑定与场景组件嵌入
           </p>
