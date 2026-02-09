@@ -9,7 +9,7 @@
         <span class="readonly-val">{{ selectedObject.material.type }}</span>
       </div>
 
-      <div class="prop-row">
+      <div class="prop-row" v-if="selectedObject.material.color">
         <label>颜色</label>
         <input type="color" :value="'#' + selectedObject.material.color.getHexString()" @change="updateColor">
       </div>
@@ -20,7 +20,7 @@
       </div>
     </div>
 
-    <div class="section">
+    <div class="section" v-if="selectedObject.material.roughness !== undefined || selectedObject.material.metalness !== undefined">
       <h4>PBR 属性</h4>
       <div class="prop-row" v-if="selectedObject.material.roughness !== undefined">
         <label>粗糙度</label>
@@ -32,7 +32,7 @@
       </div>
     </div>
 
-    <div class="section">
+    <div class="section" v-if="selectedObject.material.emissive !== undefined || selectedObject.material.emissiveIntensity !== undefined">
       <h4>自发光</h4>
       <div class="prop-row" v-if="selectedObject.material.emissive !== undefined">
         <label>颜色</label>
@@ -96,6 +96,16 @@
       <div class="prop-row">
         <label>顶点颜色</label>
         <input type="checkbox" v-model="selectedObject.material.vertexColors" @change="onShaderAffectingChange">
+      </div>
+
+      <div class="prop-row" v-if="selectedObject.material.wireframe !== undefined">
+        <label>线框</label>
+        <input type="checkbox" v-model="selectedObject.material.wireframe" @change="onMaterialChange">
+      </div>
+
+      <div class="prop-row" v-if="selectedObject.material.flatShading !== undefined">
+        <label>平面着色</label>
+        <input type="checkbox" v-model="selectedObject.material.flatShading" @change="onShaderAffectingChange">
       </div>
     </div>
   </div>

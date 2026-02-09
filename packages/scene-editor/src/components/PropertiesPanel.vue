@@ -7,7 +7,7 @@
       <h4>常规 (General)</h4>
       <div class="prop-row">
         <label>名称</label>
-        <input type="text" v-model="selectedObject.name" @change="onGeneralChange">
+        <input type="text" :value="localName" @input="onNameInput">
       </div>
       <div class="prop-row">
         <label>ID</label>
@@ -114,6 +114,24 @@ const { selectedObject } = storeToRefs(editorStore);
 
 // 强制更新 key（用于触发 Vue 重新读取 Three.js 对象属性）
 const forceUpdateKey = ref(0);
+
+// Local reactive ref for object name (markRaw 对象属性无法被 Vue 追踪，需要本地 ref 中转)
+const localName = ref('');
+
+// Sync local name when selected object changes
+watch(selectedObject, (obj) => {
+  localName.value = obj?.name || '';
+}, { immediate: true });
+
+// Handle name input — 实时同步到 Three.js 对象并通知场景树
+const onNameInput = (event) => {
+  const val = event.target.value;
+  localName.value = val;
+  if (selectedObject.value) {
+    selectedObject.value.name = val;
+    editorStore.notifyTreeUpdate();
+  }
+};
 
 // Geographic coordinate refs
 const geoLng = ref(null);
@@ -223,21 +241,11 @@ const onTransformChange = (type) => {
   }
 };
 
-const onGeneralChange = () => {
-    // Name change doesn't need specific flag if we save the whole object structure,
-    // but for GLTF children, we rely on path which uses name. 
-    // Changing name of a GLTF child might BREAK the path if not handled carefully.
-    // For now, let's assume renaming is mostly for root objects or simple meshes.
-    // If it's a GLTF child, we might need to be careful.
-    // But persistence uses the CURRENT name to generate path.
-    // Wait, if I change name, getObjectPath will generate a NEW path.
-    // The old modifications keyed by OLD path will be orphaned.
-    // This is a known limitation. For now, let's allow it.
-};
-
 const onVisibleChange = () => {
     if (!selectedObject.value) return;
     selectedObject.value.userData.visibleModified = true;
+    // 通知场景树刷新
+    editorStore.notifyTreeUpdate();
 };
 </script>
 

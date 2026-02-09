@@ -4,7 +4,7 @@
     <div class="tree-list">
       <TreeNode 
         v-for="obj in sceneObjects" 
-        :key="obj.uuid"
+        :key="obj.uuid + '-' + treeVersion"
         :node="obj"
         :level="0"
         :selectedObject="selectedObject"
@@ -25,8 +25,7 @@ import { storeToRefs } from 'pinia';
 import TreeNode from './TreeNode.vue';
 
 const editorStore = useEditorStore();
-const { sceneObjects, selectedObject } = storeToRefs(editorStore);
-console.log(sceneObjects);
+const { sceneObjects, selectedObject, treeVersion } = storeToRefs(editorStore);
 
 
 const selectObject = (obj) => {

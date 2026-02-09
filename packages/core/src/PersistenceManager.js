@@ -146,7 +146,9 @@ export class PersistenceManager {
                     transparent: object.material?.transparent,
                     depthTest: object.material?.depthTest,
                     depthWrite: object.material?.depthWrite,
-                    vertexColors: object.material?.vertexColors
+                    vertexColors: object.material?.vertexColors,
+                    wireframe: object.material?.wireframe,
+                    flatShading: object.material?.flatShading
                 }
             };
         }
@@ -198,7 +200,9 @@ export class PersistenceManager {
                             transparent: child.material.transparent,
                             depthTest: child.material.depthTest,
                             depthWrite: child.material.depthWrite,
-                            vertexColors: child.material.vertexColors
+                            vertexColors: child.material.vertexColors,
+                            wireframe: child.material.wireframe,
+                            flatShading: child.material.flatShading
                         };
                     }
                 }
@@ -282,7 +286,9 @@ export class PersistenceManager {
                 transparent: data.material.transparent ?? false,
                 depthTest: data.material.depthTest ?? true,
                 depthWrite: data.material.depthWrite ?? true,
-                vertexColors: data.material.vertexColors ?? false
+                vertexColors: data.material.vertexColors ?? false,
+                wireframe: data.material.wireframe ?? false,
+                flatShading: data.material.flatShading ?? false
             });
             const mesh = new THREE.Mesh(geometry, material);
             mesh.uuid = data.id;
@@ -472,6 +478,8 @@ export class PersistenceManager {
                     if (mods.material.depthTest !== undefined) child.material.depthTest = mods.material.depthTest;
                     if (mods.material.depthWrite !== undefined) child.material.depthWrite = mods.material.depthWrite;
                     if (mods.material.vertexColors !== undefined) child.material.vertexColors = mods.material.vertexColors;
+                    if (mods.material.wireframe !== undefined) child.material.wireframe = mods.material.wireframe;
+                    if (mods.material.flatShading !== undefined) child.material.flatShading = mods.material.flatShading;
 
                     child.material.needsUpdate = true;
                     child.userData.materialModified = true;
