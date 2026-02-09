@@ -59,7 +59,7 @@
 
       <div class="prop-row">
         <label>渲染面</label>
-        <select v-model.number="selectedObject.material.side" @change="onMaterialChange">
+        <select v-model.number="selectedObject.material.side" @change="onShaderAffectingChange">
             <option :value="THREE.FrontSide">Front</option>
             <option :value="THREE.BackSide">Back</option>
             <option :value="THREE.DoubleSide">Double</option>
@@ -68,7 +68,19 @@
 
       <div class="prop-row">
         <label>透明</label>
-        <input type="checkbox" v-model="selectedObject.material.transparent" @change="onMaterialChange">
+        <input type="checkbox" v-model="selectedObject.material.transparent" @change="onShaderAffectingChange">
+      </div>
+
+      <div class="prop-row" v-if="selectedObject.material.opacity !== undefined">
+        <label>不透明度</label>
+        <input type="range" min="0" max="1" step="0.01" :value="opacityVal" @input="onOpacityInput">
+        <span class="range-val">{{ opacityVal.toFixed(2) }}</span>
+      </div>
+
+      <div class="prop-row" v-if="selectedObject.material.alphaTest !== undefined">
+        <label>Alpha裁切</label>
+        <input type="range" min="0" max="1" step="0.01" :value="alphaTestVal" @input="onAlphaTestInput">
+        <span class="range-val">{{ alphaTestVal.toFixed(2) }}</span>
       </div>
 
       <div class="prop-row">
@@ -83,7 +95,7 @@
 
       <div class="prop-row">
         <label>顶点颜色</label>
-        <input type="checkbox" v-model="selectedObject.material.vertexColors" @change="onMaterialChange">
+        <input type="checkbox" v-model="selectedObject.material.vertexColors" @change="onShaderAffectingChange">
       </div>
     </div>
   </div>
@@ -95,10 +107,43 @@
 <script setup>
 import { useEditorStore } from '../stores/editorStore';
 import { storeToRefs } from 'pinia';
+import { ref, watch } from 'vue';
 import * as THREE from 'three';
 
 const editorStore = useEditorStore();
 const { selectedObject } = storeToRefs(editorStore);
+
+// Local reactive refs for range sliders (needed because Three.js objects are markRaw)
+const opacityVal = ref(1);
+const alphaTestVal = ref(0);
+
+// Sync local refs when selected object changes
+watch(selectedObject, (obj) => {
+  if (obj && obj.material) {
+    opacityVal.value = obj.material.opacity ?? 1;
+    alphaTestVal.value = obj.material.alphaTest ?? 0;
+  }
+}, { immediate: true });
+
+// Handle opacity slider input
+const onOpacityInput = (event) => {
+  const val = parseFloat(event.target.value);
+  opacityVal.value = val;
+  if (selectedObject.value?.material) {
+    selectedObject.value.material.opacity = val;
+    onMaterialChange();
+  }
+};
+
+// Handle alphaTest slider input
+const onAlphaTestInput = (event) => {
+  const val = parseFloat(event.target.value);
+  alphaTestVal.value = val;
+  if (selectedObject.value?.material) {
+    selectedObject.value.material.alphaTest = val;
+    onShaderAffectingChange();
+  }
+};
 
 // Handle color updates
 const updateColor = (event) => {
@@ -116,12 +161,20 @@ const updateEmissive = (event) => {
   onMaterialChange();
 };
 
-// Handle material changes
+// Handle material changes that do NOT require shader recompilation
+// (e.g. color, roughness, metalness, opacity, emissiveIntensity, blending, depthTest, depthWrite)
 const onMaterialChange = () => {
   if (!selectedObject.value) return;
   selectedObject.value.userData.materialModified = true;
+};
+
+// Handle material changes that DO require shader recompilation
+// (e.g. transparent, side, vertexColors, alphaTest changing from/to 0)
+const onShaderAffectingChange = () => {
+  if (!selectedObject.value) return;
+  selectedObject.value.userData.materialModified = true;
   if (selectedObject.value.material) {
-      selectedObject.value.material.needsUpdate = true;
+    selectedObject.value.material.needsUpdate = true;
   }
 };
 </script>
@@ -171,12 +224,14 @@ h4 {
 
 label {
   width: 70px;
+  min-width: 70px;
   font-size: 12px;
   color: #aaa;
 }
 
 input {
   flex: 1;
+  min-width: 0;
   background: #333;
   border: 1px solid #444;
   color: white;
@@ -200,6 +255,30 @@ input[type="checkbox"] {
   flex: none;
   width: 16px;
   height: 16px;
+}
+
+input[type="range"] {
+  -webkit-appearance: auto;
+  appearance: auto;
+  background: transparent;
+  border: none;
+  padding: 0;
+  height: 20px;
+  cursor: pointer;
+}
+
+input[type="range"]:focus {
+  border: none;
+  outline: none;
+}
+
+.range-val {
+  min-width: 36px;
+  text-align: right;
+  font-size: 11px;
+  color: #aaa;
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
 }
 
 select {

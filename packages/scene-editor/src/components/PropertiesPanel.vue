@@ -106,7 +106,6 @@
 <script setup>
 import { useEditorStore } from '../stores/editorStore';
 import { storeToRefs } from 'pinia';
-import * as THREE from 'three';
 import { TransformCommand } from '../core/CommandFactory';
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
 
@@ -239,32 +238,6 @@ const onGeneralChange = () => {
 const onVisibleChange = () => {
     if (!selectedObject.value) return;
     selectedObject.value.userData.visibleModified = true;
-};
-
-// Handle color updates
-const updateColor = (event) => {
-  if (!selectedObject.value || !selectedObject.value.material) return;
-  
-  selectedObject.value.material.color.set(event.target.value);
-  onMaterialChange();
-};
-
-// Handle material changes
-const onMaterialChange = () => {
-  if (!selectedObject.value) return;
-  selectedObject.value.userData.materialModified = true;
-  // Material needs update to reflect some changes like transparent/side
-  if (selectedObject.value.material) {
-      selectedObject.value.material.needsUpdate = true;
-  }
-};
-
-// Handle emissive color updates
-const updateEmissive = (event) => {
-  if (!selectedObject.value || !selectedObject.value.material) return;
-  
-  selectedObject.value.material.emissive.set(event.target.value);
-  onMaterialChange();
 };
 </script>
 

@@ -137,6 +137,10 @@ export class PersistenceManager {
                     color: object.material?.color?.getHex(),
                     roughness: object.material?.roughness,
                     metalness: object.material?.metalness,
+                    emissive: object.material?.emissive?.getHex(),
+                    emissiveIntensity: object.material?.emissiveIntensity,
+                    opacity: object.material?.opacity,
+                    alphaTest: object.material?.alphaTest,
                     blending: object.material?.blending,
                     side: object.material?.side,
                     transparent: object.material?.transparent,
@@ -185,6 +189,10 @@ export class PersistenceManager {
                             color: child.material.color?.getHex(),
                             roughness: child.material.roughness,
                             metalness: child.material.metalness,
+                            emissive: child.material.emissive?.getHex(),
+                            emissiveIntensity: child.material.emissiveIntensity,
+                            opacity: child.material.opacity,
+                            alphaTest: child.material.alphaTest,
                             blending: child.material.blending,
                             side: child.material.side,
                             transparent: child.material.transparent,
@@ -265,6 +273,10 @@ export class PersistenceManager {
                 color: data.material.color || 0xffffff,
                 roughness: data.material.roughness ?? 0.5,
                 metalness: data.material.metalness ?? 0.5,
+                emissive: data.material.emissive ?? 0x000000,
+                emissiveIntensity: data.material.emissiveIntensity ?? 1,
+                opacity: data.material.opacity ?? 1,
+                alphaTest: data.material.alphaTest ?? 0,
                 blending: data.material.blending ?? THREE.NormalBlending,
                 side: data.material.side ?? THREE.FrontSide,
                 transparent: data.material.transparent ?? false,
@@ -449,6 +461,10 @@ export class PersistenceManager {
                     if (mods.material.color !== undefined) child.material.color.setHex(mods.material.color);
                     if (mods.material.roughness !== undefined) child.material.roughness = mods.material.roughness;
                     if (mods.material.metalness !== undefined) child.material.metalness = mods.material.metalness;
+                    if (mods.material.emissive !== undefined && child.material.emissive) child.material.emissive.setHex(mods.material.emissive);
+                    if (mods.material.emissiveIntensity !== undefined) child.material.emissiveIntensity = mods.material.emissiveIntensity;
+                    if (mods.material.opacity !== undefined) child.material.opacity = mods.material.opacity;
+                    if (mods.material.alphaTest !== undefined) child.material.alphaTest = mods.material.alphaTest;
 
                     if (mods.material.blending !== undefined) child.material.blending = mods.material.blending;
                     if (mods.material.side !== undefined) child.material.side = mods.material.side;
@@ -457,6 +473,7 @@ export class PersistenceManager {
                     if (mods.material.depthWrite !== undefined) child.material.depthWrite = mods.material.depthWrite;
                     if (mods.material.vertexColors !== undefined) child.material.vertexColors = mods.material.vertexColors;
 
+                    child.material.needsUpdate = true;
                     child.userData.materialModified = true;
                 }
             }
