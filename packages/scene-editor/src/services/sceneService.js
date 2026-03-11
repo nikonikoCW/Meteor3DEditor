@@ -80,3 +80,25 @@ export async function deleteScene(sceneId) {
         throw error;
     }
 }
+
+/**
+ * 获取单个场景详细信息
+ * @param {string} sceneId - 场景 ID
+ * @returns {Promise<Object>}
+ */
+export async function getSceneData(sceneId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/scene/load?sceneId=${sceneId}`);
+        const data = await response.json();
+
+        if (data.success) {
+            // 返回包含 metadata 的基础信息供展示使用
+            return data.metadata || { name: '未命名场景' };
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error(`获取场景信息失败 [${sceneId}]:`, error);
+        throw error;
+    }
+}

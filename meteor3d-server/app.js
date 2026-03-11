@@ -6,6 +6,7 @@ const connectDB = require('./src/config/db');
 const sceneRoutes = require('./src/routes/sceneRoutes');
 const assetRoutes = require('./src/routes/assetRoutes');
 const appRoutes = require('./src/routes/appRoutes');
+const chatRoutes = require('./src/routes/chatRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -28,6 +29,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/scene', sceneRoutes);
 app.use('/api/assets', assetRoutes);
 app.use('/api/app', appRoutes);
+app.use('/api/chat', chatRoutes);
 
 // 根路由
 app.get('/', (req, res) => {

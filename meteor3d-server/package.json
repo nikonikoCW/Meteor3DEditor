@@ -16,6 +16,7 @@
     "@gltf-transform/core": "^4.2.1",
     "@gltf-transform/extensions": "^4.2.1",
     "@gltf-transform/functions": "^4.2.1",
+    "@google/generative-ai": "^0.24.1",
     "adm-zip": "^0.5.16",
     "axios": "^1.13.2",
     "body-parser": "^2.2.1",
