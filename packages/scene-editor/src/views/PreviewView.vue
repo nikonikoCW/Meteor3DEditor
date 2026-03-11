@@ -16,6 +16,10 @@
           <div v-if="msg.role === 'system'" class="message-content" v-html="msg.text"></div>
           <div v-else-if="msg.role === 'user'" class="message-content">{{ msg.text }}</div>
           <div v-else-if="msg.role === 'assistant'" class="message-content" v-html="msg.text"></div>
+          <div v-else-if="msg.role === 'tool'" class="message-tool">
+            <span class="tool-icon">⚙️</span>
+            执行空间指令: <strong>{{ msg.functionName }}</strong>
+          </div>
         </div>
         
         <div v-if="isTyping" class="message assistant typing">
@@ -107,6 +111,85 @@ onBeforeUnmount(() => {
   }
 });
 
+// 处理大模型空间 API 交互
+const processToolCall = (functionName, args) => {
+  if (!meteorInstance) return;
+  console.log('====== AI工具调用 ======', functionName, args);
+
+  // 辅助函数：根据名称寻找场景内的物体的 UUID
+  const findObjectUuidByName = (targetName) => {
+    const objects = meteorInstance._internal?.sceneManager?.objects || [];
+    const targetObj = objects.find(o => o.name && o.name.toLowerCase().includes(targetName.toLowerCase()));
+    return targetObj ? targetObj.uuid : null;
+  };
+
+  switch (functionName) {
+    case 'control_weather':
+      if (args.type === 'snow') {
+        meteorInstance.setSnow(args.enabled, { count: args.intensity || 10000 });
+        meteorInstance.setRain(false);
+      } else if (args.type === 'rain') {
+        meteorInstance.setRain(args.enabled, { count: args.intensity || 10000 });
+        meteorInstance.setSnow(false);
+      } else {
+        meteorInstance.setSnow(false);
+        meteorInstance.setRain(false);
+      }
+      break;
+
+    case 'highlight_asset':
+    case 'outline_asset':
+      const highlightUuid = findObjectUuidByName(args.target);
+      if (highlightUuid) {
+        if (functionName === 'highlight_asset') {
+          if (args.enabled) meteorInstance.enableHighlight(highlightUuid, { color: 0x00ff00, intensity: 1.0 });
+          else meteorInstance.disableHighlight(highlightUuid);
+        } else {
+          if (args.enabled) meteorInstance.enableOutline(highlightUuid, { color: 0xffff00, thickness: 2 });
+          else meteorInstance.disableOutline(highlightUuid);
+        }
+        
+        // 可选：几秒后自动关闭，避免视觉残留
+        if (args.enabled) {
+          setTimeout(() => {
+             meteorInstance.disableHighlight(highlightUuid);
+             meteorInstance.disableOutline(highlightUuid);
+          }, 5000);
+        }
+      } else {
+        console.warn(`未找到目标物体: ${args.target}`);
+      }
+      break;
+
+    case 'control_camera':
+       if (args.target === 'overview') {
+          meteorInstance.fitCameraToScene();
+       } else {
+          const focusUuid = findObjectUuidByName(args.target);
+          if (focusUuid) {
+            // 通过获取该对象的位置来移动相机
+            const objects = meteorInstance._internal?.sceneManager?.objects || [];
+            const targetObj = objects.find(o => o.uuid === focusUuid);
+            if(targetObj) {
+              meteorInstance.setView({ target: targetObj.position });
+            }
+          }
+       }
+       break;
+
+    case 'toggle_performance_stats':
+       if (args.enabled) {
+         meteorInstance.enableStats();
+       } else {
+         meteorInstance.disableStats();
+       }
+       break;
+
+    default:
+       console.warn('暂不支持的指令:', functionName);
+  }
+};
+
 const sendMessage = async () => {
   if (!userInput.value.trim() || isTyping.value) return;
 
@@ -154,6 +237,13 @@ const sendMessage = async () => {
             } else {
               messages.value[assistantMessageIndex].text += parsed.chunk;
             }
+          } else if (parsed.type === 'tool_call') {
+            messages.value.push({ 
+              role: 'tool', 
+              functionName: parsed.functionName,
+              args: parsed.args 
+            });
+            processToolCall(parsed.functionName, parsed.args);
           }
           scrollToBottom();
         } catch (e) {
@@ -317,6 +407,14 @@ const sendMessage = async () => {
   border: 1px solid rgba(0, 102, 204, 0.3);
   color: #cce0ff;
   margin-right: 20px;
+}
+
+.message.tool {
+  background: rgba(255, 153, 0, 0.1);
+  border: 1px solid rgba(255, 153, 0, 0.3);
+  color: #ffcc80;
+  font-family: monospace;
+  font-size: 11px;
 }
 
 /* Typing Indicator */
