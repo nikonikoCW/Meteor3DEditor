@@ -101,6 +101,49 @@ onBeforeUnmount(() => {
   }
 });
 
+// Phase 2: 实时提取场景树摘要，供 AI 感知场景结构
+let cachedSceneTree = null;
+let sceneTreeDirty = true;
+
+const getSceneTreeSnapshot = () => {
+  if (!meteorInstance) return '';
+  if (!sceneTreeDirty && cachedSceneTree) return cachedSceneTree;
+
+  const lines = [];
+  const sceneManager = meteorInstance._internal?.sceneManager;
+  if (!sceneManager) return '';
+
+  // 遍历场景树，只提取名称和层级关系
+  const traverse = (object, depth = 0) => {
+    if (!object) return;
+    const indent = '  '.repeat(depth);
+    const type = object.isMesh ? 'Mesh' : object.isGroup ? 'Group' : 'Object';
+    if (object.name && object.name.trim()) {
+      lines.push(`${indent}- ${object.name} [${type}]`);
+    }
+    if (object.children && depth < 4) { // 最多4层深度
+      for (const child of object.children) {
+        traverse(child, depth + 1);
+      }
+    }
+  };
+
+  // 从场景根开始遍历
+  const scene = sceneManager.scene;
+  if (scene) {
+    for (const child of scene.children) {
+      traverse(child, 0);
+    }
+  }
+
+  // 截断保护：最多200行，避免超大场景浪费 Token
+  const result = lines.slice(0, 200).join('\n');
+  cachedSceneTree = result;
+  sceneTreeDirty = false;
+
+  return result;
+};
+
 // 处理大模型空间 API 交互
 const processToolCall = (functionName, args) => {
   if (!meteorInstance) return;
@@ -193,7 +236,8 @@ const sendMessage = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sessionId: sessionId.value,
-        messages: [{ role: 'user', content: text }]
+        messages: [{ role: 'user', content: text }],
+        sceneContext: getSceneTreeSnapshot()
       })
     });
 

@@ -83,8 +83,19 @@ const tools = [{
 
 const model = genAI.getGenerativeModel({
     model: "gemini-flash-latest",
-    systemInstruction: SYSTEM_PROMPT
 });
+
+/**
+ * 构建动态 System Prompt，注入场景上下文
+ */
+function buildSystemPrompt(sceneContext) {
+    let prompt = SYSTEM_PROMPT;
+    if (sceneContext && sceneContext.length > 0) {
+        prompt += "\n\n【当前场景物体列表】用户的 3D 场景中包含以下物体，当用户提到某个物体时，请用此列表中的准确名称作为 target 参数：\n";
+        prompt += sceneContext;
+    }
+    return prompt;
+}
 
 // 会话管理 (内存中)
 const sessions = new Map();
@@ -126,7 +137,7 @@ setInterval(() => {
  * SSE 流式接口: 处理聊天并在接收到 chunk 时立刻返回前端
  */
 exports.handleChatStream = async (req, res) => {
-    const { messages, sessionId } = req.body;
+    const { messages, sessionId, sceneContext } = req.body;
     const lastUserMsg = messages?.[messages.length - 1]?.content;
 
     if (!lastUserMsg) {
@@ -140,22 +151,30 @@ exports.handleChatStream = async (req, res) => {
     try {
         const { id, session } = getSession(sessionId || "http-stream");
         console.log(`\n[Meteor3D Stream Session ${id}] 用户: ${lastUserMsg}`);
+        if (sceneContext) {
+            console.log(`[Meteor3D Stream Session ${id}] 携带场景上下文 (${sceneContext.length} 字符)`);
+        }
+
+        const dynamicPrompt = buildSystemPrompt(sceneContext);
 
         const chat = model.startChat({
             tools,
+            systemInstruction: { role: "user", parts: [{ text: dynamicPrompt }] },
             history: session.history
         });
 
         const resultChunkStream = await chat.sendMessageStream(lastUserMsg);
 
         let fullText = "";
-        let functionCallResult = null;
+        const functionCalls = [];
 
         for await (const chunk of resultChunkStream.stream) {
             const calls = chunk.functionCalls();
             if (calls && calls.length > 0) {
-                functionCallResult = calls[0];
-                break;
+                for (const call of calls) {
+                    functionCalls.push(call);
+                }
+                continue;
             }
 
             try {
@@ -171,15 +190,19 @@ exports.handleChatStream = async (req, res) => {
 
         appendHistory(session, "user", lastUserMsg);
 
-        if (functionCallResult) {
-            const toolSummary = `[内置系统执行反馈]: 已帮你执行了 3D 空间动作 ${functionCallResult.name}，参数: ${JSON.stringify(functionCallResult.args)}。当前场景已发生相应变化。`;
+        if (functionCalls.length > 0) {
+            const toolSummaries = functionCalls.map(fc => `${fc.name}(${JSON.stringify(fc.args)})`);
+            const toolSummary = `[内置系统执行反馈]: 已执行 ${functionCalls.length} 个空间动作: ${toolSummaries.join(' → ')}。场景已更新。`;
             appendHistory(session, "model", toolSummary);
-            console.log(`[Meteor3D Stream Session ${id}] Gemini 函数调用: ${functionCallResult.name}`);
-            res.write(`data: ${JSON.stringify({
-                type: "tool_call",
-                functionName: functionCallResult.name,
-                args: functionCallResult.args
-            })}\n\n`);
+
+            for (const fc of functionCalls) {
+                console.log(`[Meteor3D Stream Session ${id}] Gemini 函数调用: ${fc.name}`);
+                res.write(`data: ${JSON.stringify({
+                    type: "tool_call",
+                    functionName: fc.name,
+                    args: fc.args
+                })}\n\n`);
+            }
         } else {
             appendHistory(session, "model", fullText);
             console.log(`[Meteor3D Stream Session ${id}] Gemini 文本回复完成`);
