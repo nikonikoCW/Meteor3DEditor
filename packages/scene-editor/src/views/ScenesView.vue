@@ -32,13 +32,6 @@
         </div>
         <div class="scene-actions">
           <button 
-            class="action-btn preview-btn" 
-            @click.stop="enterPreview(scene.sceneId)"
-            title="预览并对话"
-          >
-            👁️
-          </button>
-          <button 
             class="action-btn delete-btn" 
             @click.stop="handleDelete(scene)"
             title="删除"
@@ -181,10 +174,6 @@ const onPageSizeChange = () => {
 
 const enterScene = (sceneId) => {
   router.push(`/editor/${sceneId}`);
-};
-
-const enterPreview = (sceneId) => {
-  router.push(`/preview/${sceneId}`);
 };
 
 const handleCreate = async () => {

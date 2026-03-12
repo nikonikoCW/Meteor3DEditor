@@ -4,9 +4,8 @@
       <router-link to="/scenes" class="back-link">← 返回场景列表</router-link>
     </div>
 
-    <!-- 预留给 3D 渲染区域 -->
-    <div class="viewport-container" ref="container">
-    </div>
+    <!-- 3D 渲染区域 -->
+    <div class="viewport-container" ref="container"></div>
 
     <!-- 大模型对话悬浮窗 -->
     <div class="ai-chat-panel">
@@ -31,7 +30,7 @@
           type="text" 
           v-model="userInput" 
           @keyup.enter="sendMessage" 
-          placeholder="试试说：高亮那个变压器..." 
+          placeholder="试试说：下雪吧 / 高亮一号楼..." 
           :disabled="isTyping || !meteorLoaded" 
         />
         <button @click="sendMessage" :disabled="isTyping || !userInput.trim() || !meteorLoaded">
@@ -45,14 +44,12 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
-import { getSceneData } from '../services/sceneService'; 
 import { loadScene } from '@meteor3d/core';
 import { ASSET_BASE_URL } from '../config';
 
 const route = useRoute();
 const sceneId = route.params.sceneId;
 
-const sceneData = ref(null);
 const loading = ref(true);
 const container = ref(null);
 const messagesContainer = ref(null);
@@ -65,7 +62,7 @@ const meteorLoaded = ref(false);
 const isTyping = ref(false);
 const userInput = ref('');
 const messages = ref([
-  { role: 'system', text: '您好！我是您的 3D 场景智能助手。您可以问我关于园区的任何问题。' }
+  { role: 'system', text: '您好！我是您的 3D 场景智能助手。您可以问我关于园区的任何问题，也可以让我控制场景中的天气、高亮、运镜等。' }
 ]);
 
 const scrollToBottom = () => {
@@ -78,11 +75,6 @@ const scrollToBottom = () => {
 
 onMounted(async () => {
   try {
-    // 1. 获取场景基础数据(名称等)
-    // const result = await getSceneData(sceneId);
-    // sceneData.value = result;
-
-    // 2. 使用 loadScene 核心方法接入场景视图
     if (container.value) {
       meteorInstance = await loadScene({
         sceneId: sceneId,
@@ -94,18 +86,16 @@ onMounted(async () => {
           showGrid: false
         }
       });
-      meteorInstance.enableStats(); // 先开启性能监视作为展示
       meteorLoaded.value = true;
     }
   } catch (error) {
-    console.error('加载场景信息或实体失败:', error);
+    console.error('加载场景失败:', error);
   } finally {
     loading.value = false;
   }
 });
 
 onBeforeUnmount(() => {
-  // 销毁 Three.js 实例，释放内存和事件监听
   if (meteorInstance) {
     meteorInstance.dispose();
   }
@@ -116,7 +106,6 @@ const processToolCall = (functionName, args) => {
   if (!meteorInstance) return;
   console.log('====== AI工具调用 ======', functionName, args);
 
-  // 辅助函数：根据名称寻找场景内的物体的 UUID
   const findObjectUuidByName = (targetName) => {
     const objects = meteorInstance._internal?.sceneManager?.objects || [];
     const targetObj = objects.find(o => o.name && o.name.toLowerCase().includes(targetName.toLowerCase()));
@@ -148,8 +137,6 @@ const processToolCall = (functionName, args) => {
           if (args.enabled) meteorInstance.enableOutline(highlightUuid, { color: 0xffff00, thickness: 2 });
           else meteorInstance.disableOutline(highlightUuid);
         }
-        
-        // 可选：几秒后自动关闭，避免视觉残留
         if (args.enabled) {
           setTimeout(() => {
              meteorInstance.disableHighlight(highlightUuid);
@@ -167,7 +154,6 @@ const processToolCall = (functionName, args) => {
        } else {
           const focusUuid = findObjectUuidByName(args.target);
           if (focusUuid) {
-            // 通过获取该对象的位置来移动相机
             const objects = meteorInstance._internal?.sceneManager?.objects || [];
             const targetObj = objects.find(o => o.uuid === focusUuid);
             if(targetObj) {
@@ -297,23 +283,12 @@ const sendMessage = async () => {
   color: white;
 }
 
-.header h1 {
-  font-size: 16px;
-  margin: 0;
-  font-weight: 500;
-}
-
 .viewport-container {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.loading {
-  color: #888;
-  font-size: 16px;
 }
 
 .ai-chat-panel {
@@ -393,7 +368,6 @@ const sendMessage = async () => {
   cursor: not-allowed;
 }
 
-/* User vs AI styling */
 .message.user {
   background: rgba(40, 40, 40, 0.8);
   border: 1px solid #555;

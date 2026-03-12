@@ -63,6 +63,16 @@
           <div class="product-action">进入编辑器 →</div>
         </div>
 
+        <div class="product-card" @click="navigateTo('ai-scene')">
+          <div class="card-glow"></div>
+          <div class="product-icon">🤖</div>
+          <h3 class="product-title">AI 空间场景</h3>
+          <p class="product-desc">
+            AI 驱动的 3D 场景交互体验，自然语言控制天气、高亮、运镜等空间操作
+          </p>
+          <div class="product-action">进入 AI 场景 →</div>
+        </div>
+
         <div class="product-card" @click="navigateTo('asset-manager')">
           <div class="card-glow"></div>
           <div class="product-icon">📦</div>
@@ -198,7 +208,8 @@
 const PORTS = {
   'scene-editor': 5173,
   'asset-manager': 5175,
-  'app-editor': 5174
+  'app-editor': 5174,
+  'ai-scene': 5176
 }
 
 const navigateTo = (app) => {
@@ -211,6 +222,9 @@ const navigateTo = (app) => {
       break;
     case 'app-editor':
       window.location.href = `https://appeditor.meteor3d.cn`
+      break;
+    case 'ai-scene':
+      window.location.href = `http://localhost:${PORTS['ai-scene']}`
       break;
     default:
       break;

@@ -27,6 +27,7 @@ jobs:
           rm -rf packages/docs
           rm -rf packages/core-webgpu
           rm -rf packages/scene-editor-webgpu
+          rm -rf packages/ai-scene
           rm -rf packages/core/dashboard.html
           
           # 删除所有 .md 文件 (但保留根目录 README.md)
@@ -34,6 +35,10 @@ jobs:
           
           # 删除 plan 目录 (如果有的话)
           rm -rf plan
+          
+          # 删除敏感环境配置文件
+          rm -f meteor3d-server/.env
+          rm -f meteor3d-server/.env.example
           
           # 更新 pnpm-workspace.yaml
           cat > pnpm-workspace.yaml << 'EOF'
