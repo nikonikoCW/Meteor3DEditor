@@ -77,12 +77,48 @@ const tools = [{
                 },
                 required: ["enabled"]
             }
+        },
+        {
+            name: "create_flow_line",
+            description: "在 3D 场景中绘制一条流动线/路线，可以用来展示行走路径、巡检路线、导航路线等。需要提供路径上的坐标点列表。",
+            parameters: {
+                type: "OBJECT",
+                properties: {
+                    points: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                x: { type: "NUMBER", description: "X 坐标" },
+                                y: { type: "NUMBER", description: "Y 坐标（高度）" },
+                                z: { type: "NUMBER", description: "Z 坐标" }
+                            },
+                            required: ["x", "y", "z"]
+                        },
+                        description: "路径点坐标数组，至少2个点"
+                    },
+                    textureUrl: { type: "STRING", description: "线条纹理图片地址，默认'http://localhost:3003/assets/jiantou2.png'" },
+                    width: { type: "NUMBER", description: "线条宽度，默认2.0" },
+                    speed: { type: "NUMBER", description: "流动速度，默认1.0" },
+                    color: { type: "STRING", description: "线条颜色描述，如 'blue'、'red'、'green'，默认蓝色" }
+                },
+                required: ["points"]
+            }
+        },
+        {
+            name: "remove_flow_lines",
+            description: "清除场景中所有的流动线/路线",
+            parameters: {
+                type: "OBJECT",
+                properties: {},
+                required: []
+            }
         }
     ]
 }];
 
 const model = genAI.getGenerativeModel({
-    model: "gemini-flash-latest",
+    model: "gemini-3.1-flash-lite-preview",
 });
 
 /**

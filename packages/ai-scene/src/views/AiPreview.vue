@@ -86,6 +86,7 @@ onMounted(async () => {
           showGrid: false
         }
       });
+      window.meteor3d = meteorInstance;
       meteorLoaded.value = true;
     }
   } catch (error) {
@@ -212,6 +213,30 @@ const processToolCall = (functionName, args) => {
        } else {
          meteorInstance.disableStats();
        }
+       break;
+
+    case 'create_flow_line':
+       if (args.points && args.points.length >= 2) {
+         // 先清除之前的路线
+         meteorInstance.clearLines();
+  
+         let a = {
+           points: args.points.map(p => ({ x: p.x, y: p.y, z: p.z })),
+           textureUrl: args.textureUrl,
+           width: args.width || 2.0,
+           speed: args.speed || 1.0,
+           repeat: 10.0,
+           opacity: 0.9
+         }
+         debugger
+         const lineId = meteorInstance.createLine(a);
+         console.log('流动线已创建, ID:', lineId);
+       }
+       break;
+
+    case 'remove_flow_lines':
+       meteorInstance.clearLines();
+       console.log('所有流动线已清除');
        break;
 
     default:
