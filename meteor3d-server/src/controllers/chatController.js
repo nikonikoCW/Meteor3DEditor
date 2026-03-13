@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const SceneObject = require('../models/SceneObject');
 
 // 初始化 Gemini
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -14,7 +15,9 @@ const SYSTEM_PROMPT = [
     "你是园区 3D 场景控制中枢也是一个全能的智能助手。",
     "你可以和用户进行闲聊，并友好、自然地回答用户的任何问题。",
     "在涉及 3D 场景操作（如天气、高亮、运镜、性能统计等）时，你必须调用对应的系统工具函数来完成用户的空间操作意图。",
-    "如果用户意图明确，直接调用工具；如果需要参数但不明确，可以结合常理补全。"
+    "如果用户意图明确，直接调用工具；如果需要参数但不明确，可以结合常理补全。",
+    "当你需要了解当前场景中有哪些物体、它们的名称和位置等信息时，你应该主动调用 query_scene_objects 工具进行查询，然后根据查询结果回答用户或执行后续操作。",
+    "不要猜测场景中有什么物体，务必先查询再回答。"
 ].join("");
 
 const tools = [{
@@ -113,6 +116,15 @@ const tools = [{
                 properties: {},
                 required: []
             }
+        },
+        {
+            name: "query_scene_objects",
+            description: "查询当前 3D 场景中的所有物体信息，包括名称、类型、坐标位置等。当你需要了解场景中有什么物体、某个物体在哪儿、有多少个某类物体时，必须先调用此工具。",
+            parameters: {
+                type: "OBJECT",
+                properties: {},
+                required: []
+            }
         }
     ]
 }];
@@ -122,15 +134,40 @@ const model = genAI.getGenerativeModel({
 });
 
 /**
- * 构建动态 System Prompt，注入场景上下文
+ * 服务端工具集合：这些工具由后端直接执行，结果返回给 AI 继续推理
  */
-function buildSystemPrompt(sceneContext) {
-    let prompt = SYSTEM_PROMPT;
-    if (sceneContext && sceneContext.length > 0) {
-        prompt += "\n\n【当前场景物体列表】用户的 3D 场景中包含以下物体，当用户提到某个物体时，请用此列表中的准确名称作为 target 参数：\n";
-        prompt += sceneContext;
+const SERVER_SIDE_TOOLS = new Set(['query_scene_objects']);
+
+/**
+ * 执行服务端工具
+ */
+async function executeServerTool(toolName, toolArgs, context) {
+    switch (toolName) {
+        case 'query_scene_objects': {
+            const { sceneId } = context;
+            if (!sceneId) {
+                return { error: '未提供 sceneId，无法查询场景物体' };
+            }
+            const objects = await SceneObject.find({ sceneId });
+            // 只返回 AI 需要的摘要信息，节省 Token
+            const summary = objects.map(obj => ({
+                name: obj.name || '未命名',
+                type: obj.type,
+                position: obj.position,
+                rotation: obj.rotation,
+                scale: obj.scale,
+                uuid: obj.id,
+                createdAt: obj.createdAt,
+                visible: obj.visible
+            }));
+            return {
+                objectCount: summary.length,
+                objects: summary
+            };
+        }
+        default:
+            return { error: `未知的服务端工具: ${toolName}` };
     }
-    return prompt;
 }
 
 // 会话管理 (内存中)
@@ -173,7 +210,7 @@ setInterval(() => {
  * SSE 流式接口: 处理聊天并在接收到 chunk 时立刻返回前端
  */
 exports.handleChatStream = async (req, res) => {
-    const { messages, sessionId, sceneContext } = req.body;
+    const { messages, sessionId, sceneId } = req.body;
     const lastUserMsg = messages?.[messages.length - 1]?.content;
 
     if (!lastUserMsg) {
@@ -187,68 +224,106 @@ exports.handleChatStream = async (req, res) => {
     try {
         const { id, session } = getSession(sessionId || "http-stream");
         console.log(`\n[Meteor3D Stream Session ${id}] 用户: ${lastUserMsg}`);
-        if (sceneContext) {
-            console.log(`[Meteor3D Stream Session ${id}] 携带场景上下文 (${sceneContext.length} 字符)`);
-        }
-
-        const dynamicPrompt = buildSystemPrompt(sceneContext);
 
         const chat = model.startChat({
             tools,
-            systemInstruction: { role: "user", parts: [{ text: dynamicPrompt }] },
+            systemInstruction: { role: "user", parts: [{ text: SYSTEM_PROMPT }] },
             history: session.history
         });
 
-        const resultChunkStream = await chat.sendMessageStream(lastUserMsg);
+        // ===== Agent Loop (全程非流式，确保 function call history 正确) =====
+        const MAX_LOOP = 5;
+        let loopCount = 0;
+        let finalText = "";
+        const allClientToolCalls = [];
+        let pendingFunctionCalls = [];
 
-        let fullText = "";
-        const functionCalls = [];
+        // 第一轮：发送用户消息
+        console.log(`[Agent Loop] 发送用户消息`);
+        const firstResult = await chat.sendMessage(lastUserMsg);
+        const firstResponse = firstResult.response;
 
-        for await (const chunk of resultChunkStream.stream) {
-            const calls = chunk.functionCalls();
-            if (calls && calls.length > 0) {
-                for (const call of calls) {
-                    functionCalls.push(call);
-                }
-                continue;
-            }
-
-            try {
-                const textChunk = chunk.text();
-                if (textChunk) {
-                    fullText += textChunk;
-                    res.write(`data: ${JSON.stringify({ type: "text", chunk: textChunk })}\n\n`);
-                }
-            } catch (e) {
-                // Ignore chunk without text
+        const firstCalls = firstResponse.functionCalls();
+        if (firstCalls && firstCalls.length > 0) {
+            pendingFunctionCalls = firstCalls;
+        } else {
+            finalText = firstResponse.text() || "";
+            if (finalText) {
+                res.write(`data: ${JSON.stringify({ type: "text", chunk: finalText })}\n\n`);
             }
         }
 
-        appendHistory(session, "user", lastUserMsg);
+        // Agent Loop：持续处理函数调用
+        while (pendingFunctionCalls.length > 0 && loopCount < MAX_LOOP) {
+            loopCount++;
 
-        if (functionCalls.length > 0) {
-            const toolSummaries = functionCalls.map(fc => `${fc.name}(${JSON.stringify(fc.args)})`);
-            const toolSummary = `[内置系统执行反馈]: 已执行 ${functionCalls.length} 个空间动作: ${toolSummaries.join(' → ')}。场景已更新。`;
-            appendHistory(session, "model", toolSummary);
+            // 分离服务端工具和客户端工具
+            const serverCalls = pendingFunctionCalls.filter(fc => SERVER_SIDE_TOOLS.has(fc.name));
+            const clientCalls = pendingFunctionCalls.filter(fc => !SERVER_SIDE_TOOLS.has(fc.name));
 
-            for (const fc of functionCalls) {
-                console.log(`[Meteor3D Stream Session ${id}] Gemini 函数调用: ${fc.name}`);
+            // 客户端工具 → 推送给前端
+            for (const fc of clientCalls) {
+                allClientToolCalls.push(fc);
+                console.log(`[Agent Loop #${loopCount}] 前端工具: ${fc.name}`);
                 res.write(`data: ${JSON.stringify({
                     type: "tool_call",
                     functionName: fc.name,
                     args: fc.args
                 })}\n\n`);
             }
-        } else {
-            appendHistory(session, "model", fullText);
-            console.log(`[Meteor3D Stream Session ${id}] Gemini 文本回复完成`);
+
+            // 没有服务端工具 → 结束循环
+            if (serverCalls.length === 0) break;
+
+            // 服务端工具 → 执行并回传给 AI
+            const functionResponses = [];
+            for (const fc of serverCalls) {
+                console.log(`[Agent Loop #${loopCount}] 服务端工具: ${fc.name}`);
+                const result = await executeServerTool(fc.name, fc.args, { sceneId });
+                console.log(`[Agent Loop #${loopCount}] 查询结果: ${JSON.stringify(result).substring(0, 100)}...`);
+                functionResponses.push({
+                    functionResponse: {
+                        name: fc.name,
+                        response: result
+                    }
+                });
+            }
+
+            console.log(`[Agent Loop #${loopCount}] 回传 functionResponse`);
+            const nextResult = await chat.sendMessage(functionResponses);
+            const nextResponse = nextResult.response;
+
+            // 检查 AI 是否返回了更多函数调用
+            const nextCalls = nextResponse.functionCalls();
+            if (nextCalls && nextCalls.length > 0) {
+                pendingFunctionCalls = nextCalls;
+                continue;
+            }
+
+            // AI 返回了文本
+            const responseText = nextResponse.text();
+            if (responseText) {
+                finalText = responseText;
+                res.write(`data: ${JSON.stringify({ type: "text", chunk: responseText })}\n\n`);
+            }
+            pendingFunctionCalls = []; // 结束循环
+        }
+
+        // 更新历史记录
+        appendHistory(session, "user", lastUserMsg);
+        if (allClientToolCalls.length > 0) {
+            const toolSummaries = allClientToolCalls.map(fc => `${fc.name}(${JSON.stringify(fc.args)})`);
+            appendHistory(session, "model", `[系统执行]: ${toolSummaries.join(' → ')}`);
+        }
+        if (finalText) {
+            appendHistory(session, "model", finalText);
         }
 
         res.write(`data: [DONE]\n\n`);
         res.end();
 
     } catch (error) {
-        console.error("Gemini 流式调用失败:", error.message);
+        console.error("Gemini Agent Loop 失败:", error.message);
         res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
         res.end();
     }
