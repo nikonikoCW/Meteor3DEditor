@@ -44,17 +44,27 @@ export class HighlightManager {
 
                     if (mat.emissive !== undefined) {
                         // 方案 A：支持 emissive 的材质（如 MeshStandardMaterial）
+                        // 为了避免同一资产的多个克隆对象共享同一材质导致同时高亮，这里必须克隆材质
+                        const originalMaterial = mat;
+                        const highlightMat = mat.clone();
+
+                        highlightMat.emissive.set(color);
+                        highlightMat.emissiveIntensity = intensity;
+                        highlightMat.needsUpdate = true;
+
                         originalData.push({
                             mesh: child,
                             materialIndex: index,
-                            type: 'emissive',
-                            originalEmissive: mat.emissive.clone(),
-                            originalEmissiveIntensity: mat.emissiveIntensity
+                            type: 'material', // 统一使用 material 类型以便恢复
+                            originalMaterial: originalMaterial
                         });
 
-                        mat.emissive.set(color);
-                        mat.emissiveIntensity = intensity;
-                        mat.needsUpdate = true;
+                        // 替换为高亮材质副本
+                        if (Array.isArray(child.material)) {
+                            child.material[index] = highlightMat;
+                        } else {
+                            child.material = highlightMat;
+                        }
                     } else if (mat.color !== undefined) {
                         // 方案 B：不支持 emissive 的材质（如 MeshBasicMaterial）
                         // 保存原始材质引用，创建高亮材质副本
@@ -144,15 +154,12 @@ export class HighlightManager {
             const mat = materials[data.materialIndex];
             if (!mat) return;
 
-            if (data.type === 'emissive') {
-                const mat = materials[data.materialIndex];
-                if (mat && mat.emissive) {
-                    mat.emissive.copy(data.originalEmissive);
-                    mat.emissiveIntensity = data.originalEmissiveIntensity;
-                    mat.needsUpdate = true;
-                    console.log(`[HighlightManager] Restored emissive for mesh`);
+            if (data.type === 'material') {
+                // 销毁临时高亮克隆材质，防止显存泄漏
+                if (mat && typeof mat.dispose === 'function') {
+                    mat.dispose();
                 }
-            } else if (data.type === 'material') {
+
                 // 恢复原始材质引用
                 if (Array.isArray(data.mesh.material)) {
                     data.mesh.material[data.materialIndex] = data.originalMaterial;
