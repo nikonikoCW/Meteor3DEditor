@@ -224,7 +224,7 @@ const navigateTo = (app) => {
       window.location.href = `https://appeditor.meteor3d.cn`
       break;
     case 'ai-scene':
-      window.location.href = `http://localhost:${PORTS['ai-scene']}`
+      window.location.href = `https://ai-scene.meteor3d.cn`
       break;
     default:
       break;

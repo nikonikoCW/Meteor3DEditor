@@ -46,6 +46,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import { loadScene } from '@meteor3d/core';
 import { ASSET_BASE_URL } from '../config';
+import { sendChatStream } from '../services/chatService';
 
 const route = useRoute();
 const sceneId = route.params.sceneId;
@@ -56,7 +57,6 @@ const messagesContainer = ref(null);
 let meteorInstance = null;
 
 // Chat 状态
-const API_CHAT_URL = 'http://localhost:3001/api/chat/stream';
 const sessionId = ref(`session_${Date.now()}`);
 const meteorLoaded = ref(false);
 const isTyping = ref(false);
@@ -171,15 +171,14 @@ const processToolCall = (functionName, args) => {
          // 先清除之前的路线
          meteorInstance.clearLines();
   
-         let a = {
+         const lineId = meteorInstance.createLine({
            points: args.points.map(p => ({ x: p.x, y: p.y, z: p.z })),
            textureUrl: args.textureUrl,
            width: args.width || 2.0,
            speed: args.speed || 1.0,
            repeat: 10.0,
            opacity: 0.9
-         }
-         const lineId = meteorInstance.createLine(a);
+         });
          console.log('流动线已创建, ID:', lineId);
        }
        break;
@@ -206,56 +205,28 @@ const sendMessage = async () => {
   let assistantMessageIndex = null;
 
   try {
-    const response = await fetch(API_CHAT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: sessionId.value,
-        messages: [{ role: 'user', content: text }],
-        sceneId: sceneId
-      })
-    });
-
-    if (!response.ok) throw new Error('网络请求失败');
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      
-      const chunkStr = decoder.decode(value, { stream: true });
-      const updates = chunkStr.split('data: ').filter(Boolean);
-
-      for (const update of updates) {
-        const cleanUpdate = update.trim();
-        if (!cleanUpdate || cleanUpdate === '[DONE]') continue;
-
-        try {
-          const parsed = JSON.parse(cleanUpdate);
-          
-          if (parsed.type === 'text') {
-            if (assistantMessageIndex === null) {
-              messages.value.push({ role: 'assistant', text: parsed.chunk });
-              assistantMessageIndex = messages.value.length - 1;
-            } else {
-              messages.value[assistantMessageIndex].text += parsed.chunk;
-            }
-          } else if (parsed.type === 'tool_call') {
-            messages.value.push({ 
-              role: 'tool', 
-              functionName: parsed.functionName,
-              args: parsed.args 
-            });
-            processToolCall(parsed.functionName, parsed.args);
-          }
-          scrollToBottom();
-        } catch (e) {
-          console.error("SSE 解析错误:", e, cleanUpdate);
+    await sendChatStream({
+      sessionId: sessionId.value,
+      message: text,
+      sceneId: sceneId,
+      onText: (chunk) => {
+        if (assistantMessageIndex === null) {
+          messages.value.push({ role: 'assistant', text: chunk });
+          assistantMessageIndex = messages.value.length - 1;
+        } else {
+          messages.value[assistantMessageIndex].text += chunk;
         }
+        scrollToBottom();
+      },
+      onToolCall: (functionName, args) => {
+        messages.value.push({ role: 'tool', functionName, args });
+        processToolCall(functionName, args);
+        scrollToBottom();
+      },
+      onError: (errorMsg) => {
+        messages.value.push({ role: 'system', text: `<span style="color: #ffaaaa">错误: ${errorMsg}</span>` });
       }
-    }
+    });
   } catch (error) {
     messages.value.push({ role: 'system', text: `<span style="color: #ffaaaa">发送失败: ${error.message}</span>` });
   } finally {
