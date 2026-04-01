@@ -9,8 +9,7 @@ meteor3d-server/uploads/
 Thumbs.db
 
 # Environment Variables
-.env*.local
-meteor3d-server/.env
+
 
 #web 包
 dist/
