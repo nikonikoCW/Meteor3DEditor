@@ -108,6 +108,7 @@ export class DBManager {
                         sceneId: sceneData.id || 'default',
                         name: sceneData.name,
                         description: sceneData.description,
+                        cameraFar: sceneData.cameraFar,
                         lastModified: sceneData.lastModified || Date.now(),
                         objectCount: sceneData.objectCount || 0,
                         environmentUrl: sceneData.environmentUrl || null, // 保存环境贴图 URL

@@ -17,6 +17,10 @@ const SceneSchema = new mongoose.Schema({
     description: String,
     thumbnail: String,
     environmentUrl: String, // 环境贴图 URL (本地相对路径)
+    cameraFar: {
+        type: Number,
+        default: 1000000
+    },
 
     // 云端绝对路径 (又拍云 CDN)
     cloudUrls: {

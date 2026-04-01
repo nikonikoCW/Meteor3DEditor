@@ -548,6 +548,20 @@ export class PersistenceManager {
 
         // 恢复环境贴图，优先使用云端 URL
         if (sceneData.metadata) {
+            // 同步元数据到 Pinia Store
+            if (this.editorStore && typeof this.editorStore.setSceneMetadata === 'function') {
+                this.editorStore.setSceneMetadata({
+                    name: sceneData.metadata.name || '未命名场景',
+                    description: sceneData.metadata.description || '',
+                    cameraFar: sceneData.metadata.cameraFar || 1000000
+                });
+            }
+
+            // 应用相机远裁切面到场景
+            if (sceneData.metadata.cameraFar) {
+                this.sceneManager.setCameraFar(sceneData.metadata.cameraFar);
+            }
+
             const envUrl = sceneData.metadata.cloudUrls?.environment || sceneData.metadata.environmentUrl;
             if (envUrl) {
                 try {
@@ -636,10 +650,18 @@ export class PersistenceManager {
             ? { ...this.sceneManager.gisConfig, gridVisible: this.sceneManager.gridVisible }
             : null;
 
+        // 获取场景元数据从 Store
+        const name = this.editorStore?.sceneMetadata?.name || '未命名场景';
+        const description = this.editorStore?.sceneMetadata?.description || '';
+        const cameraFar = this.editorStore?.sceneMetadata?.cameraFar || 1000000;
+
         // 批量保存到后端
         await this.dbManager.saveScene({
             objects: serializedObjects,
             id: this.currentSceneId,
+            name: name,
+            description: description,
+            cameraFar: cameraFar,
             lastModified: Date.now(),
             objectCount: this.sceneManager.objects.length,
             environmentUrl: environmentUrl, // 保存环境贴图 URL

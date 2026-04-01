@@ -545,6 +545,25 @@ export class SceneManager {
     }
 
     /**
+     * 设置相机的远裁切面 (far)
+     * @param {number} far - 远远裁切面的值
+     */
+    setCameraFar(far) {
+        if (this.camera && this.camera.isPerspectiveCamera) {
+            this.camera.far = far;
+            this.camera.updateProjectionMatrix();
+        }
+    }
+
+    /**
+     * 获取相机的远裁切面 (far)
+     * @returns {number}
+     */
+    getCameraFar() {
+        return this.camera ? this.camera.far : 1000000;
+    }
+
+    /**
      * 加载环境贴图 (HDR)
      * @param {string} url - HDR 文件 URL
      */

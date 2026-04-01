@@ -5,9 +5,20 @@ export const useEditorStore = defineStore('editor', () => {
     const selectedObject = ref(null);
     const sceneObjects = ref([]); // For tree view
 
+    // 场景元数据
+    const sceneMetadata = ref({
+        name: '未命名场景',
+        description: '',
+        cameraFar: 1000000
+    });
+
     // 版本号：markRaw 对象的深层属性变化无法被 Vue 追踪，
     // 通过递增此值来通知依赖组件（如 SceneTree）强制刷新。
     const treeVersion = ref(0);
+
+    function setSceneMetadata(metadata) {
+        sceneMetadata.value = { ...sceneMetadata.value, ...metadata };
+    }
 
     function selectObject(object) {
         selectedObject.value = object ? markRaw(object) : null;
@@ -41,7 +52,9 @@ export const useEditorStore = defineStore('editor', () => {
     return {
         selectedObject,
         sceneObjects,
+        sceneMetadata,
         treeVersion,
+        setSceneMetadata,
         selectObject,
         clearSelection,
         addObject,

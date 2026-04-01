@@ -6,11 +6,11 @@
       <h4>基本信息</h4>
       <div class="prop-row">
         <label>场景名称</label>
-        <input type="text" v-model="sceneConfig.name" placeholder="输入场景名称">
+        <input type="text" v-model="editorStore.sceneMetadata.name" placeholder="输入场景名称">
       </div>
       <div class="prop-row">
         <label>描述</label>
-        <textarea v-model="sceneConfig.description" rows="3" placeholder="场景描述..."></textarea>
+        <textarea v-model="editorStore.sceneMetadata.description" rows="3" placeholder="场景描述..."></textarea>
       </div>
     </div>
 
@@ -23,6 +23,10 @@
       <div class="prop-row">
         <label>环境光强度</label>
         <input type="number" v-model.number="sceneConfig.ambientIntensity" step="0.1" min="0" max="5">
+      </div>
+      <div class="prop-row">
+        <label>相机可视距离 (Far)</label>
+        <input type="number" v-model.number="editorStore.sceneMetadata.cameraFar" @change="onCameraFarChange" step="1000" min="100">
       </div>
     </div>
 
@@ -112,12 +116,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, onBeforeUnmount } from 'vue';
+import { ref, reactive, onBeforeUnmount, onMounted } from 'vue';
+import { useEditorStore } from '../stores/editorStore';
 
-// 模拟的场景配置数据，未来应该连接到 Store
+const editorStore = useEditorStore();
+
+// 模拟的场景配置数据，未来应该连接到 Store (部分暂未接入后端的数据)
 const sceneConfig = reactive({
-  name: '未命名场景',
-  description: '',
   backgroundColor: '#000000',
   ambientIntensity: 1.0
 });
@@ -151,6 +156,22 @@ const onStatsToggle = () => {
     window.editor.sceneManager.toggleStats(showStats.value);
   }
 };
+
+// 修改相机视距
+const onCameraFarChange = () => {
+  if (window.editor && window.editor.sceneManager) {
+    window.editor.sceneManager.setCameraFar(editorStore.sceneMetadata.cameraFar);
+  }
+};
+
+onMounted(() => {
+  if (window.editor && window.editor.sceneManager) {
+    // 首次如果不存在值，则初始化一次
+    if (!editorStore.sceneMetadata.cameraFar) {
+      editorStore.setSceneMetadata({ cameraFar: window.editor.sceneManager.getCameraFar() });
+    }
+  }
+});
 
 // 切换三角形统计
 const onTriangleStatsToggle = () => {
