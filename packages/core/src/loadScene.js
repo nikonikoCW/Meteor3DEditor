@@ -118,6 +118,12 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
         sceneManager.emitGisConfigUpdated();
     }
 
+    // ========== 2.5 恢复相机配置 ==========
+    if (metadata.cameraFar) {
+        sceneManager.setCameraFar(metadata.cameraFar);
+        // console.log(`✅ 相机配置加载成功: 远裁切面 ${metadata.cameraFar}`);
+    }
+
     // ========== 3. 加载场景对象 ==========
     let successCount = 0;
     let failedCount = 0;
