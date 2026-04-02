@@ -28,6 +28,7 @@
     "meshoptimizer": "^1.0.0",
     "mongoose": "^9.0.0",
     "multer": "^2.0.2",
+    "openai": "^6.33.0",
     "sharp": "0.32.6",
     "upyun": "^3.4.6",
     "uuid": "^9.0.1"

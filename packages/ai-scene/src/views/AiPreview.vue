@@ -180,6 +180,15 @@ const processToolCall = (functionName, args) => {
            opacity: 0.9
          });
          console.log('流动线已创建, ID:', lineId);
+         console.log({
+           points: args.points.map(p => ({ x: p.x, y: p.y, z: p.z })),
+           textureUrl: args.textureUrl,
+           width: args.width || 2.0,
+           speed: args.speed || 1.0,
+           repeat: 10.0,
+           opacity: 0.9
+         });
+         
        }
        break;
 
