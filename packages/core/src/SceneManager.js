@@ -47,7 +47,7 @@ export class SceneManager {
         this.camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 10000);
         this.camera.position.set(5, 5, 5);
 
-        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); // 开启 alpha 以防背景问题
+        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, logarithmicDepthBuffer: true }); // 开启 alpha 以防背景问题
         this.renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
