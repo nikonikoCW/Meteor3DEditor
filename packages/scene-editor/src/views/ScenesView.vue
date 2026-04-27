@@ -99,6 +99,12 @@
           <label>描述 (可选)</label>
           <textarea v-model="newScene.description" placeholder="请输入场景描述"></textarea>
         </div>
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="newScene.enableOnboarding">
+            <span>是否开启新手引导</span>
+          </label>
+        </div>
         <div class="modal-actions">
           <button class="cancel-btn" @click="showCreateModal = false">取消</button>
           <button class="confirm-btn" @click="handleCreate" :disabled="!newScene.name">创建</button>
@@ -117,7 +123,7 @@ import { message } from '../utils/message';
 const router = useRouter();
 const scenes = ref([]);
 const showCreateModal = ref(false);
-const newScene = ref({ name: '', description: '' });
+const newScene = ref({ name: '', description: '', enableOnboarding: true });
 const nameInput = ref(null);
 const loading = ref(false);
 
@@ -180,10 +186,13 @@ const handleCreate = async () => {
   if (!newScene.value.name) return;
 
   try {
-    await createScene(newScene.value.name, newScene.value.description);
+    const result = await createScene(newScene.value.name, newScene.value.description);
     showCreateModal.value = false;
-    newScene.value = { name: '', description: '' };
-    await loadScenes(1); // 创建后回到第一页
+    const enableOnboarding = newScene.value.enableOnboarding;
+    newScene.value = { name: '', description: '', enableOnboarding: true };
+    // 创建后直接进入编辑器
+    const query = enableOnboarding ? { onboarding: '1' } : {};
+    router.push({ path: `/editor/${result.sceneId}`, query });
   } catch (error) {
     message.error('创建场景失败: ' + error.message);
   }
@@ -479,6 +488,26 @@ onMounted(() => {
 .confirm-btn:disabled {
   background: #444;
   cursor: not-allowed;
+}
+
+.checkbox-group {
+  margin-bottom: 10px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #ccc;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #0066cc;
+  cursor: pointer;
 }
 
 /* 分页样式 */

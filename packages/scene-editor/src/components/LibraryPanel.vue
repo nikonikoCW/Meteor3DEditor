@@ -50,7 +50,7 @@
     </div>
 
     <!-- 环境贴图部分 -->
-    <div class="section">
+    <div class="section" id="env-section">
       <div class="section-header">
         <h4>环境贴图</h4>
       </div>
@@ -145,6 +145,8 @@ const loadAssets = async () => {
     console.error('加载资产失败:', error);
   } finally {
     loading.value = false;
+    // 通知外部资源加载完成（用于新手引导等）
+    window.dispatchEvent(new CustomEvent('library-loaded'));
   }
 };
 

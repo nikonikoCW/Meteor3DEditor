@@ -21,6 +21,7 @@
             v-for="tab in rightTabs" 
             :key="tab.id"
             class="tab-item"
+            :id="tab.id === 'gis' ? 'gis-tab' : undefined"
             :class="{ active: activeRightTab === tab.id }"
             @click="activeRightTab = tab.id"
             :title="tab.title"
@@ -41,7 +42,7 @@
 </template>
 
 <script setup>
-import { onMounted, watch, ref } from 'vue';
+import { onMounted, watch, ref, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import Toolbar from '../components/Toolbar.vue';
 import LibraryPanel from '../components/LibraryPanel.vue';
@@ -52,6 +53,7 @@ import MaterialPanel from '../components/MaterialPanel.vue';
 import SceneSettingsPanel from '../components/SceneSettingsPanel.vue';
 import GisSettingsPanel from '../components/GisSettingsPanel.vue';
 import WeatherPanel from '../components/WeatherPanel.vue';
+import { startOnboarding } from '../utils/onboarding';
 
 const route = useRoute();
 const activeRightTab = ref('properties');
@@ -100,8 +102,21 @@ onMounted(() => {
   const sceneId = route.params.sceneId;
   if (sceneId) {
     console.log('进入场景:', sceneId);
-    // 这里我们可能需要一个全局的事件总线或者 store action 来通知系统加载特定场景
-    // 暂时，我们假设 Viewport 组件会读取 route.params.sceneId
+  }
+
+  // 新手引导：等待资源库加载完成后启动
+  if (route.query.onboarding === '1') {
+    const onLibraryLoaded = () => {
+      window.removeEventListener('library-loaded', onLibraryLoaded);
+      nextTick(() => {
+        startOnboarding({
+          onSwitchToGisTab: () => {
+            activeRightTab.value = 'gis';
+          }
+        });
+      });
+    };
+    window.addEventListener('library-loaded', onLibraryLoaded);
   }
 });
 

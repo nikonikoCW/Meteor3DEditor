@@ -20,7 +20,7 @@
       <p class="hint">说明：当前网格以 10m × 10m 为一个小格</p>
       
       <!-- 显示影像地图开关 -->
-      <div class="prop-row switch-row" style="margin-top: 12px;">
+      <div id="basemap-row" class="prop-row switch-row" style="margin-top: 12px;">
         <label>显示影像地图</label>
         <div class="toggle-switch">
           <input 
@@ -37,7 +37,7 @@
     </div>
     <!-- 未配置状态 -->
     <div v-if="!isConfigured" class="section unconfigured-state">
-      <button class="enable-btn" @click="openMapSelector">
+      <button id="enable-gis-btn" class="enable-btn" @click="openMapSelector">
         <span class="icon">+</span> 启用地理环境
       </button>
       <p v-if="hasCachedConfig" class="restore-hint">
