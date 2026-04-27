@@ -18,14 +18,15 @@ const CHAT_STREAM_URL = `${API_BASE_URL}/chat/stream`;
  * @param {Function} params.onError - 错误回调
  * @param {Function} params.onDone - 完成回调
  */
-export async function sendChatStream({ sessionId, message, sceneId, onText, onToolCall, onError, onDone }) {
+export async function sendChatStream({ sessionId, message, sceneId, sceneData, onText, onToolCall, onError, onDone }) {
     const response = await fetch(CHAT_STREAM_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             sessionId,
             messages: [{ role: 'user', content: message }],
-            sceneId
+            sceneId,
+            sceneData
         })
     });
 

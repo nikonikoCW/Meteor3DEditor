@@ -1,5 +1,4 @@
 const { OpenAI } = require("openai");
-const SceneObject = require('../models/SceneObject');
 
 // 初始化 Zhipu AI
 const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY;
@@ -144,11 +143,29 @@ const tools = [
         type: "function",
         function: {
             name: "query_scene_objects",
-            description: "查询当前 3D 场景中的所有物体信息，包括名称、类型、坐标位置等。当你需要了解场景中有什么物体、某个物体在哪儿、有多少个某类物体时，必须先调用此工具。",
+            description: "查询当前 3D 场景中的所有物体概览（名称和UUID），用于了解场景中有什么物体。返回结果只包含名称和UUID的树形结构。如需查询某个物体的详细空间信息（位置、旋转、缩放），请使用 query_object_details 工具。",
             parameters: {
                 type: "object",
                 properties: {},
                 required: []
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "query_object_details",
+            description: "根据 UUID 列表批量查询场景物体的详细空间信息，包括位置(position)、旋转(rotation)、缩放(scale)。需要先通过 query_scene_objects 获取物体的 UUID，再用此工具查询详情。",
+            parameters: {
+                type: "object",
+                properties: {
+                    uuids: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "要查询详情的物体 UUID 列表"
+                    }
+                },
+                required: ["uuids"]
             }
         }
     }
@@ -157,34 +174,49 @@ const tools = [
 /**
  * 服务端工具集合：这些工具由后端直接执行，结果返回给 AI 继续推理
  */
-const SERVER_SIDE_TOOLS = new Set(['query_scene_objects']);
+const SERVER_SIDE_TOOLS = new Set(['query_scene_objects', 'query_object_details']);
 
 /**
  * 执行服务端工具
  */
 async function executeServerTool(toolName, toolArgs, context) {
+    const { sceneData } = context;
+    if (!sceneData) {
+        return { error: '前端未提供场景数据' };
+    }
+
     switch (toolName) {
         case 'query_scene_objects': {
-            const { sceneId } = context;
-            if (!sceneId) {
-                return { error: '未提供 sceneId，无法查询场景物体' };
+            // 只返回轻量的 name+uuid 树，剥离空间详情
+            const stripDetails = (node) => ({
+                name: node.name,
+                uuid: node.uuid,
+                children: (node.children || []).map(stripDetails)
+            });
+            return stripDetails(sceneData);
+        }
+        case 'query_object_details': {
+            const { uuids } = toolArgs;
+            if (!uuids || uuids.length === 0) {
+                return { error: '请提供要查询的 UUID 列表' };
             }
-            const objects = await SceneObject.find({ sceneId });
-            // 只返回 AI 需要的摘要信息，节省 Token
-            const summary = objects.map(obj => ({
-                name: obj.name || '未命名',
-                type: obj.type,
-                position: obj.position,
-                rotation: obj.rotation,
-                scale: obj.scale,
-                uuid: obj.id,
-                createdAt: obj.createdAt,
-                visible: obj.visible
-            }));
-            return {
-                objectCount: summary.length,
-                objects: summary
+            // 扁平化遍历场景树，按 UUID 匹配
+            const uuidSet = new Set(uuids);
+            const results = [];
+            const walk = (node) => {
+                if (uuidSet.has(node.uuid)) {
+                    results.push({
+                        name: node.name,
+                        uuid: node.uuid,
+                        position: node.position,
+                        rotation: node.rotation,
+                        scale: node.scale
+                    });
+                }
+                (node.children || []).forEach(walk);
             };
+            walk(sceneData);
+            return { found: results.length, objects: results };
         }
         default:
             return { error: `未知的服务端工具: ${toolName}` };
@@ -223,7 +255,7 @@ setInterval(() => {
  * SSE 流式接口: 处理聊天并在接收到 chunk 时立刻返回前端
  */
 exports.handleChatStream = async (req, res) => {
-    const { messages, sessionId, sceneId } = req.body;
+    const { messages, sessionId, sceneId, sceneData } = req.body;
     const lastUserMsg = messages?.[messages.length - 1]?.content;
 
     if (!lastUserMsg) {
@@ -268,7 +300,7 @@ exports.handleChatStream = async (req, res) => {
 
             console.log(`[Agent Loop #${loopCount}] 调用 Zhipu GLM-4 API`);
             const response = await openai.chat.completions.create({
-                model: "glm-4-flash",
+                model: "glm-4.7",
                 messages: currentMessages,
                 tools: tools,
                 tool_choice: "auto"
@@ -322,7 +354,7 @@ exports.handleChatStream = async (req, res) => {
                 if (serverCalls.length > 0) {
                     for (const sc of serverCalls) {
                         console.log(`[Agent Loop #${loopCount}] 服务端工具: ${sc.functionName}`);
-                        const result = await executeServerTool(sc.functionName, sc.functionArgs, { sceneId });
+                        const result = await executeServerTool(sc.functionName, sc.functionArgs, { sceneId, sceneData });
 
                         const toolReply = {
                             role: "tool",

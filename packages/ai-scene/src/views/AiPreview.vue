@@ -73,6 +73,22 @@ const scrollToBottom = () => {
   }, 100);
 };
 
+// 递归遍历 Three.js 场景，生成场景树 JSON（含空间信息）
+const getSceneTreeJson = () => {
+  const scene = meteorInstance?._internal?.sceneManager?.scene;
+  if (!scene) return { name: 'Scene', uuid: '', children: [] };
+
+  const traverse = (obj) => ({
+    name: obj.name || obj.type,
+    uuid: obj.uuid,
+    position: obj.position ? { x: obj.position.x, y: obj.position.y, z: obj.position.z } : undefined,
+    rotation: obj.rotation ? { x: obj.rotation.x, y: obj.rotation.y, z: obj.rotation.z } : undefined,
+    scale: obj.scale ? { x: obj.scale.x, y: obj.scale.y, z: obj.scale.z } : undefined,
+    children: (obj.children || []).map(traverse)
+  });
+  return traverse(scene);
+};
+
 onMounted(async () => {
   try {
     if (container.value) {
@@ -218,6 +234,7 @@ const sendMessage = async () => {
       sessionId: sessionId.value,
       message: text,
       sceneId: sceneId,
+      sceneData: getSceneTreeJson(),
       onText: (chunk) => {
         if (assistantMessageIndex === null) {
           messages.value.push({ role: 'assistant', text: chunk });
