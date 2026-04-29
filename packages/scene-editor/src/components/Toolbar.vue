@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { message } from '../utils/message';
 import BatchLoaderDialog from './BatchLoaderDialog.vue';
 
@@ -43,12 +43,30 @@ const redo = () => {
   }
 };
 
-const save = async () => {
+const save = async (isAutoSave = false) => {
   if (window.editor && window.editor.persistenceManager) {
     await window.editor.persistenceManager.saveScene();
-    message.success('场景已保存！');
+    if (isAutoSave === true) {
+      // Auto save implicitly without toast, or maybe a subtle indication could be added later
+    } else {
+      message.success('场景已保存！');
+    }
   }
 };
+
+let autoSaveTimer = null;
+
+onMounted(() => {
+  autoSaveTimer = setInterval(() => {
+    save(true);
+  }, 10000);
+});
+
+onUnmounted(() => {
+  if (autoSaveTimer) {
+    clearInterval(autoSaveTimer);
+  }
+});
 </script>
 
 <style scoped>
