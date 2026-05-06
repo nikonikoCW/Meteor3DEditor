@@ -93,6 +93,81 @@ export class PersistenceManager {
     }
 
     /**
+     * 从 3D Tiles 的 ECEF 坐标中提取可用于本地 GIS 场景定位的锚点。
+     * 优先使用 root transform 的平移项；没有 transform 时退回到包围球中心。
+     * @param {TilesRenderer} tilesRenderer
+     * @returns {{lng:number, lat:number, height:number, lonRad:number, latRad:number}|null}
+     */
+    getTilesetCartographicAnchor(tilesRenderer) {
+        const anchor = new THREE.Vector3();
+        let hasAnchor = false;
+
+        const rootTile = tilesRenderer.root;
+        const rootTransform = rootTile?.cached?.transform;
+        if (rootTransform) {
+            anchor.setFromMatrixPosition(rootTransform);
+            hasAnchor = anchor.length() > 1000000;
+        }
+
+        if (!hasAnchor) {
+            const sphere = new THREE.Sphere();
+            if (tilesRenderer.getBoundingSphere(sphere) && sphere.center.length() > 1000000) {
+                anchor.copy(sphere.center);
+                hasAnchor = true;
+            }
+        }
+
+        if (!hasAnchor) return null;
+
+        const cartographic = {};
+        tilesRenderer.ellipsoid.getPositionToCartographic(anchor, cartographic);
+
+        return {
+            lng: THREE.MathUtils.radToDeg(cartographic.lon),
+            lat: THREE.MathUtils.radToDeg(cartographic.lat),
+            height: cartographic.height || 0,
+            lonRad: cartographic.lon,
+            latRad: cartographic.lat
+        };
+    }
+
+    /**
+     * 将 3D Tiles 从 ECEF 地心坐标转换到当前 Meteor3D GIS 本地坐标系。
+     * 3d-tiles-renderer 的 setLatLonToYUp 输出为 X=北、Y=高、Z=东；
+     * Meteor3D 约定为 X=东、Y=高、-Z=北，因此 wrapper 需要绕 Y 轴旋转 90 度。
+     * @param {TilesRenderer} tilesRenderer
+     * @param {THREE.Group} wrapper
+     * @param {{lng:number, lat:number, height:number, lonRad:number, latRad:number}} anchor
+     * @returns {boolean}
+     */
+    applyGisTilesetTransform(tilesRenderer, wrapper, anchor) {
+        if (!this.sceneManager.geoSystem || !anchor) return false;
+
+        const worldPos = this.sceneManager.lngLatToWorld(anchor.lng, anchor.lat, 0);
+        if (!worldPos) return false;
+
+        tilesRenderer.setLatLonToYUp(anchor.latRad, anchor.lonRad);
+
+        // setLatLonToYUp 以椭球面为局部原点；减去锚点高度后，tileset 原点落在场景地面上。
+        tilesRenderer.group.position.y -= anchor.height || 0;
+        tilesRenderer.group.updateMatrix();
+        tilesRenderer.group.updateMatrixWorld(true);
+
+        wrapper.position.copy(worldPos);
+        wrapper.rotation.set(0, Math.PI / 2, 0);
+        wrapper.scale.set(1, 1, 1);
+        wrapper.updateMatrixWorld(true);
+
+        wrapper.userData.gisCenter = {
+            lng: anchor.lng,
+            lat: anchor.lat,
+            height: anchor.height || 0
+        };
+
+        return true;
+    }
+
+    /**
      * 序列化对象
      * 将 Three.js 对象转换为可存储的 JSON 数据
      * @param {THREE.Object3D} object - 要序列化的对象
@@ -368,47 +443,15 @@ export class PersistenceManager {
 
                 // 监听加载完成，提取 GIS 信息并定位
                 const box3 = new THREE.Box3();
-                tilesRenderer.addEventListener('load-tile-set', () => {
+                const handleTileSetLoaded = () => {
+                    tilesRenderer.removeEventListener('load-tile-set', handleTileSetLoaded);
                     // console.log('3D Tiles 加载完成:', url);
 
-                    // 尝试从 transform 提取 ECEF 坐标
-                    const rootTile = tilesRenderer.root;
-                    let tilesetLng = null;
-                    let tilesetLat = null;
-
-                    if (rootTile && rootTile.cached && rootTile.cached.transform) {
-                        const transform = rootTile.cached.transform;
-                        // transform 是 4x4 列主序矩阵，位置在 [12], [13], [14]
-                        const ecefX = transform.elements[12];
-                        const ecefY = transform.elements[13];
-                        const ecefZ = transform.elements[14];
-
-                        // ECEF 转经纬度
-                        const lngLat = this.ecefToLngLat(ecefX, ecefY, ecefZ);
-                        if (lngLat) {
-                            tilesetLng = lngLat.lng;
-                            tilesetLat = lngLat.lat;
-                            // console.log(`3D Tiles GIS 信息: 经度 ${tilesetLng.toFixed(6)}°, 纬度 ${tilesetLat.toFixed(6)}°`);
-
-                            // 保存 GIS 信息到 userData
-                            wrapper.userData.gisCenter = { lng: tilesetLng, lat: tilesetLat };
-                        }
-                    }
+                    const anchor = this.getTilesetCartographicAnchor(tilesRenderer);
 
                     // 根据场景 GIS 配置决定定位方式
-                    if (this.sceneManager.gisProjection && tilesetLng !== null && tilesetLat !== null) {
-                        // 场景有 GIS 配置：将 tileset 定位到正确的地理位置
-                        const worldPos = this.sceneManager.lngLatToWorld(tilesetLng, tilesetLat, 0);
-                        if (worldPos) {
-                            // 先居中，然后偏移到目标位置
-                            if (tilesRenderer.getBoundingBox(box3)) {
-                                box3.getCenter(tilesRenderer.group.position);
-                                tilesRenderer.group.position.multiplyScalar(-1);
-                            }
-                            // 将 wrapper 移动到地理位置
-                            wrapper.position.copy(worldPos);
-                            // console.log(`3D Tiles 已定位到场景坐标: (${worldPos.x.toFixed(2)}, ${worldPos.y.toFixed(2)}, ${worldPos.z.toFixed(2)})`);
-                        }
+                    if (this.sceneManager.geoSystem && anchor) {
+                        this.applyGisTilesetTransform(tilesRenderer, wrapper, anchor);
                     } else {
                         // 无 GIS 配置：居中到原点
                         if (tilesRenderer.getBoundingBox(box3)) {
@@ -417,7 +460,8 @@ export class PersistenceManager {
                         }
                         // console.log('3D Tiles 已居中到原点');
                     }
-                });
+                };
+                tilesRenderer.addEventListener('load-tile-set', handleTileSetLoaded);
 
                 tilesRenderer.addEventListener('load-tile-set-error', (event) => {
                     console.error('3D Tiles 加载失败:', event);
