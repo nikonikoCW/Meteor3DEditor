@@ -20,6 +20,26 @@ uploadDirs.forEach(dir => {
 });
 
 /**
+ * Multer/Busboy can expose UTF-8 multipart filenames as latin1 mojibake
+ * in some clients. Normalize only when the conversion clearly restores
+ * a valid UTF-8 filename, so already-correct Unicode names stay untouched.
+ */
+function normalizeOriginalName(originalName) {
+    if (!originalName || typeof originalName !== 'string') {
+        return originalName;
+    }
+
+    const decoded = Buffer.from(originalName, 'latin1').toString('utf8');
+    const looksLikeMojibake = /[\u00C0-\u00FF]/.test(originalName) && /[^\u0000-\u00FF]/.test(decoded);
+
+    if (looksLikeMojibake && !decoded.includes('\uFFFD')) {
+        return decoded;
+    }
+
+    return originalName;
+}
+
+/**
  * 配置文件存储
  */
 const storage = multer.diskStorage({
@@ -43,6 +63,8 @@ const storage = multer.diskStorage({
  * 只允许特定格式的文件
  */
 const fileFilter = (req, file, cb) => {
+    file.originalname = normalizeOriginalName(file.originalname);
+
     // 缩略图字段允许 jpeg/jpg
     if (file.fieldname === 'thumbnail') {
         const ext = path.extname(file.originalname).toLowerCase();
