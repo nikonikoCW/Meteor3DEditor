@@ -13,6 +13,8 @@ export class GeoCoordinateSystem {
 
         // Calculate the Web Mercator coordinate of the scene center (0,0,0)
         this.centerMercator = GisUtils.lonLatToWebMercator(centerLon, centerLat);
+        // Web Mercator is scale-distorted by latitude. Convert back to local real meters.
+        this.mercatorToLocalScale = Math.cos(centerLat * Math.PI / 180);
     }
 
     /**
@@ -24,6 +26,7 @@ export class GeoCoordinateSystem {
         this.centerLon = lon;
         this.centerLat = lat;
         this.centerMercator = GisUtils.lonLatToWebMercator(lon, lat);
+        this.mercatorToLocalScale = Math.cos(lat * Math.PI / 180);
     }
 
     /**
@@ -39,8 +42,8 @@ export class GeoCoordinateSystem {
         // Calculate relative offset from center
         // Web Mercator X -> Scene X (East)
         // Web Mercator Y -> Scene -Z (North)
-        const x = targetMercator.x - this.centerMercator.x;
-        const z = -(targetMercator.y - this.centerMercator.y);
+        const x = (targetMercator.x - this.centerMercator.x) * this.mercatorToLocalScale;
+        const z = -(targetMercator.y - this.centerMercator.y) * this.mercatorToLocalScale;
 
         return { x, y: height, z };
     }
@@ -52,8 +55,8 @@ export class GeoCoordinateSystem {
      * @returns {lon, lat}
      */
     unproject(x, z) {
-        const mercatorX = this.centerMercator.x + x;
-        const mercatorY = this.centerMercator.y - z; // z is negative y
+        const mercatorX = this.centerMercator.x + x / this.mercatorToLocalScale;
+        const mercatorY = this.centerMercator.y - z / this.mercatorToLocalScale; // z is negative y
 
         return GisUtils.webMercatorToLonLat(mercatorX, mercatorY);
     }

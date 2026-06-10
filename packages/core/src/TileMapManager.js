@@ -27,13 +27,15 @@ export class TileMapManager {
         // 1. Get Center from GeoSystem (Source of Truth)
         // We no longer pass lon/lat here, we trust the GeoSystem's center
         const centerMercator = this.geoSystem.centerMercator;
+        const scale = this.geoSystem.mercatorToLocalScale || 1;
 
         // 2. Determine Tile Range and Optimal Zoom
         const halfSize = sizeMeters / 2;
-        const minX = centerMercator.x - halfSize;
-        const maxX = centerMercator.x + halfSize;
-        const minY = centerMercator.y - halfSize;
-        const maxY = centerMercator.y + halfSize;
+        const halfMercatorSize = halfSize / scale;
+        const minX = centerMercator.x - halfMercatorSize;
+        const maxX = centerMercator.x + halfMercatorSize;
+        const minY = centerMercator.y - halfMercatorSize;
+        const maxY = centerMercator.y + halfMercatorSize;
 
         // Auto-calculate Zoom to keep tile count reasonable (LOD)
         this.zoom = this.calculateOptimalZoom(minX, maxX, minY, maxY);
@@ -92,10 +94,11 @@ export class TileMapManager {
 
                 // Check Visibility
                 const bounds = GisUtils.tileToWebMercator(x, y, this.zoom);
-                const tileMinX = bounds.minX - this.geoSystem.centerMercator.x;
-                const tileMaxX = bounds.maxX - this.geoSystem.centerMercator.x;
-                const tileMinZ = -(bounds.maxY - this.geoSystem.centerMercator.y); // Top (larger Y) -> Smaller Z (negative)
-                const tileMaxZ = -(bounds.minY - this.geoSystem.centerMercator.y); // Bottom (smaller Y) -> Larger Z (negative)
+                const scale = this.geoSystem.mercatorToLocalScale || 1;
+                const tileMinX = (bounds.minX - this.geoSystem.centerMercator.x) * scale;
+                const tileMaxX = (bounds.maxX - this.geoSystem.centerMercator.x) * scale;
+                const tileMinZ = -(bounds.maxY - this.geoSystem.centerMercator.y) * scale; // Top (larger Y) -> Smaller Z (negative)
+                const tileMaxZ = -(bounds.minY - this.geoSystem.centerMercator.y) * scale; // Bottom (smaller Y) -> Larger Z
 
                 // Create AABB for the tile (flat box)
                 const box = new THREE.Box3(

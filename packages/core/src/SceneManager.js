@@ -986,7 +986,7 @@ export class SceneManager {
 
     /**
      * 经纬度 -> Three.js 世界坐标
-     * east -> +X, north -> +Z, up -> +Y
+     * east -> +X, north -> -Z, up -> +Y
      * @param {number} lng - 经度
      * @param {number} lat - 纬度
      * @param {number} [height=0] - 高度（米）
@@ -1003,7 +1003,7 @@ export class SceneManager {
 
     /**
      * 世界坐标 -> 经纬度/高度
-     * 假设 X 为东向（east），Z 为北向（north），Y 为高度（up）
+     * 假设 X 为东向（east），-Z 为北向（north），Y 为高度（up）
      * @param {THREE.Vector3} worldPos - 世界坐标
      * @returns {{lng:number,lat:number,height:number}|null} GIS 未配置时返回 null
      */

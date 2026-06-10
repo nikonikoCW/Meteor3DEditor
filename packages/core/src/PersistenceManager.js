@@ -69,18 +69,21 @@ export class PersistenceManager {
      */
     ecefToLngLat(x, y, z) {
         // WGS84 椭球参数
-        const a = 6378137.0;  // 长半轴（米）
-        const e2 = 0.00669437999014;  // 第一偏心率的平方
+        const a = 6378137.0; // 长半轴（米）
+        const f = 1 / 298.257223563;
+        const b = a * (1 - f);
+        const e2 = 1 - (b * b) / (a * a);
+        const ep2 = (a * a - b * b) / (b * b);
 
         const p = Math.sqrt(x * x + y * y);
-        const theta = Math.atan2(z * a, p * Math.sqrt(1 - e2) * a);
+        const theta = Math.atan2(a * z, b * p);
 
         // 经度（弧度 -> 度）
         const lng = Math.atan2(y, x) * 180 / Math.PI;
 
         // 纬度（迭代计算）
         const lat = Math.atan2(
-            z + e2 / (1 - e2) * a * Math.pow(Math.sin(theta), 3),
+            z + ep2 * b * Math.pow(Math.sin(theta), 3),
             p - e2 * a * Math.pow(Math.cos(theta), 3)
         ) * 180 / Math.PI;
 
@@ -90,6 +93,79 @@ export class PersistenceManager {
         const height = p / Math.cos(lat * Math.PI / 180) - N;
 
         return { lng, lat, height };
+    }
+
+    /**
+     * 获取 3D Tiles 根节点 transform 的列主序数组
+     * @param {TilesRenderer} tilesRenderer
+     * @returns {number[]|null}
+     */
+    getTilesetTransformElements(tilesRenderer) {
+        const transform = tilesRenderer.root?.transform || tilesRenderer.root?.cached?.transform;
+        if (!transform) return null;
+        if (Array.isArray(transform)) return transform;
+        if (transform.elements) return transform.elements;
+        return null;
+    }
+
+    /**
+     * 将带地理参考的 3D Tiles 从 ECEF 转到当前 GIS 本地坐标系
+     * @param {TilesRenderer} tilesRenderer
+     * @param {THREE.Group} wrapper
+     * @param {number[]} transform
+     * @returns {boolean} 是否成功放置
+     */
+    placeGeoreferencedTileset(tilesRenderer, wrapper, transform) {
+        if (!this.sceneManager.geoSystem || !transform || transform.length < 16) {
+            return false;
+        }
+
+        const position = new THREE.Vector3(transform[12], transform[13], transform[14]);
+        const east = new THREE.Vector3(transform[0], transform[1], transform[2]).normalize();
+        const north = new THREE.Vector3(transform[4], transform[5], transform[6]).normalize();
+        const up = new THREE.Vector3(transform[8], transform[9], transform[10]).normalize();
+        const lngLat = this.ecefToLngLat(position.x, position.y, position.z);
+        if (!lngLat) return false;
+
+        const anchor = this.sceneManager.lngLatToWorld(lngLat.lng, lngLat.lat, 0);
+        if (!anchor) return false;
+
+        wrapper.position.copy(anchor);
+        wrapper.userData.gisCenter = { lng: lngLat.lng, lat: lngLat.lat };
+
+        const ecefToEnu = new THREE.Matrix4().set(
+            east.x, east.y, east.z, -east.dot(position),
+            north.x, north.y, north.z, -north.dot(position),
+            up.x, up.y, up.z, -up.dot(position),
+            0, 0, 0, 1
+        );
+
+        // Project ENU into Meteor3D local GIS axes: east -> +X, up -> +Y, north -> -Z.
+        const enuToThree = new THREE.Matrix4().set(
+            1, 0, 0, 0,
+            0, 0, 1, 0,
+            0, -1, 0, 0,
+            0, 0, 0, 1
+        );
+
+        tilesRenderer.group.applyMatrix4(new THREE.Matrix4().multiplyMatrices(enuToThree, ecefToEnu));
+        tilesRenderer.group.updateMatrixWorld(true);
+        return true;
+    }
+
+    /**
+     * 无地理参考时退回到本地居中显示
+     * @param {TilesRenderer} tilesRenderer
+     * @returns {boolean}
+     */
+    placeLocalTilesetFallback(tilesRenderer) {
+        const box3 = new THREE.Box3();
+        if (!tilesRenderer.getBoundingBox(box3) || box3.isEmpty()) {
+            return false;
+        }
+        box3.getCenter(tilesRenderer.group.position);
+        tilesRenderer.group.position.multiplyScalar(-1);
+        return true;
     }
 
     /**
@@ -355,6 +431,10 @@ export class PersistenceManager {
         return new Promise((resolve, reject) => {
             try {
                 const tilesRenderer = new TilesRenderer(url);
+                tilesRenderer.fetchOptions = {
+                    ...tilesRenderer.fetchOptions,
+                    mode: 'cors'
+                };
                 tilesRenderer.setCamera(this.sceneManager.camera);
                 tilesRenderer.setResolutionFromRenderer(this.sceneManager.camera, this.sceneManager.renderer);
 
@@ -366,58 +446,23 @@ export class PersistenceManager {
                 wrapper.userData.tilesRenderer = tilesRenderer;
                 wrapper.name = 'Tileset';
 
-                // 监听加载完成，提取 GIS 信息并定位
-                const box3 = new THREE.Box3();
-                tilesRenderer.addEventListener('load-tile-set', () => {
-                    // console.log('3D Tiles 加载完成:', url);
+                let placed = false;
+                const placeTileset = () => {
+                    if (placed) return;
 
-                    // 尝试从 transform 提取 ECEF 坐标
-                    const rootTile = tilesRenderer.root;
-                    let tilesetLng = null;
-                    let tilesetLat = null;
-
-                    if (rootTile && rootTile.cached && rootTile.cached.transform) {
-                        const transform = rootTile.cached.transform;
-                        // transform 是 4x4 列主序矩阵，位置在 [12], [13], [14]
-                        const ecefX = transform.elements[12];
-                        const ecefY = transform.elements[13];
-                        const ecefZ = transform.elements[14];
-
-                        // ECEF 转经纬度
-                        const lngLat = this.ecefToLngLat(ecefX, ecefY, ecefZ);
-                        if (lngLat) {
-                            tilesetLng = lngLat.lng;
-                            tilesetLat = lngLat.lat;
-                            // console.log(`3D Tiles GIS 信息: 经度 ${tilesetLng.toFixed(6)}°, 纬度 ${tilesetLat.toFixed(6)}°`);
-
-                            // 保存 GIS 信息到 userData
-                            wrapper.userData.gisCenter = { lng: tilesetLng, lat: tilesetLat };
-                        }
+                    const transform = this.getTilesetTransformElements(tilesRenderer);
+                    if (transform) {
+                        placed = this.placeGeoreferencedTileset(tilesRenderer, wrapper, transform);
                     }
 
-                    // 根据场景 GIS 配置决定定位方式
-                    if (this.sceneManager.gisProjection && tilesetLng !== null && tilesetLat !== null) {
-                        // 场景有 GIS 配置：将 tileset 定位到正确的地理位置
-                        const worldPos = this.sceneManager.lngLatToWorld(tilesetLng, tilesetLat, 0);
-                        if (worldPos) {
-                            // 先居中，然后偏移到目标位置
-                            if (tilesRenderer.getBoundingBox(box3)) {
-                                box3.getCenter(tilesRenderer.group.position);
-                                tilesRenderer.group.position.multiplyScalar(-1);
-                            }
-                            // 将 wrapper 移动到地理位置
-                            wrapper.position.copy(worldPos);
-                            // console.log(`3D Tiles 已定位到场景坐标: (${worldPos.x.toFixed(2)}, ${worldPos.y.toFixed(2)}, ${worldPos.z.toFixed(2)})`);
-                        }
-                    } else {
-                        // 无 GIS 配置：居中到原点
-                        if (tilesRenderer.getBoundingBox(box3)) {
-                            box3.getCenter(tilesRenderer.group.position);
-                            tilesRenderer.group.position.multiplyScalar(-1);
-                        }
-                        // console.log('3D Tiles 已居中到原点');
+                    if (!placed) {
+                        placed = this.placeLocalTilesetFallback(tilesRenderer);
                     }
-                });
+                };
+
+                // Root metadata and model content may arrive in different events.
+                tilesRenderer.addEventListener('load-tile-set', placeTileset);
+                tilesRenderer.addEventListener('load-model', placeTileset);
 
                 tilesRenderer.addEventListener('load-tile-set-error', (event) => {
                     console.error('3D Tiles 加载失败:', event);
