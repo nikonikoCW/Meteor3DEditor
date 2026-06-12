@@ -17,9 +17,9 @@
     },
     "dependencies": {
         "@tweenjs/tween.js": "^25.0.0",
-        "3d-tiles-renderer": "^0.3.39",
-        "three": "^0.181.2",
-        "three-mesh-bvh": "^0.9.7"
+        "3d-tiles-renderer": "^0.4.24",
+        "three": "^0.184.0",
+        "three-mesh-bvh": "^0.9.10"
     },
     "devDependencies": {
         "vite": "^7.2.4"

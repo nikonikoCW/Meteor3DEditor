@@ -9,9 +9,9 @@
         "./*": "./src/*"
     },
     "dependencies": {
-        "3d-tiles-renderer": "^0.4.19",
+        "3d-tiles-renderer": "^0.4.24",
         "@meteor3d/core": "workspace:*",
         "@tweenjs/tween.js": "^25.0.0",
-        "three": "^0.181.2"
+        "three": "^0.184.0"
     }
 }

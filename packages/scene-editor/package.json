@@ -12,13 +12,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "3d-tiles-renderer": "^0.4.19",
+    "3d-tiles-renderer": "^0.4.24",
     "@meteor3d/core": "workspace:*",
     "@tweenjs/tween.js": "^25.0.0",
     "driver.js": "^1.4.0",
     "leaflet": "^1.9.4",
     "pinia": "^3.0.4",
-    "three": "^0.181.2",
+    "three": "^0.184.0",
     "vue": "^3.5.25",
     "vue-router": "^4.6.3"
   },
