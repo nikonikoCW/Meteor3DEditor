@@ -103,6 +103,34 @@
         🌐 {{ tileset.name }}
       </div>
     </div>
+
+    <!-- 高斯泼溅部分 -->
+    <div class="section">
+      <div class="section-header">
+        <h4>高斯泼溅</h4>
+        <button class="refresh-btn" @click="loadAssets" title="刷新">🔄</button>
+      </div>
+      
+      <div v-if="loading" class="loading">
+        加载中...
+      </div>
+      
+      <div v-else-if="gaussianSplats.length === 0" class="empty">
+        暂无高斯泼溅
+      </div>
+      
+      <div 
+        v-else
+        v-for="gaussianSplat in gaussianSplats" 
+        :key="gaussianSplat._id"
+        class="item" 
+        draggable="true" 
+        @dragstart="onDragStart($event, 'GaussianSplat', gaussianSplat.gaussianSplatUrl)"
+        :title="gaussianSplat.originalName"
+      >
+        ✨ {{ gaussianSplat.name }}
+      </div>
+    </div>
   </div>
 </template>
 
@@ -113,6 +141,7 @@ import { getAssets, getAssetUrl as _getAssetUrl, getCompressedAssetUrl } from '.
 const models = ref([]);
 const environments = ref([]);
 const tilesets = ref([]);
+const gaussianSplats = ref([]);
 const loading = ref(false);
 
 const onDragStart = (event, type, url = null) => {
@@ -133,14 +162,16 @@ const getAssetUrl = (asset) => {
 const loadAssets = async () => {
   loading.value = true;
   try {
-    const [modelAssets, envAssets, tilesetAssets] = await Promise.all([
+    const [modelAssets, envAssets, tilesetAssets, gaussianSplatAssets] = await Promise.all([
       getAssets('model'),
       getAssets('hdri'),
-      getAssets('tileset')
+      getAssets('tileset'),
+      getAssets('gaussian-splat')
     ]);
     models.value = modelAssets;
     environments.value = envAssets;
     tilesets.value = tilesetAssets;
+    gaussianSplats.value = gaussianSplatAssets;
   } catch (error) {
     console.error('加载资产失败:', error);
   } finally {
