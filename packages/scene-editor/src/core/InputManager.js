@@ -36,7 +36,7 @@ export class InputManager {
 
         if (intersects.length > 0) {
             // 直接选中被点击的对象（可能是子节点）
-            const selectedObject = intersects[0].object;
+            const selectedObject = intersects[0].object.userData.selectionRoot || intersects[0].object;
             this.editorStore.selectObject(selectedObject);
         } else {
             this.editorStore.clearSelection();

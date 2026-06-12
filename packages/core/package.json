@@ -16,8 +16,9 @@
         "dev": "vite build --watch"
     },
     "dependencies": {
-        "@tweenjs/tween.js": "^25.0.0",
         "3d-tiles-renderer": "^0.4.24",
+        "@sparkjsdev/spark": "^2.1.0",
+        "@tweenjs/tween.js": "^25.0.0",
         "three": "^0.184.0",
         "three-mesh-bvh": "^0.9.10"
     },

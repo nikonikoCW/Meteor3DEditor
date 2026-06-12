@@ -101,6 +101,18 @@ const onDrop = async (event) => {
       console.error('Failed to load 3D Tiles:', error);
       return;
     }
+  } else if (type === 'GaussianSplat') {
+    const url = event.dataTransfer.getData('url');
+    try {
+      object = await persistenceManager.loadGaussianSplat(url);
+
+      // 使用统一的放置位置计算
+      const dropPosition = getDropPosition(event);
+      object.position.copy(dropPosition);
+    } catch (error) {
+      console.error('Failed to load Gaussian Splat:', error);
+      return;
+    }
   } else {
     // Simple geometry
     let geometry, material;

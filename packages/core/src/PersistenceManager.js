@@ -199,6 +199,17 @@ export class PersistenceManager {
                 scale: { x: object.scale.x, y: object.scale.y, z: object.scale.z },
                 gisCenter: object.userData.gisCenter || null  // 保存提取的 GIS 中心点
             };
+        } else if (object.userData.modelType === 'GaussianSplat') {
+            return {
+                id: object.uuid,
+                type: 'GaussianSplat',
+                name: object.name || 'Gaussian Splat',
+                url: object.userData.modelUrl,
+                visible: object.visible,
+                position: { x: object.position.x, y: object.position.y, z: object.position.z },
+                rotation: { x: object.rotation.x, y: object.rotation.y, z: object.rotation.z },
+                scale: { x: object.scale.x, y: object.scale.y, z: object.scale.z }
+            };
         } else {
             return {
                 id: object.uuid,
@@ -337,6 +348,15 @@ export class PersistenceManager {
             tileset.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
             tileset.scale.set(data.scale.x, data.scale.y, data.scale.z);
             return tileset;
+        } else if (data.type === 'GaussianSplat') {
+            const splat = await this.loadGaussianSplat(data.url);
+            splat.uuid = data.id;
+            splat.name = data.name || 'Gaussian Splat';
+            if (data.visible !== undefined) splat.visible = data.visible;
+            splat.position.set(data.position.x, data.position.y, data.position.z);
+            splat.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
+            splat.scale.set(data.scale.x, data.scale.y, data.scale.z);
+            return splat;
         } else {
             let geometry;
             if (data.geometry.type === 'BoxGeometry') {
@@ -480,6 +500,58 @@ export class PersistenceManager {
                 reject(error);
             }
         });
+    }
+
+    /**
+     * 确保 SparkRenderer 已加入场景
+     * @returns {SparkRenderer}
+     */
+    async ensureSparkRenderer() {
+        if (!this.sceneManager._sparkRenderer) {
+            const { SparkRenderer } = await import('@sparkjsdev/spark');
+            const sparkRenderer = new SparkRenderer({
+                renderer: this.sceneManager.renderer
+            });
+            this.sceneManager.scene.add(sparkRenderer);
+            this.sceneManager._sparkRenderer = sparkRenderer;
+        }
+
+        return this.sceneManager._sparkRenderer;
+    }
+
+    /**
+     * 加载高斯泼溅
+     * @param {string} url - 高斯泼溅文件 URL
+     * @returns {Promise<THREE.Object3D>} 高斯泼溅对象
+     */
+    async loadGaussianSplat(url) {
+        try {
+            await this.ensureSparkRenderer();
+
+            const { SplatMesh } = await import('@sparkjsdev/spark');
+            const splat = new SplatMesh({ url });
+            await splat.initialized;
+
+            const wrapper = new THREE.Group();
+            wrapper.userData.modelType = 'GaussianSplat';
+            wrapper.userData.modelUrl = url;
+            wrapper.name = 'Gaussian Splat';
+
+            const box = splat.getBoundingBox(false);
+            if (!box.isEmpty()) {
+                const center = box.getCenter(new THREE.Vector3());
+                splat.position.sub(center);
+                wrapper.userData.pivotOffset = center.toArray();
+            }
+
+            splat.userData.selectionRoot = wrapper;
+            wrapper.add(splat);
+
+            return wrapper;
+        } catch (error) {
+            console.error('高斯泼溅初始化失败:', error);
+            throw error;
+        }
     }
 
     /**
