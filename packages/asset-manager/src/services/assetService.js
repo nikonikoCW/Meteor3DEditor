@@ -276,3 +276,28 @@ export async function registerTileset({ name, tilesetUrl }) {
         throw error;
     }
 }
+
+/**
+ * 注册高斯泼溅
+ * @param {Object} options - 注册参数
+ * @param {string} options.name - 资产名称
+ * @param {string} options.gaussianSplatUrl - 高斯泼溅资产 URL
+ * @returns {Promise<Object>}
+ */
+export async function registerGaussianSplat({ name, gaussianSplatUrl }) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/assets/register-gaussian-splat`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name, gaussianSplatUrl })
+        });
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('注册高斯泼溅失败:', error);
+        throw error;
+    }
+}

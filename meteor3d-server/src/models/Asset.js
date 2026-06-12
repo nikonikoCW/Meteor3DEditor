@@ -16,7 +16,7 @@ const AssetSchema = new mongoose.Schema({
     type: {
         type: String,
         required: true,
-        enum: ['model', 'texture', 'hdri', 'effect', 'tileset'], // 资产类型 (新增 tileset)
+        enum: ['model', 'texture', 'hdri', 'effect', 'tileset', 'gaussian-splat'], // 资产类型
         default: 'model'
     },
     format: {
@@ -25,15 +25,15 @@ const AssetSchema = new mongoose.Schema({
     },
     filePath: {
         type: String,
-        required: false // tileset 类型可能没有本地路径（外部 URL 注册）
+        required: false // 外部 URL 注册类型可能没有本地路径
     },
     fileSize: {
         type: Number,
-        required: false // tileset 不记录文件大小
+        required: false // 外部 URL 注册类型不记录文件大小
     },
     url: {
         type: String,
-        required: false // tileset 使用 tilesetUrl
+        required: false // 外部 URL 注册类型使用专用 URL 字段
     },
     thumbnail: {
         type: String // 缩略图 URL（可选）
@@ -47,6 +47,13 @@ const AssetSchema = new mongoose.Schema({
     // tileset.json 的访问 URL (本地或外部)
     tilesetUrl: {
         type: String // 例如: https://example.com/tileset.json 或 /data/tilesets/xxx/tileset.json
+    },
+
+    // ========== Gaussian Splatting 专用字段 ==========
+
+    // 高斯泼溅资产访问 URL
+    gaussianSplatUrl: {
+        type: String // 例如: https://example.com/splats/scene.splat
     },
 
     // ========== 流水线处理相关字段 ==========

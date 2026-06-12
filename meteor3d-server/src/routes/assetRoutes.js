@@ -37,4 +37,7 @@ router.post('/:id/thumbnail', upload.single('thumbnail'), assetController.upload
 // POST /api/assets/register-tileset - 注册 3D Tiles
 router.post('/register-tileset', assetController.registerTileset);
 
+// POST /api/assets/register-gaussian-splat - 注册高斯泼溅
+router.post('/register-gaussian-splat', assetController.registerGaussianSplat);
+
 module.exports = router;

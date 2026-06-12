@@ -9,6 +9,9 @@
         <button class="register-btn" @click="showTilesetDialog = true">
           <span>🌐</span> 注册 3D Tiles
         </button>
+        <button class="register-btn" @click="showGaussianSplatDialog = true">
+          <span>✨</span> 注册高斯泼溅
+        </button>
       </div>
       <input 
         ref="fileInput"
@@ -50,6 +53,12 @@
       >
         3D Tiles
       </button>
+      <button 
+        :class="['filter-btn', { active: currentFilter === 'gaussian-splat' }]"
+        @click="setFilter('gaussian-splat')"
+      >
+        高斯泼溅
+      </button>
     </div>
 
     <div class="assets-grid" v-if="assets.length > 0">
@@ -77,6 +86,7 @@
         </div>
         <div class="asset-actions">
           <button 
+            v-if="asset.filePath"
             class="action-btn download-btn" 
             @click="handleDownload(asset)"
             title="下载"
@@ -186,13 +196,45 @@
         </div>
       </div>
     </div>
+
+    <!-- 高斯泼溅注册对话框 -->
+    <div v-if="showGaussianSplatDialog" class="dialog-overlay" @click.self="showGaussianSplatDialog = false">
+      <div class="dialog">
+        <h3>✨ 注册高斯泼溅</h3>
+        
+        <div class="form-group">
+          <label>资产名称</label>
+          <input 
+            type="text" 
+            v-model="gaussianSplatForm.name" 
+            placeholder="例如：展厅高斯泼溅"
+          />
+        </div>
+        
+        <div class="form-group">
+          <label>高斯泼溅 URL</label>
+          <input 
+            type="text" 
+            v-model="gaussianSplatForm.gaussianSplatUrl" 
+            placeholder="https://example.com/splats/scene.splat"
+          />
+        </div>
+        
+        <div class="dialog-actions">
+          <button class="btn-cancel" @click="showGaussianSplatDialog = false">取消</button>
+          <button class="btn-primary" @click="handleRegisterGaussianSplat" :disabled="!canRegisterGaussianSplat">
+            确认注册
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
-import { uploadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset, uploadThumbnail, getAssetsWithoutThumbnail, registerTileset } from '../services/assetService';
+import { uploadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset, uploadThumbnail, getAssetsWithoutThumbnail, registerTileset, registerGaussianSplat } from '../services/assetService';
 import { ASSET_BASE_URL } from '../config';
 import { ThumbnailGenerator } from '../utils/ThumbnailGenerator';
 import { message } from '../utils/message';
@@ -208,6 +250,13 @@ const showTilesetDialog = ref(false);
 const tilesetForm = reactive({
   name: '',
   tilesetUrl: ''
+});
+
+// 高斯泼溅注册状态
+const showGaussianSplatDialog = ref(false);
+const gaussianSplatForm = reactive({
+  name: '',
+  gaussianSplatUrl: ''
 });
 
 // 分页状态
@@ -253,6 +302,11 @@ const canRegisterTileset = computed(() => {
   return tilesetForm.name.trim() && tilesetForm.tilesetUrl.trim();
 });
 
+// 高斯泼溅注册表单验证
+const canRegisterGaussianSplat = computed(() => {
+  return gaussianSplatForm.name.trim() && gaussianSplatForm.gaussianSplatUrl.trim();
+});
+
 // 处理 3D Tiles 注册
 const handleRegisterTileset = async () => {
   if (!canRegisterTileset.value) return;
@@ -269,6 +323,32 @@ const handleRegisterTileset = async () => {
       // 重置表单
       tilesetForm.name = '';
       tilesetForm.tilesetUrl = '';
+      // 刷新列表
+      await loadAssets();
+    } else {
+      message.error('注册失败: ' + result.message);
+    }
+  } catch (error) {
+    message.error('注册失败: ' + error.message);
+  }
+};
+
+// 处理高斯泼溅注册
+const handleRegisterGaussianSplat = async () => {
+  if (!canRegisterGaussianSplat.value) return;
+
+  try {
+    const result = await registerGaussianSplat({
+      name: gaussianSplatForm.name.trim(),
+      gaussianSplatUrl: gaussianSplatForm.gaussianSplatUrl.trim()
+    });
+
+    if (result.success) {
+      message.success('高斯泼溅注册成功！');
+      showGaussianSplatDialog.value = false;
+      // 重置表单
+      gaussianSplatForm.name = '';
+      gaussianSplatForm.gaussianSplatUrl = '';
       // 刷新列表
       await loadAssets();
     } else {
@@ -400,7 +480,8 @@ const getAssetIcon = (type) => {
     texture: '\ud83d\uddbc\ufe0f',
     hdri: '\ud83c\udf05',
     effect: '\u2728',
-    tileset: '\ud83c\udf10'
+    tileset: '\ud83c\udf10',
+    'gaussian-splat': '\u2728'
   };
   return icons[type] || '\ud83d\udce6';
 };

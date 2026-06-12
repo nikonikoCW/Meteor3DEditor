@@ -514,3 +514,57 @@ exports.registerTileset = async (req, res) => {
         });
     }
 };
+
+/**
+ * 注册高斯泼溅
+ * 只支持外部 URL（http/https）
+ */
+exports.registerGaussianSplat = async (req, res) => {
+    try {
+        const { name, gaussianSplatUrl } = req.body;
+
+        // 参数校验
+        if (!name || !gaussianSplatUrl) {
+            return res.status(400).json({
+                success: false,
+                message: '缺少必要参数: name 和 gaussianSplatUrl'
+            });
+        }
+
+        // URL 必须是 http/https 开头
+        if (!gaussianSplatUrl.startsWith('http://') && !gaussianSplatUrl.startsWith('https://')) {
+            return res.status(400).json({
+                success: false,
+                message: 'URL 必须以 http:// 或 https:// 开头'
+            });
+        }
+
+        // 创建资产记录
+        const asset = new Asset({
+            name: name,
+            originalName: name,
+            type: 'gaussian-splat',
+            format: 'gaussian-splat',
+            gaussianSplatUrl: gaussianSplatUrl,
+            processingStatus: 'skipped'
+        });
+
+        await asset.save();
+
+        console.log(`[GaussianSplat] 已注册: ${name} -> ${gaussianSplatUrl}`);
+
+        res.status(201).json({
+            success: true,
+            message: '高斯泼溅注册成功',
+            asset: asset
+        });
+
+    } catch (error) {
+        console.error('注册高斯泼溅失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '注册高斯泼溅失败',
+            error: error.message
+        });
+    }
+};
