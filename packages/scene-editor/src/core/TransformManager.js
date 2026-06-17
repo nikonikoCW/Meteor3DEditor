@@ -1,5 +1,6 @@
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { TransformCommand } from './CommandFactory.js';
+import { message } from '../utils/message.js';
 
 /**
  * 变换管理器
@@ -84,6 +85,11 @@ export class TransformManager {
      */
     attach(object) {
         this.controls.attach(object);
+
+        // 高斯泼溅不支持缩放工具，选中时若当前为缩放模式则切回移动
+        if (object?.userData?.modelType === 'GaussianSplat' && this.controls.mode === 'scale') {
+            this.controls.setMode('translate');
+        }
     }
 
     /**
@@ -98,6 +104,12 @@ export class TransformManager {
      * @param {string} mode - 'translate', 'rotate', 或 'scale'
      */
     setMode(mode) {
+        const object = this.controls.object;
+        if (mode === 'scale' && object?.userData?.modelType === 'GaussianSplat') {
+            message.warning('高斯泼溅模型不支持缩放工具，仅支持等比缩放，请到属性面板缩放修改大小');
+            return;
+        }
+
         this.controls.setMode(mode);
     }
 
