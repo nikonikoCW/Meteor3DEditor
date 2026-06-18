@@ -36,7 +36,18 @@ export class InputManager {
 
         if (intersects.length > 0) {
             // 直接选中被点击的对象（可能是子节点）
-            const selectedObject = intersects[0].object.userData.selectionRoot || intersects[0].object;
+            const hitObject = intersects[0].object;
+
+            // Tiles are created asynchronously under the persisted wrapper.
+            // Always transform that wrapper instead of an internal tile mesh.
+            let tilesetRoot = hitObject;
+            while (tilesetRoot && tilesetRoot.userData?.modelType !== 'Tileset') {
+                tilesetRoot = tilesetRoot.parent;
+            }
+
+            const selectedObject = hitObject.userData.selectionRoot
+                || tilesetRoot
+                || hitObject;
             this.editorStore.selectObject(selectedObject);
         } else {
             this.editorStore.clearSelection();

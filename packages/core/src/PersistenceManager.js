@@ -169,6 +169,25 @@ export class PersistenceManager {
     }
 
     /**
+     * Apply transform data previously produced by serializeObject.
+     * @param {THREE.Object3D} object
+     * @param {{position?: Object, rotation?: Object, scale?: Object}} transform
+     */
+    applySerializedTransform(object, transform) {
+        if (!object || !transform) return;
+
+        if (transform.position) {
+            object.position.set(transform.position.x, transform.position.y, transform.position.z);
+        }
+        if (transform.rotation) {
+            object.rotation.set(transform.rotation.x, transform.rotation.y, transform.rotation.z);
+        }
+        if (transform.scale) {
+            object.scale.set(transform.scale.x, transform.scale.y, transform.scale.z);
+        }
+    }
+
+    /**
      * 序列化对象
      * 将 Three.js 对象转换为可存储的 JSON 数据
      * @param {THREE.Object3D} object - 要序列化的对象
@@ -344,9 +363,21 @@ export class PersistenceManager {
             tileset.uuid = data.id;
             tileset.name = data.name || 'Tileset';
             if (data.visible !== undefined) tileset.visible = data.visible;
-            tileset.position.set(data.position.x, data.position.y, data.position.z);
-            tileset.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
-            tileset.scale.set(data.scale.x, data.scale.y, data.scale.z);
+
+            // Root metadata is loaded asynchronously and automatic placement
+            // can run after this method returns. Keep the persisted transform
+            // available so that callback can restore the user's final values.
+            const persistedTransform = {
+                position: data.position,
+                rotation: data.rotation,
+                scale: data.scale
+            };
+            tileset.userData.pendingPersistedTransform = persistedTransform;
+            this.applySerializedTransform(tileset, persistedTransform);
+
+            if (tileset.userData.tilesetPlacementComplete) {
+                delete tileset.userData.pendingPersistedTransform;
+            }
             return tileset;
         } else if (data.type === 'GaussianSplat') {
             const splat = await this.loadGaussianSplat(data.url);
@@ -464,11 +495,35 @@ export class PersistenceManager {
                 wrapper.userData.modelType = 'Tileset';
                 wrapper.userData.modelUrl = url;
                 wrapper.userData.tilesRenderer = tilesRenderer;
+                wrapper.userData.tilesetPlacementComplete = false;
                 wrapper.name = 'Tileset';
 
                 let placed = false;
                 const placeTileset = () => {
                     if (placed) return;
+
+                    const hasRuntimeTransform = wrapper.userData.positionModified
+                        || wrapper.userData.rotationModified
+                        || wrapper.userData.scaleModified;
+                    const runtimeTransform = hasRuntimeTransform
+                        ? {
+                            position: {
+                                x: wrapper.position.x,
+                                y: wrapper.position.y,
+                                z: wrapper.position.z
+                            },
+                            rotation: {
+                                x: wrapper.rotation.x,
+                                y: wrapper.rotation.y,
+                                z: wrapper.rotation.z
+                            },
+                            scale: {
+                                x: wrapper.scale.x,
+                                y: wrapper.scale.y,
+                                z: wrapper.scale.z
+                            }
+                        }
+                        : null;
 
                     const transform = this.getTilesetTransformElements(tilesRenderer);
                     if (transform) {
@@ -477,6 +532,21 @@ export class PersistenceManager {
 
                     if (!placed) {
                         placed = this.placeLocalTilesetFallback(tilesRenderer);
+                    }
+
+                    if (placed) {
+                        // Automatic placement must not overwrite a transform
+                        // restored from the scene database.
+                        const finalTransform = runtimeTransform
+                            || wrapper.userData.pendingPersistedTransform;
+                        if (finalTransform) {
+                            this.applySerializedTransform(
+                                wrapper,
+                                finalTransform
+                            );
+                            delete wrapper.userData.pendingPersistedTransform;
+                        }
+                        wrapper.userData.tilesetPlacementComplete = true;
                     }
                 };
 
