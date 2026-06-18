@@ -32,7 +32,10 @@ export class InputManager {
         this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
         // 使用 SceneManager 的 BVH 加速射线检测
-        const intersects = this.sceneManager.raycastObjects(this.mouse, { recursive: true });
+        const intersects = this.sceneManager.raycastObjects(this.mouse, {
+            recursive: true,
+            includeTileMap: false
+        });
 
         if (intersects.length > 0) {
             // 直接选中被点击的对象（可能是子节点）
