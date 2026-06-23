@@ -1,6 +1,11 @@
 <template>
   <div class="toolbar">
     <div class="group">
+      <button @click="toggleCameraMode" :title="cameraMode === 'ghost' ? '切换到轨道模式' : '切换到幽灵模式'">
+        {{ cameraMode === 'ghost' ? '轨道模式' : '幽灵模式' }}
+      </button>
+    </div>
+    <div class="group">
       <button @click="setMode('translate')">移动</button>
       <button @click="setMode('rotate')">旋转</button>
       <button @click="setMode('scale')">缩放</button>
@@ -24,6 +29,19 @@ import { message } from '../utils/message';
 import BatchLoaderDialog from './BatchLoaderDialog.vue';
 
 const showBatchLoader = ref(false);
+const cameraMode = ref('orbit');
+
+const toggleCameraMode = () => {
+  const sceneManager = window.editor?.sceneManager;
+  if (!sceneManager) return;
+
+  const currentMode = sceneManager.getControlMode();
+  const nextMode = currentMode === 'ghost' ? 'orbit' : 'ghost';
+
+  if (sceneManager.setControlMode(nextMode)) {
+    cameraMode.value = nextMode;
+  }
+};
 
 const setMode = (mode) => {
   if (window.editor && window.editor.transformManager) {
