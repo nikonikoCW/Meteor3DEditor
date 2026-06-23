@@ -45,7 +45,8 @@
         @dragstart="onDragStart($event, 'GLTFModel', getAssetUrl(model))"
         :title="model.originalName"
       >
-        🎨 {{ model.name }}
+        <span class="asset-type-icon iconfont me-jiandanmoxing"></span>
+        <span class="item-name">{{ model.name }}</span>
       </div>
     </div>
 
@@ -72,7 +73,8 @@
         @dragstart="onDragStart($event, 'Environment', getAssetUrl(env))"
         :title="env.originalName"
       >
-        🌅 {{ env.name }}
+        <span class="asset-type-icon iconfont me-tiankonghezi"></span>
+        <span class="item-name">{{ env.name }}</span>
       </div>
     </div>
 
@@ -100,7 +102,8 @@
         @dragstart="onDragStart($event, 'Tileset', tileset.tilesetUrl)"
         :title="tileset.originalName"
       >
-        🌐 {{ tileset.name }}
+        <span class="asset-type-icon iconfont me-a-3dtiles"></span>
+        <span class="item-name">{{ tileset.name }}</span>
       </div>
     </div>
 
@@ -128,7 +131,8 @@
         @dragstart="onDragStart($event, 'GaussianSplat', gaussianSplat.gaussianSplatUrl)"
         :title="gaussianSplat.originalName"
       >
-        ✨ {{ gaussianSplat.name }}
+        <span class="asset-type-icon iconfont me-a-ziyuan1"></span>
+        <span class="item-name">{{ gaussianSplat.name }}</span>
       </div>
     </div>
   </div>
@@ -249,8 +253,10 @@ h4 {
   font-size: 13px;
   transition: background 0.2s;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 
 .item:hover {
@@ -259,6 +265,18 @@ h4 {
 
 .item:active {
   cursor: grabbing;
+}
+
+.asset-type-icon {
+  flex-shrink: 0;
+  color: #aaa;
+  font-size: 17px;
+}
+
+.item-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .loading,
