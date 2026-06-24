@@ -189,7 +189,7 @@ const updateBoxes = () => {
 const initMap = () => {
   if (!mapContainer.value) return;
 
-  const defaultCenter = props.initialCenter || { lat: 39.9042, lng: 116.4074 };
+  const defaultCenter = props.initialCenter || { lat: 34.218182, lng: 108.959407 };
   
   map = L.map(mapContainer.value, {
     center: [defaultCenter.lat, defaultCenter.lng],
