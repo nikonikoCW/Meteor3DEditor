@@ -11,34 +11,96 @@ export class InputManager {
         this.editorStore = editorStore;
         this.transformManager = transformManager;
         this.mouse = new THREE.Vector2();
+        this.clickMoveThreshold = 4;
+        this.pointerDown = null;
+        this.suppressNextClick = false;
+        this.suppressClickTimer = null;
 
         this.canvas = sceneManager.renderer.domElement;
-        this.canvas.addEventListener('pointerdown', this.onPointerDown.bind(this));
+
+        this.onPointerDown = this.onPointerDown.bind(this);
+        this.onPointerMove = this.onPointerMove.bind(this);
+        this.onPointerUp = this.onPointerUp.bind(this);
+        this.onClickCapture = this.onClickCapture.bind(this);
+
+        this.canvas.addEventListener('pointerdown', this.onPointerDown);
+        this.canvas.addEventListener('click', this.onClickCapture, true);
+        window.addEventListener('pointermove', this.onPointerMove);
+        window.addEventListener('pointerup', this.onPointerUp);
     }
 
     /**
-     * 处理鼠标按下事件
-     * 执行射线检测并选择对象
+     * 处理鼠标按下事件，只记录按下位置，不立刻做射线检测。
      * @param {PointerEvent} event - 指针事件
      */
     onPointerDown(event) {
-        if (event.button !== 0) return; // 仅响应左键点击
+        if (event.button !== 0) return;
 
-        // 如果正在拖动变换控制器，则不进行选择
+        this.pointerDown = {
+            pointerId: event.pointerId,
+            x: event.clientX,
+            y: event.clientY,
+            moved: false
+        };
+    }
+
+    onPointerMove(event) {
+        if (!this.pointerDown || event.pointerId !== this.pointerDown.pointerId) return;
+
+        const dx = event.clientX - this.pointerDown.x;
+        const dy = event.clientY - this.pointerDown.y;
+        if ((dx * dx + dy * dy) > this.clickMoveThreshold * this.clickMoveThreshold) {
+            this.pointerDown.moved = true;
+        }
+    }
+
+    onPointerUp(event) {
+        if (!this.pointerDown || event.pointerId !== this.pointerDown.pointerId) return;
+
+        const pointerDown = this.pointerDown;
+        this.pointerDown = null;
+
+        if (pointerDown.moved) {
+            this.suppressNextClick = true;
+            if (this.suppressClickTimer) {
+                window.clearTimeout(this.suppressClickTimer);
+            }
+            this.suppressClickTimer = window.setTimeout(() => {
+                this.suppressNextClick = false;
+                this.suppressClickTimer = null;
+            }, 250);
+            return;
+        }
+
+        // If a transform gizmo consumed the click/drag, leave selection unchanged.
         if (this.transformManager && this.transformManager.isDragging) return;
 
-        const rect = this.canvas.getBoundingClientRect();
-        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        this.selectAt(event.clientX, event.clientY);
+    }
 
-        // 使用 SceneManager 的 BVH 加速射线检测
+    onClickCapture(event) {
+        if (!this.suppressNextClick) return;
+
+        this.suppressNextClick = false;
+        if (this.suppressClickTimer) {
+            window.clearTimeout(this.suppressClickTimer);
+            this.suppressClickTimer = null;
+        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+    }
+
+    selectAt(clientX, clientY) {
+        const rect = this.canvas.getBoundingClientRect();
+        this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+
         const intersects = this.sceneManager.raycastObjects(this.mouse, {
             recursive: true,
             includeTileMap: false
         });
 
         if (intersects.length > 0) {
-            // 直接选中被点击的对象（可能是子节点）
             const hitObject = intersects[0].object;
 
             // Tiles are created asynchronously under the persisted wrapper.
@@ -56,5 +118,15 @@ export class InputManager {
             this.editorStore.clearSelection();
         }
     }
-}
 
+    dispose() {
+        this.canvas.removeEventListener('pointerdown', this.onPointerDown);
+        this.canvas.removeEventListener('click', this.onClickCapture, true);
+        window.removeEventListener('pointermove', this.onPointerMove);
+        window.removeEventListener('pointerup', this.onPointerUp);
+        if (this.suppressClickTimer) {
+            window.clearTimeout(this.suppressClickTimer);
+            this.suppressClickTimer = null;
+        }
+    }
+}

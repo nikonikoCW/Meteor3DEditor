@@ -34,6 +34,7 @@ let transformManager = null;
 let historyManager = null;
 let persistenceManager = null;
 let dbManager = null;
+let resizeObserver = null;
 
 // Expose managers to parent/global if needed, or use a composable/provide-inject
 // For now, we attach them to the window for debugging or simple access
@@ -177,7 +178,7 @@ onMounted(async () => {
     }
   });
 
-  const observer = new ResizeObserver((entries) => {
+  resizeObserver = new ResizeObserver((entries) => {
       if (sceneManager && sceneManager.renderer) {
           const entry = entries[0];
           if (entry && entry.contentRect) {
@@ -188,12 +189,17 @@ onMounted(async () => {
           }
       }
   });
-  observer.observe(container.value);
+  resizeObserver.observe(container.value);
 });
 
 
 onBeforeUnmount(() => {
-  // Cleanup if necessary
+  if (inputManager) {
+    inputManager.dispose();
+  }
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+  }
 });
 </script>
 
