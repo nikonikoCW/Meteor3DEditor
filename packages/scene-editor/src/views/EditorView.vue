@@ -150,21 +150,22 @@ watch(
   height: 50px;
   background: #1a1a1a;
   color: white;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   padding: 0 20px;
-  justify-content: space-between;
   border-bottom: 1px solid #333;
 }
 
 .header h1 {
   font-size: 18px;
   margin: 0;
-  flex: 1;
+  grid-column: 2;
   text-align: center;
 }
 
 .home-link {
+  justify-self: start;
   color: #aaa;
   text-decoration: none;
   font-size: 14px;
@@ -173,6 +174,10 @@ watch(
 
 .home-link:hover {
   color: white;
+}
+
+.header :deep(.toolbar) {
+  justify-self: end;
 }
 
 .main-content {
