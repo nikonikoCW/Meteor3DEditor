@@ -1,8 +1,9 @@
 <template>
   <div>
     <div 
+      ref="treeItem"
       class="tree-item"
-      :class="{ selected: selectedObject && selectedObject.uuid === node.uuid }"
+      :class="{ selected: isSelected }"
       :style="{ paddingLeft: (level * 16 + 8) + 'px' }"
       @click.stop="handleSelect"
     >
@@ -50,7 +51,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, nextTick, watch } from 'vue';
 
 const props = defineProps({
   node: {
@@ -73,11 +74,43 @@ const props = defineProps({
 
 const emit = defineEmits(['select', 'delete']);
 
-const expanded = ref(false); // 默认展开
+const expanded = ref(false); // collapsed by default
+const treeItem = ref(null);
 
 const hasChildren = computed(() => {
   return props.node.children && props.node.children.length > 0;
 });
+
+const containsUuid = (nodes, uuid) => {
+  return nodes.some((node) => {
+    if (node.uuid === uuid) return true;
+    if (node.children && node.children.length > 0) {
+      return containsUuid(node.children, uuid);
+    }
+    return false;
+  });
+};
+
+const selectedUuid = computed(() => props.selectedObject?.uuid || null);
+const isSelected = computed(() => selectedUuid.value === props.node.uuid);
+const containsSelectedObject = computed(() => {
+  return !!selectedUuid.value && hasChildren.value && containsUuid(props.node.children, selectedUuid.value);
+});
+
+watch(
+  selectedUuid,
+  async () => {
+    if (containsSelectedObject.value) {
+      expanded.value = true;
+    }
+
+    if (isSelected.value) {
+      await nextTick();
+      treeItem.value?.scrollIntoView({ block: 'nearest' });
+    }
+  },
+  { immediate: true }
+);
 
 const toggleExpand = () => {
   expanded.value = !expanded.value;
