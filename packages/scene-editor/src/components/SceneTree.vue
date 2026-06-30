@@ -4,10 +4,11 @@
     <div class="tree-list">
       <TreeNode 
         v-for="obj in sceneObjects" 
-        :key="obj.uuid + '-' + treeVersion"
+        :key="obj.uuid"
         :node="obj"
         :level="0"
         :selectedObject="selectedObject"
+        :refresh-version="treeVersion"
         @select="selectObject"
         @delete="deleteObject"
       />

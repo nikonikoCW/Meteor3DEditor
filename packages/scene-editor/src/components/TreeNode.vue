@@ -41,6 +41,7 @@
         :node="child"
         :level="level + 1"
         :selectedObject="selectedObject"
+        :refresh-version="refreshVersion"
         @select="$emit('select', $event)"
         @delete="$emit('delete', $event)"
       />
@@ -63,6 +64,10 @@ const props = defineProps({
   selectedObject: {
     type: Object,
     default: null
+  },
+  refreshVersion: {
+    type: Number,
+    default: 0
   }
 });
 
