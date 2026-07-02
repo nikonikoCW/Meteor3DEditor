@@ -1,6 +1,6 @@
 <template>
   <div class="camera-speed-panel">
-    <h3>相机速度</h3>
+    <h3>鼠标键盘</h3>
 
     <div class="section">
       <h4>幽灵模式</h4>
@@ -79,16 +79,40 @@
         >
         <div class="hint">右键拖动鼠标时的视角旋转速度</div>
       </div>
+
+      <div class="hint section-note">
+        参数会立即应用，下次切换到幽灵模式时仍然有效。
+      </div>
     </div>
 
-    <div class="hint">
-      参数会立即应用，下次切换到幽灵模式时仍然有效。
+    <div class="section">
+      <h4>场景拾取</h4>
+
+      <div class="prop-row">
+        <label class="switch-row" for="ignore-invisible-on-pick">
+          <span class="switch-label">忽略隐藏对象</span>
+          <input
+            id="ignore-invisible-on-pick"
+            v-model="ignoreInvisibleOnPick"
+            class="switch-input"
+            type="checkbox"
+          >
+          <span class="switch-track" aria-hidden="true"></span>
+        </label>
+        <div class="hint">开启后点击场景会跳过不可见的对象</div>
+      </div>
     </div>
+
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useEditorStore } from '../stores/editorStore';
+
+const editorStore = useEditorStore();
+const { ignoreInvisibleOnPick } = storeToRefs(editorStore);
 
 const moveSpeed = ref(10);
 const boostMultiplier = ref(2);
@@ -177,6 +201,59 @@ input[type="range"] {
   width: 100%;
 }
 
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.switch-label {
+  font-size: 13px;
+}
+
+.switch-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.switch-track {
+  position: relative;
+  width: 42px;
+  height: 22px;
+  border-radius: 999px;
+  background: #444;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #aaa;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.switch-input:checked + .switch-track {
+  background: #0066cc;
+}
+
+.switch-input:checked + .switch-track::after {
+  transform: translateX(20px);
+  background: #fff;
+}
+
+.switch-input:focus-visible + .switch-track {
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.35);
+}
+
 input[type="number"] {
   padding: 7px 8px;
   border: 1px solid #444;
@@ -194,5 +271,9 @@ input[type="number"]:focus {
   color: #888;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.section-note {
+  margin-top: -4px;
 }
 </style>

@@ -4,6 +4,7 @@ import { ref, markRaw } from 'vue';
 export const useEditorStore = defineStore('editor', () => {
     const selectedObject = ref(null);
     const sceneObjects = ref([]); // For tree view
+    const ignoreInvisibleOnPick = ref(false);
 
     // 场景元数据
     const sceneMetadata = ref({
@@ -52,6 +53,7 @@ export const useEditorStore = defineStore('editor', () => {
     return {
         selectedObject,
         sceneObjects,
+        ignoreInvisibleOnPick,
         sceneMetadata,
         treeVersion,
         setSceneMetadata,

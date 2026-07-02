@@ -95,10 +95,14 @@ export class InputManager {
         this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
         this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
 
-        const intersects = this.sceneManager.raycastObjects(this.mouse, {
+        let intersects = this.sceneManager.raycastObjects(this.mouse, {
             recursive: true,
             includeTileMap: false
         });
+
+        if (this.editorStore.ignoreInvisibleOnPick) {
+            intersects = intersects.filter(hit => hit.object.visible !== false);
+        }
 
         if (intersects.length > 0) {
             const hitObject = intersects[0].object;

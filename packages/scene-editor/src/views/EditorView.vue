@@ -88,7 +88,7 @@ const rightTabs = [
   },
   {
     id: 'camera-speed',
-    title: '相机速度',
+    title: '鼠标键盘',
     icon: 'me-jianpan'
   }
 ];
