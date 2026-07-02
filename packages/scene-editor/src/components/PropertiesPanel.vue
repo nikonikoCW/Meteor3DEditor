@@ -19,7 +19,7 @@
       </div>
       <div class="prop-row">
         <label>可见性</label>
-        <input type="checkbox" v-model="selectedObject.visible" @change="onVisibleChange">
+        <input type="checkbox" v-model="localVisible" @change="onVisibleChange">
       </div>
     </div>
 
@@ -117,10 +117,12 @@ const forceUpdateKey = ref(0);
 
 // Local reactive ref for object name (markRaw 对象属性无法被 Vue 追踪，需要本地 ref 中转)
 const localName = ref('');
+const localVisible = ref(true);
 
 // Sync local name when selected object changes
 watch(selectedObject, (obj) => {
   localName.value = obj?.name || '';
+  localVisible.value = obj?.visible !== false;
 }, { immediate: true });
 
 // Handle name input — 实时同步到 Three.js 对象并通知场景树
@@ -243,6 +245,7 @@ const onTransformChange = (type) => {
 
 const onVisibleChange = () => {
     if (!selectedObject.value) return;
+    selectedObject.value.visible = localVisible.value;
     selectedObject.value.userData.visibleModified = true;
     // 通知场景树刷新
     editorStore.notifyTreeUpdate();
