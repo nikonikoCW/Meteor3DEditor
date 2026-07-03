@@ -2,8 +2,6 @@ const SceneObject = require('../models/SceneObject');
 const Scene = require('../models/Scene');
 const { v4: uuidv4 } = require('uuid');
 const { generateBaseMap } = require('../services/baseMapGenerator');
-const { uploadFile } = require('../services/upyunService');
-const path = require('path');
 
 /**
  * 获取场景列表（支持分页）
@@ -143,17 +141,6 @@ exports.saveScene = async (req, res) => {
         if (metadata.cameraFar !== undefined) sceneData.cameraFar = metadata.cameraFar; // 保存相机的远裁切面
         if (metadata.gisConfig !== undefined) sceneData.gisConfig = metadata.gisConfig; // 保存 GIS 配置
 
-        // 如果有新的环境贴图，上传到又拍云
-        if (metadata.environmentUrl) {
-            const localPath = path.join(__dirname, '../..', metadata.environmentUrl);
-            const ext = path.extname(metadata.environmentUrl);
-            const remotePath = `/scenes/${sceneId}/environment${ext}`;
-            const environmentCloudUrl = await uploadFile(localPath, remotePath);
-            if (environmentCloudUrl) {
-                sceneData['cloudUrls.environment'] = environmentCloudUrl;
-            }
-        }
-
         await Scene.findOneAndUpdate(
             { sceneId: sceneId },
             sceneData,
@@ -291,7 +278,6 @@ exports.generateBaseMapHandler = async (req, res) => {
             success: true,
             message: '底图生成成功',
             baseMapUrl: result.url,
-            cloudUrl: result.cloudUrl,  // 新增: 云端 URL
             width: result.width,
             height: result.height
         });
@@ -304,3 +290,4 @@ exports.generateBaseMapHandler = async (req, res) => {
         });
     }
 };
+

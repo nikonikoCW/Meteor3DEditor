@@ -733,7 +733,7 @@ export class PersistenceManager {
             this.editorStore.resetObjects();
         }
 
-        // 恢复环境贴图，优先使用云端 URL
+        // 恢复环境贴图
         if (sceneData.metadata) {
             // 同步元数据到 Pinia Store
             if (this.editorStore && typeof this.editorStore.setSceneMetadata === 'function') {
@@ -749,7 +749,11 @@ export class PersistenceManager {
                 this.sceneManager.setCameraFar(sceneData.metadata.cameraFar);
             }
 
-            const envUrl = sceneData.metadata.cloudUrls?.environment || sceneData.metadata.environmentUrl;
+            const envUrl = sceneData.metadata.environmentUrl
+                ? (sceneData.metadata.environmentUrl.startsWith('http')
+                    ? sceneData.metadata.environmentUrl
+                    : `${this.dbManager.apiBaseUrl.replace('/api', '')}${sceneData.metadata.environmentUrl}`)
+                : null;
             if (envUrl) {
                 try {
                     await this.sceneManager.loadEnvironment(envUrl);
@@ -764,10 +768,9 @@ export class PersistenceManager {
             const gisConfig = sceneData.metadata.gisConfig;
             this.sceneManager.setGisConfig(gisConfig);
 
-            // 自动恢复底图显示，优先使用云端 URL
-            if (gisConfig.showBaseMap && (sceneData.metadata.cloudUrls?.baseMap || gisConfig.baseMapUrl)) {
-                const fullUrl = sceneData.metadata.cloudUrls?.baseMap
-                    || `${this.dbManager.apiBaseUrl.replace('/api', '')}${gisConfig.baseMapUrl}`;
+            // 自动恢复底图显示
+            if (gisConfig.showBaseMap && gisConfig.baseMapUrl) {
+                const fullUrl = `${this.dbManager.apiBaseUrl.replace('/api', '')}${gisConfig.baseMapUrl}`;
                 this.sceneManager.setBaseMap(
                     fullUrl,
                     gisConfig.bounds,

@@ -4,7 +4,6 @@
 
 import { API_BASE_URL, ASSET_BASE_URL } from '../config';
 
-
 /**
  * 上传资产
  * @param {File} file - 要上传的文件
@@ -177,47 +176,41 @@ export async function waitForProcessing(id, interval = 2000, maxAttempts = 60) {
     });
 }
 
+function toBackendUrl(path) {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+    }
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    return `${ASSET_BASE_URL}${normalizedPath}`;
+}
+
 /**
- * 获取资产 URL（原始版本）
- * 优先使用云端 URL，降级到本地路径
+ * 获取资产 URL（后端本地存储路径）
  * @param {Object} asset - 资产对象
  * @returns {string}
  */
 export function getAssetUrl(asset) {
-    // HDRI 和贴图类型，优先使用云端 file URL
-    if (asset.cloudUrls?.file) {
-        return asset.cloudUrls.file;
-    }
-    return `${ASSET_BASE_URL}${asset.url}`;
+    return toBackendUrl(asset.url);
 }
 
 /**
- * 获取压缩后的资产 URL（优先使用云端 compressed 版本）
- * 如果资产已处理完成且有 compressed 版本，返回压缩版本 URL
- * 否则返回原始 URL
+ * 获取压缩后的资产 URL。
+ * 模型处理完成后优先使用后端生成的 compressed GLB，否则返回原始上传 URL。
  * @param {Object} asset - 资产对象
  * @returns {string}
  */
 export function getCompressedAssetUrl(asset) {
-    // 优先使用云端 compressed URL
-    if (asset.cloudUrls?.compressed) {
-        return asset.cloudUrls.compressed;
+    if (asset.processingStatus === 'ready' && asset.processedFiles?.compressed) {
+        return toBackendUrl(asset.processedFiles.compressed);
     }
 
-    // 降级到本地压缩版本
-    if (asset.processingStatus === 'ready' &&
-        asset.processedFiles &&
-        asset.processedFiles.compressed) {
-        return `${ASSET_BASE_URL}/${asset.processedFiles.compressed}`;
-    }
-
-    // 没有压缩版本，返回原始 URL
     return getAssetUrl(asset);
 }
 
 /**
  * 获取模型的最佳加载 URL
- * 对于模型类型，优先使用云端 compressed 版本
+ * 对于模型类型，优先使用后端生成的 compressed 版本
  * @param {Object} asset - 资产对象
  * @returns {string}
  */
@@ -243,7 +236,7 @@ export function getLodUrl(asset, level = 0) {
     const lodPath = asset.processedFiles[lodKey];
 
     if (lodPath) {
-        return `${ASSET_BASE_URL}/${lodPath}`;
+        return toBackendUrl(lodPath);
     }
 
     return null;

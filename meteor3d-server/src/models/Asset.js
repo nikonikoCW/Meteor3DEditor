@@ -82,13 +82,6 @@ const AssetSchema = new mongoose.Schema({
         }
     },
 
-    // 云端绝对路径 (又拍云 CDN)
-    cloudUrls: {
-        compressed: String,      // 又拍云 compressed GLB URL
-        thumbnail: String,       // 又拍云缩略图 URL
-        file: String             // 又拍云原始文件 URL (HDRI/贴图)
-    },
-
     // 预计算边界数据
     bounds: {
         box: {
@@ -113,3 +106,6 @@ const AssetSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model('Asset', AssetSchema);
+
+
+

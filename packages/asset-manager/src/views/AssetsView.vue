@@ -487,11 +487,6 @@ const getAssetIcon = (type) => {
 };
 
 const getThumbnailUrl = (asset) => {
-  // 优先使用云端 URL
-  if (asset.cloudUrls?.thumbnail) {
-    return asset.cloudUrls.thumbnail;
-  }
-  // 降级到本地路径
   return ASSET_BASE_URL + asset.thumbnail;
 };
 
@@ -1081,3 +1076,4 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 </style>
+

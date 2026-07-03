@@ -22,12 +22,6 @@ const SceneSchema = new mongoose.Schema({
         default: 1000000
     },
 
-    // 云端绝对路径 (又拍云 CDN)
-    cloudUrls: {
-        environment: String,    // 又拍云环境贴图 URL
-        baseMap: String         // 又拍云底图 URL
-    },
-
     // GIS 配置
     gisConfig: {
         enable: {
@@ -74,3 +68,4 @@ const SceneSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model('Scene', SceneSchema);
+
