@@ -213,6 +213,33 @@
         </div>
       </div>
     </div>
+    <!-- 删除确认弹窗 -->
+    <div v-if="showDeleteDialog" class="dialog-overlay" @click.self="closeDeleteDialog">
+      <div class="dialog delete-dialog">
+        <h3>删除确认</h3>
+        <p class="delete-warning">删除后本地文件和云端文件都会被清理，请输入密码确认。</p>
+        <div class="delete-file-name" :title="deleteTargetAsset?.originalName">
+          {{ deleteTargetAsset?.originalName }}
+        </div>
+        <div class="form-group">
+          <label>验证密码</label>
+          <input
+            type="password"
+            v-model="deletePassword"
+            placeholder="请输入删除密码"
+            autocomplete="off"
+            @keyup.enter="confirmDeleteAsset"
+          />
+          <p v-if="deletePasswordError" class="delete-error">{{ deletePasswordError }}</p>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn-cancel" @click="closeDeleteDialog" :disabled="deleteSubmitting">取消</button>
+          <button class="btn-primary danger" @click="confirmDeleteAsset" :disabled="deleteSubmitting">
+            {{ deleteSubmitting ? '删除中...' : '确认删除' }}
+          </button>
+        </div>
+      </div>
+    </div>
     <!-- 3D Tiles 注册对话框 -->
     <div v-if="showTilesetDialog" class="dialog-overlay" @click.self="showTilesetDialog = false">
       <div class="dialog">
@@ -296,6 +323,12 @@ const showAssetDialog = ref(false);
 const selectedAsset = ref(null);
 const cloudSlideValue = ref(0);
 const cloudSlideConfirmed = ref(false);
+const DELETE_CONFIRM_PASSWORD = '123456';
+const showDeleteDialog = ref(false);
+const deleteTargetAsset = ref(null);
+const deletePassword = ref('');
+const deletePasswordError = ref('');
+const deleteSubmitting = ref(false);
 
 // 3D Tiles 注册状态
 const showTilesetDialog = ref(false);
@@ -528,21 +561,44 @@ const handleDownload = (asset) => {
   downloadAsset(asset._id, asset.originalName);
 };
 
-const handleDelete = async (asset) => {
-  // TODO: 可以改为自定义确认对话框，目前暂时保留 confirm
-  if (!confirm(`确定要删除 "${asset.originalName}" 吗？`)) {
+const handleDelete = (asset) => {
+  deleteTargetAsset.value = asset;
+  deletePassword.value = '';
+  deletePasswordError.value = '';
+  showDeleteDialog.value = true;
+};
+
+const closeDeleteDialog = () => {
+  if (deleteSubmitting.value) return;
+  showDeleteDialog.value = false;
+  deleteTargetAsset.value = null;
+  deletePassword.value = '';
+  deletePasswordError.value = '';
+};
+
+const confirmDeleteAsset = async () => {
+  if (!deleteTargetAsset.value?._id || deleteSubmitting.value) return;
+
+  if (deletePassword.value !== DELETE_CONFIRM_PASSWORD) {
+    deletePasswordError.value = '密码错误，请重新输入';
     return;
   }
 
+  deleteSubmitting.value = true;
   try {
-    await deleteAsset(asset._id);
-    message.success('删除成功！');
+    await deleteAsset(deleteTargetAsset.value._id);
+    message.success('删除成功');
+    showDeleteDialog.value = false;
+    deleteTargetAsset.value = null;
+    deletePassword.value = '';
+    deletePasswordError.value = '';
     await loadAssets();
   } catch (error) {
     message.error('删除失败: ' + error.message);
+  } finally {
+    deleteSubmitting.value = false;
   }
 };
-
 const handleCloudUpload = (asset) => {
   openAssetDialog(asset);
 };
@@ -1355,7 +1411,8 @@ onUnmounted(() => {
   margin-bottom: 6px;
 }
 
-.form-group input[type="text"] {
+.form-group input[type="text"],
+.form-group input[type="password"] {
   width: 100%;
   padding: 10px 12px;
   background: #333;
@@ -1366,11 +1423,50 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-.form-group input[type="text"]:focus {
+.form-group input[type="text"]:focus,
+.form-group input[type="password"]:focus {
   outline: none;
   border-color: #0066cc;
 }
 
+.delete-dialog {
+  width: 420px;
+}
+
+.delete-warning {
+  margin: 0 0 14px;
+  color: #f6ad55;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.delete-file-name {
+  min-height: 38px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  background: #333;
+  border: 1px solid #4a3232;
+  border-radius: 6px;
+  color: #eee;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.delete-error {
+  margin: 8px 0 0;
+  color: #ff7b7b;
+  font-size: 12px;
+}
+
+.btn-primary.danger {
+  background: #dc3545;
+}
+
+.btn-primary.danger:hover:not(:disabled) {
+  background: #e54857;
+}
 .dialog-actions {
   display: flex;
   gap: 12px;
