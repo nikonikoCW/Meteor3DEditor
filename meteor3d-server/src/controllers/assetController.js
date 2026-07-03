@@ -26,7 +26,7 @@ exports.uploadAsset = async (req, res) => {
         let assetType = 'model';
         if (['.jpg', '.jpeg', '.png'].includes(ext)) {
             assetType = 'texture';
-        } else if (['.hdr', '.exr'].includes(ext)) {
+        } else if (ext === '.hdr') {
             assetType = 'hdri';
         } else if (ext === '.zip') {
             assetType = 'model'; // ZIP 默认为模型包
@@ -171,19 +171,21 @@ exports.uploadAssetToCloud = async (req, res) => {
 
         console.log(`[CloudUpload] 开始上传文件 assetId=${asset._id}`);
         const uploadResult = await uploadAssetFiles(asset);
-        console.log(`[CloudUpload] 文件上传完成 assetId=${asset._id}, originalUrl=${uploadResult.originalUrl}, thumbnailUrl=${uploadResult.thumbnailUrl || '无'}`);
+        console.log(`[CloudUpload] Files uploaded assetId=${asset._id}, originalUrl=${uploadResult.originalUrl || 'none'}, compressedUrl=${uploadResult.compressedUrl || 'none'}, thumbnailUrl=${uploadResult.thumbnailUrl || 'none'}`);
 
+        const existingCloudUrls = asset.cloudUrls?.toObject ? asset.cloudUrls.toObject() : asset.cloudUrls || {};
+        const cloudFileUrl = uploadResult.compressedUrl || uploadResult.originalUrl;
         const cloudUrls = {
-            ...(asset.cloudUrls?.toObject ? asset.cloudUrls.toObject() : asset.cloudUrls || {}),
-            file: uploadResult.originalUrl,
-            original: uploadResult.originalUrl,
-            thumbnail: uploadResult.thumbnailUrl || asset.cloudThumbnailUrl || asset.cloudUrls?.thumbnail || null
+            ...existingCloudUrls,
+            file: cloudFileUrl,
+            original: uploadResult.originalUrl || null,
+            compressed: uploadResult.compressedUrl || null,
+            thumbnail: uploadResult.thumbnailUrl || asset.cloudThumbnailUrl || existingCloudUrls.thumbnail || null
         };
-
         const updatedAsset = await Asset.findByIdAndUpdate(
             req.params.id,
             {
-                cloudOriginalUrl: uploadResult.originalUrl,
+                cloudOriginalUrl: uploadResult.originalUrl || null,
                 cloudThumbnailUrl: cloudUrls.thumbnail,
                 cloudUrls
             },
@@ -197,7 +199,8 @@ exports.uploadAssetToCloud = async (req, res) => {
             message: uploadResult.thumbnailUrl ? '资产已上传到又拍云' : '资产原始文件已上传到又拍云，当前资产没有缩略图',
             asset: updatedAsset,
             cloudOriginalUrl: updatedAsset.cloudOriginalUrl,
-            cloudThumbnailUrl: updatedAsset.cloudThumbnailUrl
+            cloudThumbnailUrl: updatedAsset.cloudThumbnailUrl,
+            cloudCompressedUrl: updatedAsset.cloudUrls?.compressed
         });
     } catch (error) {
         console.error('[CloudUpload] 资产上云失败:', error);

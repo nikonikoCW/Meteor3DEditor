@@ -85,8 +85,7 @@ function getContentType(localPath) {
         '.jpeg': 'image/jpeg',
         '.png': 'image/png',
         '.zip': 'application/zip',
-        '.hdr': 'application/octet-stream',
-        '.exr': 'application/octet-stream'
+        '.hdr': 'application/octet-stream'
     };
 
     return contentTypes[ext] || 'application/octet-stream';
@@ -230,40 +229,63 @@ async function uploadFile(client, localPath, remotePath, label) {
 
 async function uploadAssetFiles(asset) {
     const config = requireConfig();
-    console.log(`[Upyun] 准备上云 assetId=${asset._id}, name=${asset.originalName || asset.name}`);
-    console.log(`[Upyun] 服务=${config.serviceName}, 操作员=${config.operatorName}, API=${config.apiDomain}, 目录前缀=${config.pathPrefix}`);
+    console.log(`[Upyun] Prepare cloud upload assetId=${asset._id}, name=${asset.originalName || asset.name}`);
+    console.log(`[Upyun] Service=${config.serviceName}, operator=${config.operatorName}, API=${config.apiDomain}, prefix=${config.pathPrefix}`);
 
     const client = createClient(config);
-    const originalLocalPath = resolveLocalPath(asset.filePath);
-    const originalRemotePath = buildRemotePath(config, asset, 'original', asset.filePath, asset.originalName);
-
-    console.log(`[Upyun] 原始文件路径解析: ${asset.filePath} -> ${originalLocalPath}`);
-    await uploadFile(client, originalLocalPath, originalRemotePath, '原始文件');
+    const isModelAsset = asset.type === 'model';
+    const compressedPath = asset.processedFiles?.compressed;
 
     const result = {
-        originalPath: originalRemotePath,
-        originalUrl: buildPublicUrl(config.publicDomain, originalRemotePath),
+        originalPath: null,
+        originalUrl: null,
+        compressedPath: null,
+        compressedUrl: null,
         thumbnailPath: null,
         thumbnailUrl: null
     };
+
+    if (isModelAsset) {
+        if (!compressedPath) {
+            throw new Error('模型尚未生成 compressed GLB，请等待处理完成后再上云');
+        }
+
+        const compressedLocalPath = resolveLocalPath(compressedPath);
+        const compressedRemotePath = buildRemotePath(config, asset, 'compressed', compressedPath, 'compressed.glb');
+
+        console.log(`[Upyun] Model asset detected, upload compressed GLB only. Original file will not be uploaded: ${asset.filePath}`);
+        console.log(`[Upyun] Compressed GLB path resolved: ${compressedPath} -> ${compressedLocalPath}`);
+        await uploadFile(client, compressedLocalPath, compressedRemotePath, 'compressed GLB');
+
+        result.compressedPath = compressedRemotePath;
+        result.compressedUrl = buildPublicUrl(config.publicDomain, compressedRemotePath);
+    } else {
+        const originalLocalPath = resolveLocalPath(asset.filePath);
+        const originalRemotePath = buildRemotePath(config, asset, 'original', asset.filePath, asset.originalName);
+
+        console.log(`[Upyun] Non-model asset, upload original file: ${asset.filePath} -> ${originalLocalPath}`);
+        await uploadFile(client, originalLocalPath, originalRemotePath, 'original file');
+
+        result.originalPath = originalRemotePath;
+        result.originalUrl = buildPublicUrl(config.publicDomain, originalRemotePath);
+    }
 
     if (asset.thumbnail) {
         const thumbnailLocalPath = resolveLocalPath(asset.thumbnail);
         const thumbnailRemotePath = buildRemotePath(config, asset, 'thumbnail', asset.thumbnail, 'thumbnail.jpg');
 
-        console.log(`[Upyun] 缩略图路径解析: ${asset.thumbnail} -> ${thumbnailLocalPath}`);
-        await uploadFile(client, thumbnailLocalPath, thumbnailRemotePath, '缩略图');
+        console.log(`[Upyun] Thumbnail path resolved: ${asset.thumbnail} -> ${thumbnailLocalPath}`);
+        await uploadFile(client, thumbnailLocalPath, thumbnailRemotePath, 'thumbnail');
 
         result.thumbnailPath = thumbnailRemotePath;
         result.thumbnailUrl = buildPublicUrl(config.publicDomain, thumbnailRemotePath);
     } else {
-        console.log('[Upyun] 当前资产没有缩略图，跳过缩略图上传');
+        console.log('[Upyun] Asset has no thumbnail, skip thumbnail upload');
     }
 
-    console.log(`[Upyun] 上云文件处理完成 assetId=${asset._id}`);
+    console.log(`[Upyun] Cloud upload completed assetId=${asset._id}`);
     return result;
 }
-
 async function deleteAssetCloudFiles(asset) {
     const config = requireConfig();
     const remotePaths = collectCloudRemotePaths(asset, config);

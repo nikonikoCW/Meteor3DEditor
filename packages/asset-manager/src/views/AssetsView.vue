@@ -16,7 +16,7 @@
       <input
         ref="fileInput"
         type="file"
-        accept=".glb,.jpg,.jpeg,.png,.hdr,.exr,.zip"
+        accept=".gltf,.glb,.jpg,.jpeg,.png,.hdr,.zip"
         @change="handleFileSelect"
         style="display: none"
       />
@@ -590,12 +590,13 @@ const isCloudUploaded = (asset) => {
     asset?.cloudThumbnailUrl ||
     asset?.cloudUrls?.file ||
     asset?.cloudUrls?.original ||
-    asset?.cloudUrls?.thumbnail
+    asset?.cloudUrls?.thumbnail ||
+    asset?.cloudUrls?.compressed
   );
 };
 const canUploadCloud = (asset) => {
   const format = asset.format?.toLowerCase();
-  return format === 'glb' || format === 'hdr';
+  return ['gltf', 'glb', 'zip', 'hdr'].includes(format);
 };
 const getAssetIcon = (type) => {
   const icons = {

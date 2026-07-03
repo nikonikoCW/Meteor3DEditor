@@ -81,7 +81,7 @@ const fileFilter = (req, file, cb) => {
         '.obj', '.fbx', '.stl',    // 需转换的 3D 格式
         '.zip',                    // 压缩包
         '.jpg', '.jpeg', '.png',   // 纹理
-        '.hdr', '.exr'             // HDRI
+        '.hdr'             // HDRI
     ];
     const ext = path.extname(file.originalname).toLowerCase();
 
