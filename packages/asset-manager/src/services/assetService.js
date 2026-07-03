@@ -176,6 +176,28 @@ export async function reprocessAsset(id) {
  * @param {number} timeout - 超时时间 (ms)
  * @returns {Promise<Object>}
  */
+/**
+ * 上传资产原始文件和缩略图到又拍云
+ * @param {string} id - 资产 ID
+ * @returns {Promise<Object>}
+ */
+export async function uploadAssetToCloud(id) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/assets/${id}/upload-cloud`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || data.message || '上云失败');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('资产上云失败:', error);
+        throw error;
+    }
+}
 export async function waitForProcessing(assetId, interval = 2000, timeout = 300000) {
     const startTime = Date.now();
 

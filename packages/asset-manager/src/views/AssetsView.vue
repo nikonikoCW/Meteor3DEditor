@@ -13,9 +13,9 @@
           <span>✨</span> 注册高斯泼溅
         </button>
       </div>
-      <input 
+      <input
         ref="fileInput"
-        type="file" 
+        type="file"
         accept=".glb,.jpg,.jpeg,.png,.hdr,.exr,.zip"
         @change="handleFileSelect"
         style="display: none"
@@ -23,37 +23,37 @@
     </div>
 
     <div class="filter-bar">
-      <button 
+      <button
         :class="['filter-btn', { active: currentFilter === null }]"
         @click="setFilter(null)"
       >
         全部
       </button>
-      <button 
+      <button
         :class="['filter-btn', { active: currentFilter === 'model' }]"
         @click="setFilter('model')"
       >
         模型
       </button>
-      <button 
+      <button
         :class="['filter-btn', { active: currentFilter === 'texture' }]"
         @click="setFilter('texture')"
       >
         贴图
       </button>
-      <button 
+      <button
         :class="['filter-btn', { active: currentFilter === 'hdri' }]"
         @click="setFilter('hdri')"
       >
         HDRI
       </button>
-      <button 
+      <button
         :class="['filter-btn', { active: currentFilter === 'tileset' }]"
         @click="setFilter('tileset')"
       >
         3D Tiles
       </button>
-      <button 
+      <button
         :class="['filter-btn', { active: currentFilter === 'gaussian-splat' }]"
         @click="setFilter('gaussian-splat')"
       >
@@ -62,8 +62,8 @@
     </div>
 
     <div class="assets-grid" v-if="assets.length > 0">
-      <div 
-        v-for="asset in filteredAssets" 
+      <div
+        v-for="asset in filteredAssets"
         :key="asset._id"
         class="asset-card"
       >
@@ -78,32 +78,43 @@
           <div class="asset-meta">
             <span>{{ asset.format ? asset.format.toUpperCase() : (asset.type === 'tileset' ? '3DTILES' : '-') }}</span>
             <span v-if="asset.fileSize">{{ formatFileSize(asset.fileSize) }}</span>
-            <span v-if="asset.processingStatus && asset.processingStatus !== 'skipped'" 
+            <span v-if="asset.processingStatus && asset.processingStatus !== 'skipped'"
                   :class="['status-tag', asset.processingStatus]">
               {{ getStatusLabel(asset.processingStatus) }}
+            </span>
+            <span v-if="isCloudUploaded(asset)" class="status-tag cloud-uploaded">
+              已上云
             </span>
           </div>
         </div>
         <div class="asset-actions">
-          <button 
+          <button
             v-if="asset.filePath"
-            class="action-btn download-btn" 
-            @click="handleDownload(asset)"
+            class="action-btn download-btn"
+            @click.stop="handleDownload(asset)"
             title="下载"
           >
             ⬇️
           </button>
-          <button 
+          <button
+            v-if="canUploadCloud(asset) && !isCloudUploaded(asset)"
+            class="action-btn cloud-btn"
+            @click.stop="handleCloudUpload(asset)"
+            title="上云"
+          >
+            上云
+          </button>
+          <button
             v-if="asset.processingStatus === 'failed'"
-            class="action-btn retry-btn" 
-            @click="handleReprocess(asset)"
+            class="action-btn retry-btn"
+            @click.stop="handleReprocess(asset)"
             title="重试处理"
           >
             🔄
           </button>
-          <button 
-            class="action-btn delete-btn" 
-            @click="handleDelete(asset)"
+          <button
+            class="action-btn delete-btn"
+            @click.stop="handleDelete(asset)"
             title="删除"
           >
             🗑️
@@ -123,16 +134,16 @@
         </select>
         <span>条</span>
       </div>
-      <button 
-        class="page-btn" 
+      <button
+        class="page-btn"
         :disabled="pagination.page <= 1"
         @click="goToPage(pagination.page - 1)"
       >
         ‹ 上一页
       </button>
       <div class="page-numbers" v-if="pagination.totalPages > 1">
-        <button 
-          v-for="p in visiblePages" 
+        <button
+          v-for="p in visiblePages"
           :key="p"
           class="page-num"
           :class="{ active: p === pagination.page }"
@@ -142,7 +153,7 @@
         </button>
       </div>
       <span v-else class="page-num active">1</span>
-      <button 
+      <button
         class="page-btn"
         :disabled="pagination.page >= pagination.totalPages"
         @click="goToPage(pagination.page + 1)"
@@ -165,29 +176,66 @@
       </div>
     </div>
 
+
+    <!-- 上云弹窗 -->
+    <div v-if="showAssetDialog" class="dialog-overlay" @click.self="closeAssetDialog">
+      <div class="dialog cloud-dialog">
+        <h3>上云确认</h3>
+        <div class="cloud-dialog-body">
+          <div class="cloud-file-name" :title="selectedAsset?.originalName">
+            {{ selectedAsset?.originalName }}
+          </div>
+          <div
+            class="slide-confirm"
+            :class="{ confirmed: cloudSlideConfirmed }"
+            :style="{ '--slide-progress': `${cloudSlideValue}%` }"
+          >
+            <div class="slide-fill"></div>
+            <div class="slide-shine"></div>
+            <div class="slide-thumb" :style="{ left: `calc(4px + ${cloudSlideValue}% - ${cloudSlideValue * 0.52}px)` }">
+              <span>{{ cloudSlideConfirmed ? '✓' : '›' }}</span>
+            </div>
+            <span class="slide-label">
+              {{ cloudSlideConfirmed ? '已确认' : '向右滑动确认上云' }}
+            </span>
+            <input
+              class="slide-range"
+              type="range"
+              min="0"
+              max="100"
+              v-model.number="cloudSlideValue"
+              :disabled="cloudSlideConfirmed"
+              aria-label="向右滑动确认上云"
+              @input="handleCloudSlideInput"
+              @change="handleCloudSlideRelease"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
     <!-- 3D Tiles 注册对话框 -->
     <div v-if="showTilesetDialog" class="dialog-overlay" @click.self="showTilesetDialog = false">
       <div class="dialog">
         <h3>🌐 注册 3D Tiles</h3>
-        
+
         <div class="form-group">
           <label>资产名称</label>
-          <input 
-            type="text" 
-            v-model="tilesetForm.name" 
+          <input
+            type="text"
+            v-model="tilesetForm.name"
             placeholder="例如：深圳建筑模型"
           />
         </div>
-        
+
         <div class="form-group">
           <label>tileset.json URL</label>
-          <input 
-            type="text" 
-            v-model="tilesetForm.tilesetUrl" 
+          <input
+            type="text"
+            v-model="tilesetForm.tilesetUrl"
             placeholder="https://example.com/3dtiles/tileset.json"
           />
         </div>
-        
+
         <div class="dialog-actions">
           <button class="btn-cancel" @click="showTilesetDialog = false">取消</button>
           <button class="btn-primary" @click="handleRegisterTileset" :disabled="!canRegisterTileset">
@@ -201,25 +249,25 @@
     <div v-if="showGaussianSplatDialog" class="dialog-overlay" @click.self="showGaussianSplatDialog = false">
       <div class="dialog">
         <h3>✨ 注册高斯泼溅</h3>
-        
+
         <div class="form-group">
           <label>资产名称</label>
-          <input 
-            type="text" 
-            v-model="gaussianSplatForm.name" 
+          <input
+            type="text"
+            v-model="gaussianSplatForm.name"
             placeholder="例如：展厅高斯泼溅"
           />
         </div>
-        
+
         <div class="form-group">
           <label>高斯泼溅 URL</label>
-          <input 
-            type="text" 
-            v-model="gaussianSplatForm.gaussianSplatUrl" 
+          <input
+            type="text"
+            v-model="gaussianSplatForm.gaussianSplatUrl"
             placeholder="https://example.com/splats/scene.splat"
           />
         </div>
-        
+
         <div class="dialog-actions">
           <button class="btn-cancel" @click="showGaussianSplatDialog = false">取消</button>
           <button class="btn-primary" @click="handleRegisterGaussianSplat" :disabled="!canRegisterGaussianSplat">
@@ -234,7 +282,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
-import { uploadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset, uploadThumbnail, getAssetsWithoutThumbnail, registerTileset, registerGaussianSplat } from '../services/assetService';
+import { uploadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset, uploadThumbnail, getAssetsWithoutThumbnail, registerTileset, registerGaussianSplat, uploadAssetToCloud } from '../services/assetService';
 import { ASSET_BASE_URL } from '../config';
 import { ThumbnailGenerator } from '../utils/ThumbnailGenerator';
 import { message } from '../utils/message';
@@ -244,6 +292,10 @@ const currentFilter = ref(null);
 const uploading = ref(false);
 const fileInput = ref(null);
 const uploadStatus = ref('正在上传...');
+const showAssetDialog = ref(false);
+const selectedAsset = ref(null);
+const cloudSlideValue = ref(0);
+const cloudSlideConfirmed = ref(false);
 
 // 3D Tiles 注册状态
 const showTilesetDialog = ref(false);
@@ -275,18 +327,18 @@ const visiblePages = computed(() => {
   const { page, totalPages } = pagination.value;
   const pages = [];
   const maxVisible = 5;
-  
+
   let start = Math.max(1, page - Math.floor(maxVisible / 2));
   let end = Math.min(totalPages, start + maxVisible - 1);
-  
+
   if (end - start + 1 < maxVisible) {
     start = Math.max(1, end - maxVisible + 1);
   }
-  
+
   for (let i = start; i <= end; i++) {
     pages.push(i);
   }
-  
+
   return pages;
 });
 
@@ -359,6 +411,23 @@ const handleRegisterGaussianSplat = async () => {
   }
 };
 
+
+const resetCloudSlide = () => {
+  cloudSlideValue.value = 0;
+  cloudSlideConfirmed.value = false;
+};
+
+const openAssetDialog = (asset) => {
+  selectedAsset.value = asset;
+  resetCloudSlide();
+  showAssetDialog.value = true;
+};
+
+const closeAssetDialog = () => {
+  showAssetDialog.value = false;
+  selectedAsset.value = null;
+  resetCloudSlide();
+};
 const triggerFileInput = () => {
   fileInput.value.click();
 };
@@ -373,7 +442,7 @@ const handleFileSelect = async (event) => {
   try {
     let thumbnail = null;
     const ext = file.name.split('.').pop().toLowerCase();
-    
+
     // 如果是模型文件，尝试生成缩略图
     if (['gltf', 'glb'].includes(ext)) {
       uploadStatus.value = '正在生成缩略图...';
@@ -390,7 +459,7 @@ const handleFileSelect = async (event) => {
 
     uploadStatus.value = '正在上传...';
     const result = await uploadAsset(file, thumbnail);
-    
+
     if (result.success) {
       // 如果是模型，开始轮询处理状态
       if (result.asset.type === 'model') {
@@ -399,12 +468,12 @@ const handleFileSelect = async (event) => {
         waitForProcessing(result.asset._id)
           .then(async (statusResult) => {
             message.success(`资产 "${result.asset.name}" 处理完成`);
-            
+
             // 处理完成后，检查是否需要生成缩略图
             if (!result.asset.thumbnail && statusResult.processedFiles?.lod2) {
               await generateAndUploadThumbnail(result.asset._id, statusResult.processedFiles.lod2);
             }
-            
+
             loadAssets(); // 刷新列表显示最新状态
           })
           .catch(err => {
@@ -412,7 +481,7 @@ const handleFileSelect = async (event) => {
             message.error(`资产 "${result.asset.name}" 处理失败: ${err.message}`);
             loadAssets(); // 刷新列表显示失败状态
           });
-          
+
         message.success('上传成功，正在后台处理...');
       } else {
         message.success('上传成功！');
@@ -474,6 +543,60 @@ const handleDelete = async (asset) => {
   }
 };
 
+const handleCloudUpload = (asset) => {
+  openAssetDialog(asset);
+};
+
+
+const handleCloudSlideInput = () => {
+  if (cloudSlideValue.value >= 96 && !cloudSlideConfirmed.value) {
+    const asset = selectedAsset.value;
+    cloudSlideValue.value = 100;
+    cloudSlideConfirmed.value = true;
+
+    if (!asset?._id) {
+      message.error('资产信息异常，无法上云');
+      return;
+    }
+
+    message.success(`资产 "${asset.originalName || ''}" 已确认，正在后台上云...`);
+    window.setTimeout(() => {
+      closeAssetDialog();
+    }, 500);
+
+    uploadAssetToCloud(asset._id)
+      .then((result) => {
+        if (result.asset) {
+          assets.value = assets.value.map(item => item._id === result.asset._id ? result.asset : item);
+        } else {
+          loadAssets();
+        }
+        message.success(`资产 "${asset.originalName || ''}" 上云完成`);
+      })
+      .catch((error) => {
+        message.error(`资产上云失败: ${error.message}`);
+      });
+  }
+};
+
+const handleCloudSlideRelease = () => {
+  if (!cloudSlideConfirmed.value) {
+    cloudSlideValue.value = 0;
+  }
+};
+const isCloudUploaded = (asset) => {
+  return Boolean(
+    asset?.cloudOriginalUrl ||
+    asset?.cloudThumbnailUrl ||
+    asset?.cloudUrls?.file ||
+    asset?.cloudUrls?.original ||
+    asset?.cloudUrls?.thumbnail
+  );
+};
+const canUploadCloud = (asset) => {
+  const format = asset.format?.toLowerCase();
+  return format === 'glb' || format === 'hdr';
+};
 const getAssetIcon = (type) => {
   const icons = {
     model: '\ud83c\udfa8',
@@ -512,7 +635,7 @@ const handleReprocess = async (asset) => {
     await reprocessAsset(asset._id);
     message.success('已提交重新处理请求');
     await loadAssets();
-    
+
     // 开始轮询
     waitForProcessing(asset._id)
       .then(() => {
@@ -539,23 +662,23 @@ const generateAndUploadThumbnail = async (assetId, lod2Path) => {
     if (!thumbnailGenerator) {
       thumbnailGenerator = new ThumbnailGenerator();
     }
-    
+
     // 规范化路径：替换反斜杠为正斜杠，确保以 / 开头
     let normalizedPath = lod2Path.replace(/\\/g, '/');
     if (!normalizedPath.startsWith('/')) {
       normalizedPath = '/' + normalizedPath;
     }
-    
+
     // 构建完整 URL
     const modelUrl = `${ASSET_BASE_URL}${normalizedPath}`;
     console.log('[缩略图] 加载模型 URL:', modelUrl);
-    
+
     // 从 URL 生成缩略图
     const thumbnailBlob = await thumbnailGenerator.generateFromUrl(modelUrl);
-    
+
     // 上传缩略图
     const result = await uploadThumbnail(assetId, thumbnailBlob);
-    
+
     if (result.success) {
       console.log(`[缩略图] 资产 ${assetId} 缩略图生成成功`);
     } else {
@@ -572,13 +695,13 @@ const generateAndUploadThumbnail = async (assetId, lod2Path) => {
 const checkMissingThumbnails = async () => {
   try {
     const assetsWithoutThumbnail = await getAssetsWithoutThumbnail();
-    
+
     if (assetsWithoutThumbnail.length === 0) {
       return;
     }
-    
+
     console.log(`[缩略图] 发现 ${assetsWithoutThumbnail.length} 个资产缺少缩略图，开始静默生成...`);
-    
+
     // 逐个处理，避免并发过多
     for (const asset of assetsWithoutThumbnail) {
       await generateAndUploadThumbnail(asset._id, asset.processedFiles.lod2);
@@ -735,34 +858,51 @@ onUnmounted(() => {
 
 .asset-actions {
   display: flex;
-  gap: 8px;
-  padding: 0 12px 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 0 10px 10px;
 }
 
 .action-btn {
-  flex: 1;
-  padding: 6px;
-  border: none;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid transparent;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 16px;
-  transition: background 0.2s;
+  font-size: 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
 
 .download-btn {
-  background: #0066cc;
+  background: #264f78;
 }
 
 .download-btn:hover {
-  background: #0052a3;
+  background: #31699d;
+}
+
+.cloud-btn {
+  background: #285d45;
+  min-width: 44px;
+}
+
+.cloud-btn:hover {
+  background: #347a5a;
 }
 
 .delete-btn {
-  background: #cc0000;
+  background: #7a2d2d;
 }
 
 .delete-btn:hover {
-  background: #a30000;
+  background: #9d3838;
 }
 
 .empty-state {
@@ -842,18 +982,23 @@ onUnmounted(() => {
   color: white;
 }
 
+.status-tag.cloud-uploaded {
+  background: #1f7a8c;
+  color: white;
+}
+
 .status-tag.failed {
   background: #dc3545;
   color: white;
 }
 
 .retry-btn {
-  background: #ffc107;
-  color: #000;
+  background: #72591f;
+  color: #fff;
 }
 
 .retry-btn:hover {
-  background: #e0a800;
+  background: #967323;
 }
 
 /* 分页样式 */
@@ -979,6 +1124,197 @@ onUnmounted(() => {
   transform: translateY(-1px);
 }
 
+
+.cloud-dialog {
+  min-height: 260px;
+}
+
+.cloud-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.cloud-file-name {
+  min-height: 38px;
+  padding: 10px 12px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #ddd;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slide-confirm {
+  --slide-progress: 0%;
+  position: relative;
+  height: 56px;
+  border-radius: 28px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0)),
+    #181c22;
+  border: 1px solid #3f4a56;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -10px 24px rgba(0, 0, 0, 0.22),
+    0 12px 30px rgba(0, 0, 0, 0.22);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.slide-confirm::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 23px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.slide-confirm.confirmed {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0)),
+    #11291d;
+  border-color: #39d98a;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px rgba(57, 217, 138, 0.18),
+    0 14px 34px rgba(16, 185, 129, 0.18);
+}
+
+.slide-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--slide-progress);
+  min-width: 56px;
+  background:
+    linear-gradient(90deg, #1f7a8c, #24b47e 70%, #39d98a);
+  border-radius: inherit;
+  box-shadow: 0 0 24px rgba(36, 180, 126, 0.32);
+  transition: width 0.16s ease, background 0.2s ease;
+}
+
+.slide-confirm.confirmed .slide-fill {
+  background: linear-gradient(90deg, #18a058, #39d98a);
+}
+
+.slide-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 18%,
+    rgba(255, 255, 255, 0.14) 34%,
+    transparent 50%
+  );
+  background-size: 220% 100%;
+  opacity: 0.55;
+  animation: slide-confirm-shine 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.slide-confirm.confirmed .slide-shine {
+  opacity: 0;
+  animation: none;
+}
+
+.slide-thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 35% 28%, #ffffff, #eaf7f2 58%, #cbeee0);
+  color: #0f766e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  transition: left 0.16s ease, transform 0.16s ease, color 0.2s ease, box-shadow 0.2s ease;
+  pointer-events: none;
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.slide-thumb span {
+  display: block;
+  transform: translateY(-1px);
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.slide-confirm:has(.slide-range:active) .slide-thumb {
+  transform: scale(0.96);
+  box-shadow:
+    0 7px 18px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.slide-confirm.confirmed .slide-thumb {
+  color: #0f8f58;
+  background: #ffffff;
+}
+
+.slide-label {
+  position: absolute;
+  inset: 0 58px 0 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d8e2ea;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  z-index: 2;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.slide-confirm.confirmed .slide-label {
+  color: #effff7;
+}
+
+.slide-range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: grab;
+  z-index: 4;
+}
+
+.slide-confirm:has(.slide-range:focus-visible) {
+  border-color: #5eead4;
+  box-shadow:
+    0 0 0 3px rgba(94, 234, 212, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 30px rgba(0, 0, 0, 0.22);
+}
+
+.slide-range:active {
+  cursor: grabbing;
+}
+
+@keyframes slide-confirm-shine {
+  0% {
+    background-position: 135% 0;
+  }
+  55%,
+  100% {
+    background-position: -80% 0;
+  }
+}
 /* Dialog */
 .dialog-overlay {
   position: fixed;

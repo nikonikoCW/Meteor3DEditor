@@ -29,6 +29,9 @@ router.get('/:id/download', assetController.downloadAsset);
 router.get('/:id/status', assetController.getProcessingStatus);
 
 // POST /api/assets/:id/reprocess - 重新处理资产
+// POST /api/assets/:id/upload-cloud - 上传原始文件和缩略图到又拍云
+router.post('/:id/upload-cloud', assetController.uploadAssetToCloud);
+
 router.post('/:id/reprocess', assetController.reprocessAsset);
 
 // POST /api/assets/:id/thumbnail - 上传缩略图 (延迟生成)

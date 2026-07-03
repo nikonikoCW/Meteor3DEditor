@@ -1,6 +1,7 @@
 const Asset = require('../models/Asset');
 const path = require('path');
 const fs = require('fs');
+const { uploadAssetFiles, deleteAssetCloudFiles } = require('../services/upyunService');
 
 /**
  * 上传资产
@@ -143,6 +144,74 @@ exports.getAsset = async (req, res) => {
 };
 
 /**
+ * 上传资产原始文件和缩略图到又拍云
+ */
+exports.uploadAssetToCloud = async (req, res) => {
+    try {
+        console.log(`[CloudUpload] 收到上云请求 assetId=${req.params.id}`);
+        const asset = await Asset.findById(req.params.id);
+
+        if (!asset) {
+            console.warn(`[CloudUpload] 资产不存在 assetId=${req.params.id}`);
+            return res.status(404).json({
+                success: false,
+                message: '资产不存在'
+            });
+        }
+
+        console.log(`[CloudUpload] 资产信息: name=${asset.originalName || asset.name}, type=${asset.type}, format=${asset.format}, filePath=${asset.filePath}, thumbnail=${asset.thumbnail || '无'}`);
+
+        if (!asset.filePath) {
+            console.warn(`[CloudUpload] 资产缺少本地原始文件路径 assetId=${asset._id}`);
+            return res.status(400).json({
+                success: false,
+                message: '当前资产没有本地原始文件，无法上云'
+            });
+        }
+
+        console.log(`[CloudUpload] 开始上传文件 assetId=${asset._id}`);
+        const uploadResult = await uploadAssetFiles(asset);
+        console.log(`[CloudUpload] 文件上传完成 assetId=${asset._id}, originalUrl=${uploadResult.originalUrl}, thumbnailUrl=${uploadResult.thumbnailUrl || '无'}`);
+
+        const cloudUrls = {
+            ...(asset.cloudUrls?.toObject ? asset.cloudUrls.toObject() : asset.cloudUrls || {}),
+            file: uploadResult.originalUrl,
+            original: uploadResult.originalUrl,
+            thumbnail: uploadResult.thumbnailUrl || asset.cloudThumbnailUrl || asset.cloudUrls?.thumbnail || null
+        };
+
+        const updatedAsset = await Asset.findByIdAndUpdate(
+            req.params.id,
+            {
+                cloudOriginalUrl: uploadResult.originalUrl,
+                cloudThumbnailUrl: cloudUrls.thumbnail,
+                cloudUrls
+            },
+            { new: true }
+        );
+
+        console.log(`[CloudUpload] 数据库已更新 assetId=${updatedAsset._id}`);
+
+        res.status(200).json({
+            success: true,
+            message: uploadResult.thumbnailUrl ? '资产已上传到又拍云' : '资产原始文件已上传到又拍云，当前资产没有缩略图',
+            asset: updatedAsset,
+            cloudOriginalUrl: updatedAsset.cloudOriginalUrl,
+            cloudThumbnailUrl: updatedAsset.cloudThumbnailUrl
+        });
+    } catch (error) {
+        console.error('[CloudUpload] 资产上云失败:', error);
+        const isAuthError = error.code === 40100006 || /status code 401/.test(error.message || '');
+        res.status(isAuthError ? 401 : 500).json({
+            success: false,
+            message: isAuthError
+                ? '又拍云鉴权失败，请检查 UPYUN_SERVICE_NAME、UPYUN_OPERATOR_NAME、UPYUN_PASSWORD；如果密码填的是 MD5，请设置 UPYUN_PASSWORD_TYPE=md5'
+                : '资产上云失败',
+            error: error.message
+        });
+    }
+};
+/**
  * 删除资产
  */
 exports.deleteAsset = async (req, res) => {
@@ -190,6 +259,15 @@ exports.deleteAsset = async (req, res) => {
         console.log(`[Delete] 原始文件路径: ${asset.filePath}`);
         console.log(`[Delete] 缩略图路径: ${asset.thumbnail}`);
         console.log(`[Delete] processedFiles:`, JSON.stringify(asset.processedFiles, null, 2));
+        console.log(`[Delete] cloudUrls:`, JSON.stringify(asset.cloudUrls || {}, null, 2));
+        console.log(`[Delete] cloudOriginalUrl: ${asset.cloudOriginalUrl || '无'}`);
+        console.log(`[Delete] cloudThumbnailUrl: ${asset.cloudThumbnailUrl || '无'}`);
+
+        try {
+            await deleteAssetCloudFiles(asset);
+        } catch (cloudError) {
+            console.warn(`[Delete] 云端文件删除流程异常，继续删除本地资产: ${cloudError.message}`);
+        }
 
         // tileset 类型不删除原始文件（只是注册，不是上传）
         if (asset.type === 'tileset') {

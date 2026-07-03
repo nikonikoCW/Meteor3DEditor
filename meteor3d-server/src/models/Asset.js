@@ -38,6 +38,20 @@ const AssetSchema = new mongoose.Schema({
     thumbnail: {
         type: String // 缩略图 URL（可选）
     },
+
+    // 又拍云上云后的公开访问地址
+    cloudOriginalUrl: {
+        type: String
+    },
+    cloudThumbnailUrl: {
+        type: String
+    },
+    cloudUrls: {
+        file: String,       // 兼容编辑器已有读取逻辑，等同于 original
+        original: String,
+        thumbnail: String,
+        compressed: String
+    },
     metadata: {
         type: mongoose.Schema.Types.Mixed // 额外的元数据
     },
