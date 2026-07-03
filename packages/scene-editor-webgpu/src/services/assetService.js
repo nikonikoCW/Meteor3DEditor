@@ -177,6 +177,25 @@ export async function waitForProcessing(id, interval = 2000, maxAttempts = 60) {
     });
 }
 
+function toBackendUrl(path) {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+    }
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    return `${ASSET_BASE_URL}${normalizedPath}`;
+}
+
+export function getCloudAssetUrl(asset, { preferCompressed = false } = {}) {
+    if (!asset) return '';
+
+    const urls = preferCompressed
+        ? [asset.cloudUrls?.compressed, asset.cloudUrls?.file, asset.cloudUrls?.original, asset.cloudOriginalUrl]
+        : [asset.cloudUrls?.file, asset.cloudUrls?.original, asset.cloudOriginalUrl, asset.cloudUrls?.compressed];
+
+    return urls.find(Boolean) || '';
+}
+
 /**
  * 获取资产 URL（原始版本）
  * 优先使用云端 URL，降级到本地路径
@@ -184,40 +203,32 @@ export async function waitForProcessing(id, interval = 2000, maxAttempts = 60) {
  * @returns {string}
  */
 export function getAssetUrl(asset) {
-    // HDRI 和贴图类型，优先使用云端 file URL
-    if (asset.cloudUrls?.file) {
-        return asset.cloudUrls.file;
-    }
-    return `${ASSET_BASE_URL}${asset.url}`;
+    const cloudUrl = getCloudAssetUrl(asset);
+    if (cloudUrl) return cloudUrl;
+
+    return toBackendUrl(asset?.url);
 }
 
 /**
- * 获取压缩后的资产 URL（优先使用云端 compressed 版本）
- * 如果资产已处理完成且有 compressed 版本，返回压缩版本 URL
- * 否则返回原始 URL
+ * 获取压缩后的资产 URL。
+ * 模型处理完成后优先使用云端 compressed 版本，其次云端原始文件，再降级到本地 compressed/original。
  * @param {Object} asset - 资产对象
  * @returns {string}
  */
 export function getCompressedAssetUrl(asset) {
-    // 优先使用云端 compressed URL
-    if (asset.cloudUrls?.compressed) {
-        return asset.cloudUrls.compressed;
+    const cloudUrl = getCloudAssetUrl(asset, { preferCompressed: true });
+    if (cloudUrl) return cloudUrl;
+
+    if (asset.processingStatus === 'ready' && asset.processedFiles?.compressed) {
+        return toBackendUrl(asset.processedFiles.compressed);
     }
 
-    // 降级到本地压缩版本
-    if (asset.processingStatus === 'ready' &&
-        asset.processedFiles &&
-        asset.processedFiles.compressed) {
-        return `${ASSET_BASE_URL}/${asset.processedFiles.compressed}`;
-    }
-
-    // 没有压缩版本，返回原始 URL
     return getAssetUrl(asset);
 }
 
 /**
  * 获取模型的最佳加载 URL
- * 对于模型类型，优先使用云端 compressed 版本
+ * 对于模型类型，优先使用云端或本地 compressed 版本
  * @param {Object} asset - 资产对象
  * @returns {string}
  */
@@ -243,7 +254,7 @@ export function getLodUrl(asset, level = 0) {
     const lodPath = asset.processedFiles[lodKey];
 
     if (lodPath) {
-        return `${ASSET_BASE_URL}/${lodPath}`;
+        return toBackendUrl(lodPath);
     }
 
     return null;

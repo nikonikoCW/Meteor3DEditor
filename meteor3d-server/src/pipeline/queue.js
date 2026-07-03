@@ -1,9 +1,14 @@
 /**
- * Bull 任务队列配置
- * 用于异步处理资产流水线
+ * Bull task queue config.
+ * Used by the async asset processing pipeline.
  */
 const Queue = require('bull');
 const redisConfig = require('../config/redis');
+
+const redisTarget = `${redisConfig.host}:${redisConfig.port}`;
+const redisPasswordStatus = redisConfig.password ? 'password set' : 'no password';
+
+console.log(`[Pipeline] Redis queue config: ${redisTarget} (${redisPasswordStatus})`);
 
 const assetQueue = new Queue('asset-processing', {
     redis: {
@@ -14,22 +19,29 @@ const assetQueue = new Queue('asset-processing', {
     defaultJobOptions: {
         attempts: 3,
         backoff: { type: 'exponential', delay: 1000 },
-        removeOnComplete: 100,  // 保留最近 100 个完成的任务
-        removeOnFail: 50        // 保留最近 50 个失败的任务
+        removeOnComplete: 100,
+        removeOnFail: 50
     }
 });
 
-// 队列事件监听
+assetQueue.isReady()
+    .then(() => {
+        console.log(`[Pipeline] Redis queue connected: ${redisTarget}`);
+    })
+    .catch((error) => {
+        console.error(`[Pipeline] Redis queue connection failed: ${redisTarget}`, error.message);
+    });
+
 assetQueue.on('completed', (job, result) => {
-    console.log(`[Pipeline] 任务完成: ${job.id}`);
+    console.log(`[Pipeline] task completed: ${job.id}`);
 });
 
 assetQueue.on('failed', (job, err) => {
-    console.error(`[Pipeline] 任务失败: ${job.id}`, err.message);
+    console.error(`[Pipeline] task failed: ${job.id}`, err.message);
 });
 
 assetQueue.on('error', (error) => {
-    console.error('[Pipeline] 队列错误:', error);
+    console.error('[Pipeline] queue error:', error);
 });
 
 module.exports = assetQueue;

@@ -47,6 +47,7 @@
       >
         <span class="asset-type-icon iconfont me-jiandanmoxing"></span>
         <span class="item-name">{{ model.name }}</span>
+        <span v-if="isCloudAsset(model)" class="cloud-badge" title="云端资源">☁</span>
       </div>
     </div>
 
@@ -75,6 +76,7 @@
       >
         <span class="asset-type-icon iconfont me-tiankonghezi"></span>
         <span class="item-name">{{ env.name }}</span>
+        <span v-if="isCloudAsset(env)" class="cloud-badge" title="云端资源">☁</span>
       </div>
     </div>
 
@@ -99,11 +101,12 @@
         :key="tileset._id"
         class="item" 
         draggable="true" 
-        @dragstart="onDragStart($event, 'Tileset', tileset.tilesetUrl)"
+        @dragstart="onDragStart($event, 'Tileset', getRegisteredAssetUrl(tileset, 'tilesetUrl'))"
         :title="tileset.originalName"
       >
         <span class="asset-type-icon iconfont me-a-3dtiles"></span>
         <span class="item-name">{{ tileset.name }}</span>
+        <span v-if="isCloudAsset(tileset)" class="cloud-badge" title="云端资源">☁</span>
       </div>
     </div>
 
@@ -128,11 +131,12 @@
         :key="gaussianSplat._id"
         class="item" 
         draggable="true" 
-        @dragstart="onDragStart($event, 'GaussianSplat', gaussianSplat.gaussianSplatUrl)"
+        @dragstart="onDragStart($event, 'GaussianSplat', getRegisteredAssetUrl(gaussianSplat, 'gaussianSplatUrl'))"
         :title="gaussianSplat.originalName"
       >
         <span class="asset-type-icon iconfont me-a-ziyuan1"></span>
         <span class="item-name">{{ gaussianSplat.name }}</span>
+        <span v-if="isCloudAsset(gaussianSplat)" class="cloud-badge" title="云端资源">☁</span>
       </div>
     </div>
   </div>
@@ -140,7 +144,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { getAssets, getAssetUrl as _getAssetUrl, getCompressedAssetUrl } from '../services/assetService';
+import { getAssets, getAssetUrl as _getAssetUrl, getCompressedAssetUrl, getCloudAssetUrl } from '../services/assetService';
 
 const models = ref([]);
 const environments = ref([]);
@@ -155,6 +159,19 @@ const onDragStart = (event, type, url = null) => {
   }
 };
 
+const isCloudAsset = (asset) => {
+  return Boolean(
+    asset?.cloudOriginalUrl ||
+    asset?.cloudThumbnailUrl ||
+    asset?.cloudUrls?.file ||
+    asset?.cloudUrls?.original ||
+    asset?.cloudUrls?.thumbnail ||
+    asset?.cloudUrls?.compressed
+  );
+};
+const getRegisteredAssetUrl = (asset, fallbackField) => {
+  return getCloudAssetUrl(asset) || asset?.[fallbackField] || '';
+};
 const getAssetUrl = (asset) => {
   // 对模型类型，优先使用压缩版本
   if (asset.type === 'model') {
@@ -259,6 +276,21 @@ h4 {
   gap: 7px;
 }
 
+.cloud-badge {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(40, 167, 69, 0.16);
+  border: 1px solid rgba(40, 167, 69, 0.45);
+  color: #35d56b;
+  font-size: 12px;
+  line-height: 1;
+}
 .item:hover {
   background: #333;
 }

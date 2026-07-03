@@ -185,13 +185,26 @@ function toBackendUrl(path) {
     return `${ASSET_BASE_URL}${normalizedPath}`;
 }
 
+export function getCloudAssetUrl(asset, { preferCompressed = false } = {}) {
+    if (!asset) return '';
+
+    const urls = preferCompressed
+        ? [asset.cloudUrls?.compressed, asset.cloudUrls?.file, asset.cloudUrls?.original, asset.cloudOriginalUrl]
+        : [asset.cloudUrls?.file, asset.cloudUrls?.original, asset.cloudOriginalUrl, asset.cloudUrls?.compressed];
+
+    return urls.find(Boolean) || '';
+}
+
 /**
  * 获取资产 URL（后端本地存储路径）
  * @param {Object} asset - 资产对象
  * @returns {string}
  */
 export function getAssetUrl(asset) {
-    return toBackendUrl(asset.url);
+    const cloudUrl = getCloudAssetUrl(asset);
+    if (cloudUrl) return cloudUrl;
+
+    return toBackendUrl(asset?.url);
 }
 
 /**
@@ -201,6 +214,9 @@ export function getAssetUrl(asset) {
  * @returns {string}
  */
 export function getCompressedAssetUrl(asset) {
+    const cloudUrl = getCloudAssetUrl(asset, { preferCompressed: true });
+    if (cloudUrl) return cloudUrl;
+
     if (asset.processingStatus === 'ready' && asset.processedFiles?.compressed) {
         return toBackendUrl(asset.processedFiles.compressed);
     }

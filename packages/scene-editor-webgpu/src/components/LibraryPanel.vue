@@ -45,7 +45,9 @@
         @dragstart="onDragStart($event, 'GLTFModel', getAssetUrl(model))"
         :title="model.originalName"
       >
-        🎨 {{ model.name }}
+        <span class="asset-type-icon">🎨</span>
+        <span class="item-name">{{ model.name }}</span>
+        <span v-if="isCloudAsset(model)" class="cloud-badge" title="云端资源">☁</span>
       </div>
     </div>
 
@@ -72,7 +74,9 @@
         @dragstart="onDragStart($event, 'Environment', getAssetUrl(env))"
         :title="env.originalName"
       >
-        🌅 {{ env.name }}
+        <span class="asset-type-icon">🌅</span>
+        <span class="item-name">{{ env.name }}</span>
+        <span v-if="isCloudAsset(env)" class="cloud-badge" title="云端资源">☁</span>
       </div>
     </div>
   </div>
@@ -93,6 +97,16 @@ const onDragStart = (event, type, url = null) => {
   }
 };
 
+const isCloudAsset = (asset) => {
+  return Boolean(
+    asset?.cloudOriginalUrl ||
+    asset?.cloudThumbnailUrl ||
+    asset?.cloudUrls?.file ||
+    asset?.cloudUrls?.original ||
+    asset?.cloudUrls?.thumbnail ||
+    asset?.cloudUrls?.compressed
+  );
+};
 const getAssetUrl = (asset) => {
   // 对模型类型，优先使用压缩版本
   if (asset.type === 'model') {
@@ -185,10 +199,36 @@ h4 {
   font-size: 13px;
   transition: background 0.2s;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 
+.asset-type-icon {
+  flex-shrink: 0;
+}
+
+.item-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cloud-badge {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(40, 167, 69, 0.16);
+  border: 1px solid rgba(40, 167, 69, 0.45);
+  color: #35d56b;
+  font-size: 12px;
+  line-height: 1;
+}
 .item:hover {
   background: #333;
 }
