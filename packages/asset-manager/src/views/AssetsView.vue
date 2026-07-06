@@ -68,7 +68,7 @@
         class="asset-card"
       >
             <div class="asset-preview">
-          <img v-if="asset.thumbnail" :src="getThumbnailUrl(asset)" :alt="asset.name" class="asset-thumb">
+          <img v-if="getPreviewUrl(asset)" :src="getPreviewUrl(asset)" :alt="asset.name" class="asset-thumb">
           <span v-else class="asset-icon">{{ getAssetIcon(asset.type) }}</span>
         </div>
         <div class="asset-info">
@@ -651,8 +651,13 @@ const isCloudUploaded = (asset) => {
   );
 };
 const canUploadCloud = (asset) => {
+  if (!asset?.filePath) return false;
+
   const format = asset.format?.toLowerCase();
-  return ['gltf', 'glb', 'zip', 'hdr'].includes(format);
+  const uploadableFormats = ['gltf', 'glb', 'zip', 'hdr', 'jpg', 'jpeg', 'png'];
+  const uploadableTypes = ['model', 'texture', 'hdri'];
+
+  return uploadableFormats.includes(format) || uploadableTypes.includes(asset.type);
 };
 const getAssetIcon = (type) => {
   const icons = {
@@ -666,8 +671,39 @@ const getAssetIcon = (type) => {
   return icons[type] || '\ud83d\udce6';
 };
 
+const toAssetPreviewUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+
+  const normalizedPath = url.startsWith('/') ? url : `/${url}`;
+  return `${ASSET_BASE_URL}${normalizedPath}`;
+};
+
+const isImageAsset = (asset) => {
+  const format = asset?.format?.toLowerCase();
+  return asset?.type === 'texture' || ['jpg', 'jpeg', 'png'].includes(format);
+};
+
+const getCloudPreviewUrl = (asset) => {
+  return toAssetPreviewUrl(
+    asset?.cloudUrls?.thumbnail ||
+    asset?.cloudThumbnailUrl ||
+    asset?.cloudUrls?.file ||
+    asset?.cloudUrls?.original ||
+    asset?.cloudOriginalUrl
+  );
+};
+
 const getThumbnailUrl = (asset) => {
-  return ASSET_BASE_URL + asset.thumbnail;
+  return toAssetPreviewUrl(asset?.cloudUrls?.thumbnail || asset?.cloudThumbnailUrl || asset?.thumbnail);
+};
+
+const getPreviewUrl = (asset) => {
+  if (isImageAsset(asset)) {
+    return getCloudPreviewUrl(asset) || toAssetPreviewUrl(asset?.thumbnail || asset?.url);
+  }
+
+  return getThumbnailUrl(asset);
 };
 
 const formatFileSize = (bytes) => {
