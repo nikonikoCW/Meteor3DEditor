@@ -3,7 +3,7 @@
     <div class="header">
       <h1>📦 资产管理</h1>
       <div class="header-actions">
-        <button class="upload-btn" @click="triggerFileInput">
+        <button class="upload-btn" @click="showAssetUploadDialog = true">
           <span>📤</span> 上传资产
         </button>
         <button class="cad-upload-btn" @click="showCadUploadDialog = true">
@@ -16,13 +16,6 @@
           <span>✨</span> 注册高斯泼溅
         </button>
       </div>
-      <input
-        ref="fileInput"
-        type="file"
-        accept=".gltf,.glb,.jpg,.jpeg,.png,.hdr,.zip"
-        @change="handleFileSelect"
-        style="display: none"
-      />
     </div>
 
     <div class="filter-bar">
@@ -183,7 +176,38 @@
       </div>
     </div>
 
-
+    <!-- 上传资产弹窗 -->
+    <div v-if="showAssetUploadDialog" class="dialog-overlay" @click.self="closeAssetUploadDialog">
+      <div class="dialog asset-upload-dialog">
+        <h3>上传资产</h3>
+        <div
+          class="asset-upload-drop-zone"
+          :class="{ dragging: assetDragOver, uploading }"
+          @click="triggerFileInput"
+          @dragover.prevent="assetDragOver = true"
+          @dragleave.prevent="assetDragOver = false"
+          @drop.prevent="handleAssetDrop"
+        >
+          <input
+            ref="fileInput"
+            type="file"
+            accept=".gltf,.glb,.jpg,.jpeg,.png,.hdr,.zip"
+            class="asset-upload-file-input"
+            @change="handleFileSelect"
+          />
+          <div class="asset-upload-icon">📤</div>
+          <div class="asset-upload-title">拖拽或点击上传资产文件</div>
+          <div class="asset-upload-subtitle">支持 .gltf、.glb、.zip、.jpg、.png、.hdr</div>
+          <div v-if="assetUploadFile" class="asset-upload-file-name" :title="assetUploadFile.name">
+            {{ assetUploadFile.name }}
+          </div>
+        </div>
+        <p v-if="uploading" class="asset-upload-status">{{ uploadStatus }}</p>
+        <div class="dialog-actions">
+          <button class="btn-cancel" @click="closeAssetUploadDialog" :disabled="uploading">取消</button>
+        </div>
+      </div>
+    </div>
     <!-- 上传三维 CAD 弹窗 -->
     <div v-if="showCadUploadDialog" class="dialog-overlay" @click.self="closeCadUploadDialog">
       <div class="dialog cad-upload-dialog">
@@ -359,6 +383,9 @@ const currentFilter = ref(null);
 const uploading = ref(false);
 const fileInput = ref(null);
 const uploadStatus = ref('正在上传...');
+const showAssetUploadDialog = ref(false);
+const assetUploadFile = ref(null);
+const assetDragOver = ref(false);
 const showAssetDialog = ref(false);
 const selectedAsset = ref(null);
 const cloudSlideValue = ref(0);
@@ -590,14 +617,35 @@ const closeAssetDialog = () => {
   selectedAsset.value = null;
   resetCloudSlide();
 };
-const triggerFileInput = () => {
-  fileInput.value.click();
+const closeAssetUploadDialog = () => {
+  if (uploading.value) return;
+  showAssetUploadDialog.value = false;
+  assetUploadFile.value = null;
+  assetDragOver.value = false;
+  if (fileInput.value) {
+    fileInput.value.value = '';
+  }
 };
 
-const handleFileSelect = async (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
+const triggerFileInput = () => {
+  if (uploading.value) return;
+  fileInput.value?.click();
+};
 
+const isAssetUploadFile = (file) => {
+  const ext = file?.name?.split('.').pop()?.toLowerCase();
+  return ['gltf', 'glb', 'jpg', 'jpeg', 'png', 'hdr', 'zip'].includes(ext);
+};
+
+const uploadSelectedAssetFile = async (file) => {
+  if (!file || uploading.value) return;
+
+  if (!isAssetUploadFile(file)) {
+    message.error('仅支持 GLTF、GLB、ZIP、JPG、PNG、HDR 格式');
+    return;
+  }
+
+  assetUploadFile.value = file;
   uploading.value = true;
   uploadStatus.value = '正在处理...';
 
@@ -623,6 +671,10 @@ const handleFileSelect = async (event) => {
     const result = await uploadAsset(file, thumbnail);
 
     if (result.success) {
+      showAssetUploadDialog.value = false;
+      assetUploadFile.value = null;
+      assetDragOver.value = false;
+
       // 如果是模型，开始轮询处理状态
       if (result.asset.type === 'model') {
         uploadStatus.value = '正在服务器端处理...';
@@ -656,10 +708,22 @@ const handleFileSelect = async (event) => {
     message.error('上传失败: ' + error.message);
   } finally {
     uploading.value = false;
-    event.target.value = ''; // 重置文件输入
+    if (fileInput.value) {
+      fileInput.value.value = '';
+    }
   }
 };
 
+const handleFileSelect = (event) => {
+  const file = event.target.files?.[0];
+  uploadSelectedAssetFile(file);
+};
+
+const handleAssetDrop = (event) => {
+  assetDragOver.value = false;
+  const file = event.dataTransfer.files?.[0];
+  uploadSelectedAssetFile(file);
+};
 const setFilter = (type) => {
   currentFilter.value = type;
   loadAssets(1); // 切换筛选时回到第一页
@@ -1399,6 +1463,71 @@ onUnmounted(() => {
 }
 
 
+.asset-upload-dialog {
+  min-height: 300px;
+}
+
+.asset-upload-drop-zone {
+  min-height: 190px;
+  border: 1px dashed #4f75a1;
+  border-radius: 8px;
+  background: #202b38;
+  color: #dbe7f3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.asset-upload-drop-zone.dragging {
+  border-color: #5da8ff;
+  background: #1d344d;
+}
+
+.asset-upload-drop-zone.uploading {
+  cursor: wait;
+  opacity: 0.78;
+}
+
+.asset-upload-file-input {
+  display: none;
+}
+
+.asset-upload-icon {
+  font-size: 40px;
+}
+
+.asset-upload-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.asset-upload-subtitle,
+.asset-upload-status {
+  color: #9fb0c4;
+  font-size: 13px;
+}
+
+.asset-upload-file-name {
+  max-width: 100%;
+  margin-top: 8px;
+  padding: 7px 10px;
+  background: #2d3a48;
+  border: 1px solid #465b72;
+  border-radius: 6px;
+  color: #eef6ff;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-upload-status {
+  margin: 14px 0 0;
+}
 .cad-upload-dialog {
   min-height: 300px;
 }
