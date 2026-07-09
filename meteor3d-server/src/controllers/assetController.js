@@ -1,7 +1,55 @@
 const Asset = require('../models/Asset');
 const path = require('path');
 const fs = require('fs');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
 const { uploadAssetFiles, deleteAssetCloudFiles } = require('../services/upyunService');
+
+const execFileAsync = promisify(execFile);
+const CAD_EXTENSIONS = ['.step', '.stp', '.igs', '.iges'];
+const PYTHON_COMMAND = process.env.PYTHON_COMMAND || process.env.PYTHON || 'python';
+
+function toUploadUrl(filePath) {
+    return '/' + filePath.replace(/\\/g, '/');
+}
+
+function getCadConvertedPath(filePath) {
+    const parsed = path.parse(filePath);
+    return path.join(parsed.dir, parsed.name + '.glb');
+}
+
+async function convertCadToGlb(inputPath, outputPath) {
+    const scriptPath = path.resolve(__dirname, '../../pyScript/step_to_glb.py');
+
+    if (!fs.existsSync(scriptPath)) {
+        throw new Error('CAD 转换脚本不存在: ' + scriptPath);
+    }
+
+    const { stdout, stderr } = await execFileAsync(PYTHON_COMMAND, [scriptPath, path.resolve(inputPath), path.resolve(outputPath)], {
+        cwd: path.resolve(__dirname, '../..'),
+        timeout: 20 * 60 * 1000,
+        windowsHide: true,
+        env: {
+            ...process.env,
+            PYTHONIOENCODING: 'utf-8',
+            PYTHONUTF8: '1'
+        },
+        maxBuffer: 1024 * 1024 * 20
+    });
+
+    if (stdout) console.log('[CADConvert] stdout:', stdout);
+    if (stderr) console.warn('[CADConvert] stderr:', stderr);
+
+    if (!fs.existsSync(outputPath)) {
+        throw new Error('CAD 转换失败，未生成 GLB 文件');
+    }
+}
+
+function removeFileIfExists(filePath) {
+    if (filePath && fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+    }
+}
 
 /**
  * 上传资产
@@ -21,6 +69,15 @@ exports.uploadAsset = async (req, res) => {
         }
 
         const ext = path.extname(mainFile.originalname).toLowerCase();
+
+        if (CAD_EXTENSIONS.includes(ext)) {
+            removeFileIfExists(mainFile.path);
+            if (thumbnailFile) removeFileIfExists(thumbnailFile.path);
+            return res.status(400).json({
+                success: false,
+                message: 'CAD 文件请使用上传三维CAD入口'
+            });
+        }
 
         // 确定资产类型
         let assetType = 'model';
@@ -70,6 +127,110 @@ exports.uploadAsset = async (req, res) => {
         res.status(500).json({
             success: false,
             message: '上传失败',
+            error: error.message
+        });
+    }
+};
+
+async function convertCadAssetInBackground(assetId, inputPath, outputPath) {
+    try {
+        await convertCadToGlb(inputPath, outputPath);
+
+        const asset = await Asset.findById(assetId);
+        if (!asset) {
+            removeFileIfExists(outputPath);
+            console.warn(`[CADUpload] 资产已不存在，清理转换文件: ${outputPath}`);
+            return;
+        }
+
+        const metadata = asset.metadata?.toObject ? asset.metadata.toObject() : (asset.metadata || {});
+        await Asset.findByIdAndUpdate(assetId, {
+            url: toUploadUrl(outputPath),
+            metadata: {
+                ...metadata,
+                convertedGlbPath: outputPath,
+                processingInputPath: outputPath
+            },
+            processingError: null
+        });
+
+        const { assetQueue } = require('../pipeline');
+        await assetQueue.add('process', { assetId: assetId.toString() });
+        console.log(`[CADUpload] CAD 已转换并加入处理队列: ${assetId}`);
+    } catch (error) {
+        console.error(`[CADUpload] CAD 后台转换失败: ${assetId}`, error);
+        removeFileIfExists(outputPath);
+        await Asset.findByIdAndUpdate(assetId, {
+            processingStatus: 'failed',
+            processingError: error.message
+        });
+    }
+}
+
+/**
+ * 上传 CAD 资产
+ * 保存原始 STEP/IGS 文件后立即返回，转换和流水线处理在后台执行。
+ */
+exports.uploadCadAsset = async (req, res) => {
+    let uploadedPath = null;
+    let convertedPath = null;
+
+    try {
+        const mainFile = req.file;
+        uploadedPath = mainFile?.path || null;
+
+        if (!mainFile) {
+            return res.status(400).json({
+                success: false,
+                message: '没有上传文件'
+            });
+        }
+
+        const ext = path.extname(mainFile.originalname).toLowerCase();
+        if (!CAD_EXTENSIONS.includes(ext)) {
+            removeFileIfExists(mainFile.path);
+            return res.status(400).json({
+                success: false,
+                message: '仅支持 STEP/STP/IGS/IGES 格式'
+            });
+        }
+
+        convertedPath = getCadConvertedPath(mainFile.path);
+        const assetData = {
+            name: path.basename(mainFile.originalname, ext),
+            originalName: mainFile.originalname,
+            type: 'model',
+            format: ext.substring(1),
+            filePath: mainFile.path,
+            fileSize: mainFile.size,
+            metadata: {
+                sourceType: 'cad',
+                originalCadPath: mainFile.path,
+                convertedGlbPath: convertedPath
+            },
+            processingStatus: 'pending'
+        };
+
+        const asset = new Asset(assetData);
+        await asset.save();
+
+        setImmediate(() => {
+            convertCadAssetInBackground(asset._id, mainFile.path, convertedPath);
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'CAD 文件上传成功，正在后台转换...',
+            asset
+        });
+    } catch (error) {
+        console.error('上传 CAD 资产失败:', error);
+        removeFileIfExists(uploadedPath);
+        removeFileIfExists(convertedPath);
+
+        res.status(500).json({
+            success: false,
+            message: 'CAD 上传失败',
             error: error.message
         });
     }
@@ -278,6 +439,7 @@ exports.deleteAsset = async (req, res) => {
         } else {
             // 1. 删除原始上传文件
             safeUnlink(asset.filePath);
+            safeUnlink(asset.metadata?.convertedGlbPath);
         }
 
         // 2. 删除缩略图

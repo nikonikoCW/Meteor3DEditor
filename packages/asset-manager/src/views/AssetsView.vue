@@ -6,6 +6,9 @@
         <button class="upload-btn" @click="triggerFileInput">
           <span>📤</span> 上传资产
         </button>
+        <button class="cad-upload-btn" @click="showCadUploadDialog = true">
+          <span>📐</span> 上传三维CAD
+        </button>
         <button class="register-btn" @click="showTilesetDialog = true">
           <span>🌐</span> 注册 3D Tiles
         </button>
@@ -76,15 +79,19 @@
             {{ asset.originalName }}
           </div>
           <div class="asset-meta">
-            <span>{{ asset.format ? asset.format.toUpperCase() : (asset.type === 'tileset' ? '3DTILES' : '-') }}</span>
-            <span v-if="asset.fileSize">{{ formatFileSize(asset.fileSize) }}</span>
-            <span v-if="asset.processingStatus && asset.processingStatus !== 'skipped'"
-                  :class="['status-tag', asset.processingStatus]">
-              {{ getStatusLabel(asset.processingStatus) }}
-            </span>
-            <span v-if="isCloudUploaded(asset)" class="status-tag cloud-uploaded">
-              已上云
-            </span>
+            <div class="asset-meta-main">
+              <span class="asset-format">{{ asset.format ? asset.format.toUpperCase() : (asset.type === 'tileset' ? '3DTILES' : '-') }}</span>
+              <span v-if="asset.fileSize" class="asset-size">{{ formatFileSize(asset.fileSize) }}</span>
+            </div>
+            <div class="asset-status-list">
+              <span v-if="asset.processingStatus && asset.processingStatus !== 'skipped'"
+                    :class="['status-tag', asset.processingStatus]">
+                {{ getStatusLabel(asset.processingStatus) }}
+              </span>
+              <span v-if="isCloudUploaded(asset)" class="status-tag cloud-uploaded">
+                已上云
+              </span>
+            </div>
           </div>
         </div>
         <div class="asset-actions">
@@ -176,6 +183,39 @@
       </div>
     </div>
 
+
+    <!-- 上传三维 CAD 弹窗 -->
+    <div v-if="showCadUploadDialog" class="dialog-overlay" @click.self="closeCadUploadDialog">
+      <div class="dialog cad-upload-dialog">
+        <h3>上传三维CAD</h3>
+        <div
+          class="cad-drop-zone"
+          :class="{ dragging: cadDragOver, uploading: cadUploading }"
+          @click="triggerCadFileInput"
+          @dragover.prevent="cadDragOver = true"
+          @dragleave.prevent="cadDragOver = false"
+          @drop.prevent="handleCadDrop"
+        >
+          <input
+            ref="cadFileInput"
+            type="file"
+            accept=".step,.stp,.igs,.iges"
+            class="cad-file-input"
+            @change="handleCadFileSelect"
+          />
+          <div class="cad-drop-icon">📐</div>
+          <div class="cad-drop-title">拖拽或点击上传 CAD 文件</div>
+          <div class="cad-drop-subtitle">支持 .step、.stp、.igs、.iges</div>
+          <div v-if="cadUploadFile" class="cad-file-name" :title="cadUploadFile.name">
+            {{ cadUploadFile.name }}
+          </div>
+        </div>
+        <p v-if="cadUploadStatus" class="cad-upload-status">{{ cadUploadStatus }}</p>
+        <div class="dialog-actions">
+          <button class="btn-cancel" @click="closeCadUploadDialog" :disabled="cadUploading">取消</button>
+        </div>
+      </div>
+    </div>
 
     <!-- 上云弹窗 -->
     <div v-if="showAssetDialog" class="dialog-overlay" @click.self="closeAssetDialog">
@@ -309,7 +349,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
-import { uploadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset, uploadThumbnail, getAssetsWithoutThumbnail, registerTileset, registerGaussianSplat, uploadAssetToCloud } from '../services/assetService';
+import { uploadAsset, uploadCadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset, uploadThumbnail, getAssetsWithoutThumbnail, registerTileset, registerGaussianSplat, uploadAssetToCloud } from '../services/assetService';
 import { ASSET_BASE_URL } from '../config';
 import { ThumbnailGenerator } from '../utils/ThumbnailGenerator';
 import { message } from '../utils/message';
@@ -329,6 +369,12 @@ const deleteTargetAsset = ref(null);
 const deletePassword = ref('');
 const deletePasswordError = ref('');
 const deleteSubmitting = ref(false);
+const showCadUploadDialog = ref(false);
+const cadFileInput = ref(null);
+const cadUploadFile = ref(null);
+const cadUploading = ref(false);
+const cadDragOver = ref(false);
+const cadUploadStatus = ref('');
 
 // 3D Tiles 注册状态
 const showTilesetDialog = ref(false);
@@ -381,6 +427,89 @@ const filteredAssets = computed(() => {
   }
   return assets.value.filter(asset => asset.type === currentFilter.value);
 });
+
+const closeCadUploadDialog = () => {
+  if (cadUploading.value) return;
+  showCadUploadDialog.value = false;
+  cadUploadFile.value = null;
+  cadDragOver.value = false;
+  cadUploadStatus.value = '';
+  if (cadFileInput.value) {
+    cadFileInput.value.value = '';
+  }
+};
+
+const triggerCadFileInput = () => {
+  if (cadUploading.value) return;
+  cadFileInput.value?.click();
+};
+
+const isCadFile = (file) => {
+  const ext = file?.name?.split('.').pop()?.toLowerCase();
+  return ['step', 'stp', 'igs', 'iges'].includes(ext);
+};
+
+const uploadSelectedCadFile = async (file) => {
+  if (!file || cadUploading.value) return;
+
+  if (!isCadFile(file)) {
+    message.error('仅支持 STEP、STP、IGS、IGES 格式');
+    return;
+  }
+
+  cadUploadFile.value = file;
+  cadUploading.value = true;
+  cadUploadStatus.value = '正在上传 CAD 文件...';
+
+  try {
+    const result = await uploadCadAsset(file);
+
+    if (!result.success) {
+      message.error('CAD 上传失败: ' + result.message);
+      return;
+    }
+
+    cadUploadStatus.value = '上传成功，后端正在转换...';
+    message.success('CAD 上传成功，后端正在转换...');
+    await loadAssets(1);
+
+    waitForProcessing(result.asset._id)
+      .then(async (statusResult) => {
+        message.success(`资产 "${result.asset.name}" 处理完成`);
+
+        if (!result.asset.thumbnail && statusResult.processedFiles?.lod2) {
+          await generateAndUploadThumbnail(result.asset._id, statusResult.processedFiles.lod2);
+        }
+
+        loadAssets();
+      })
+      .catch(err => {
+        message.error(`CAD 资产处理失败: ${err.message}`);
+        loadAssets();
+      });
+
+    showCadUploadDialog.value = false;
+  } catch (error) {
+    message.error('CAD 上传失败: ' + error.message);
+  } finally {
+    cadUploading.value = false;
+    cadUploadStatus.value = '';
+    if (cadFileInput.value) {
+      cadFileInput.value.value = '';
+    }
+  }
+};
+
+const handleCadFileSelect = (event) => {
+  const file = event.target.files?.[0];
+  uploadSelectedCadFile(file);
+};
+
+const handleCadDrop = (event) => {
+  cadDragOver.value = false;
+  const file = event.dataTransfer.files?.[0];
+  uploadSelectedCadFile(file);
+};
 
 // 3D Tiles 注册表单验证
 const canRegisterTileset = computed(() => {
@@ -864,6 +993,25 @@ onUnmounted(() => {
   background: #0052a3;
 }
 
+.cad-upload-btn {
+  padding: 10px 20px;
+  background: #5b5f6b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.cad-upload-btn:hover {
+  background: #6d7280;
+  transform: translateY(-1px);
+}
+
 .filter-bar {
   display: flex;
   gap: 10px;
@@ -898,7 +1046,7 @@ onUnmounted(() => {
   flex: 1;
   padding: 30px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 20px;
   overflow-y: auto;
   align-content: start;
@@ -944,9 +1092,38 @@ onUnmounted(() => {
 
 .asset-meta {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   font-size: 12px;
   color: #888;
+  min-width: 0;
+}
+
+.asset-meta-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.asset-format {
+  flex: 0 0 auto;
+  color: #aeb7c2;
+  font-weight: 600;
+}
+
+.asset-size {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-status-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 20px;
 }
 
 .asset-actions {
@@ -1058,11 +1235,15 @@ onUnmounted(() => {
 }
 
 .status-tag {
-  font-size: 10px;
-  padding: 2px 6px;
+  flex: 0 0 auto;
+  max-width: 100%;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 3px 7px;
   border-radius: 4px;
   background: #444;
   color: #ccc;
+  white-space: nowrap;
 }
 
 .status-tag.processing {
@@ -1217,6 +1398,72 @@ onUnmounted(() => {
   transform: translateY(-1px);
 }
 
+
+.cad-upload-dialog {
+  min-height: 300px;
+}
+
+.cad-drop-zone {
+  min-height: 190px;
+  border: 1px dashed #5b6675;
+  border-radius: 8px;
+  background: #24272d;
+  color: #d7dde6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.cad-drop-zone.dragging {
+  border-color: #4ea1ff;
+  background: #1e3147;
+}
+
+.cad-drop-zone.uploading {
+  cursor: wait;
+  opacity: 0.78;
+}
+
+.cad-file-input {
+  display: none;
+}
+
+.cad-drop-icon {
+  font-size: 40px;
+}
+
+.cad-drop-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cad-drop-subtitle,
+.cad-upload-status {
+  color: #9aa4b2;
+  font-size: 13px;
+}
+
+.cad-file-name {
+  max-width: 100%;
+  margin-top: 8px;
+  padding: 7px 10px;
+  background: #303640;
+  border: 1px solid #46505e;
+  border-radius: 6px;
+  color: #eef3f8;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cad-upload-status {
+  margin: 14px 0 0;
+}
 
 .cloud-dialog {
   min-height: 260px;

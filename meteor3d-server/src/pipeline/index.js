@@ -22,10 +22,12 @@ const { calculateBounds } = require('./processors/boundsCalculator');
  * @returns {Object} 处理结果上下文
  */
 async function processAsset(asset) {
+    const processingInputPath = asset.metadata?.processingInputPath || asset.filePath;
+    const processingFormat = path.extname(processingInputPath).replace('.', '').toLowerCase() || asset.format;
     const context = {
         assetId: asset._id.toString(),
-        inputPath: asset.filePath,
-        originalFormat: asset.format
+        inputPath: processingInputPath,
+        originalFormat: processingFormat
     };
 
     console.log(`[Pipeline] 开始处理资产: ${asset.name} (${asset._id})`);

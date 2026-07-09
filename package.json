@@ -19,7 +19,7 @@
         "build:all": "pnpm -r build"
     },
     "devDependencies": {
-        "pnpm": "^10.2.0"
+        "pnpm": "^10.34.4"
     },
     "dependencies": {
         "proj4": "^2.20.2"

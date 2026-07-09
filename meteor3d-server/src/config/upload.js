@@ -80,6 +80,7 @@ const fileFilter = (req, file, cb) => {
         '.gltf', '.glb',           // glTF 格式
         '.obj', '.fbx', '.stl',    // 需转换的 3D 格式
         '.zip',                    // 压缩包
+        '.step', '.stp', '.igs', '.iges', // CAD 文件
         '.jpg', '.jpeg', '.png',   // 纹理
         '.hdr'             // HDRI
     ];
@@ -99,7 +100,7 @@ const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 100 * 1024 * 1024 // 50MB 限制
+        fileSize: 150 * 1024 * 1024 // 50MB 限制
     }
 });
 

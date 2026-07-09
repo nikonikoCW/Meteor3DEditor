@@ -35,6 +35,29 @@ export async function uploadAsset(file, thumbnail = null, onProgress) {
 }
 
 /**
+ * 上传三维 CAD 资产
+ * @param {File} file - STEP/IGS 文件
+ * @returns {Promise<Object>}
+ */
+export async function uploadCadAsset(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/assets/upload-cad`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('上传 CAD 资产失败:', error);
+        throw error;
+    }
+}
+
+/**
  * 获取资产列表（支持分页）
  * @param {string} type - 资产类型过滤 (可选)
  * @param {number} page - 页码，默认 1

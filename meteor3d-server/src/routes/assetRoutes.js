@@ -13,6 +13,9 @@ router.post('/upload', upload.fields([
     { name: 'thumbnail', maxCount: 1 }
 ]), assetController.uploadAsset);
 
+// POST /api/assets/upload-cad - 上传三维 CAD
+router.post('/upload-cad', upload.single('file'), assetController.uploadCadAsset);
+
 // GET /api/assets - 获取资产列表
 router.get('/', assetController.getAssets);
 
