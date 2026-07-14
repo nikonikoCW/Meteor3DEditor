@@ -93,7 +93,7 @@
           <div class="product-action">开始开发 →</div>
         </div>
 
-        <div class="product-card" @click="$router.push('/api-docs')">
+        <div class="product-card" @click="navigateTo('api-docs')">
           <div class="card-glow"></div>
           <div class="product-icon">📚</div>
           <h3 class="product-title">API 文档</h3>
@@ -225,6 +225,9 @@ const navigateTo = (app) => {
       break;
     case 'ai-scene':
       window.location.href = `https://ai-scene.meteor3d.cn`
+      break;
+    case 'api-docs':
+      window.location.href = `https://api-docs.meteor3d.cn`
       break;
     default:
       break;
