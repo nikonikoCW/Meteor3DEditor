@@ -137,9 +137,8 @@ const onDrop = async (event) => {
   }
 
   if (object) {
-    const command = new AddObjectCommand(sceneManager, object, persistenceManager);
+    const command = new AddObjectCommand(sceneManager, object, persistenceManager, editorStore);
     historyManager.execute(command);
-    editorStore.addObject(object);
     editorStore.selectObject(object);
   }
 };

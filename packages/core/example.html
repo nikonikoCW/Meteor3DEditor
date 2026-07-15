@@ -44,7 +44,7 @@
         const startTime = performance.now();
 
         Meteor3D.loadScene({
-            sceneId: '102facb6-38cc-491c-a453-c166ce50abcd',
+            sceneId: '8dac2a0e-b074-4578-8632-259684ae6a6f',
             serverUrl: 'http://localhost:3001',
             container: container,
             config: {
@@ -73,11 +73,11 @@
             instance.on('scene-click', (data) => {
                 console.log('🖱️ [事件] scene-click:', data);
 
-                // window.meteor3d.createEffect('shield', {
-                //     position: data.worldPosition,
-                //     scale: 5,
-                //     color: '#00ff00'
-                // });
+                window.meteor3d.createEffect('shield', {
+                    position: data.worldPosition,
+                    scale: 5,
+                    color: '#00ff00'
+                });
             });
 
         }).catch(err => {

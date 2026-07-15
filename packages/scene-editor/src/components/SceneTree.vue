@@ -37,14 +37,8 @@ const deleteObject = (obj) => {
   if (!window.editor) return;
   
   const { sceneManager, historyManager, persistenceManager } = window.editor;
-  const command = new DeleteObjectCommand(sceneManager, obj, persistenceManager);
+  const command = new DeleteObjectCommand(sceneManager, obj, persistenceManager, editorStore);
   historyManager.execute(command);
-  editorStore.removeObject(obj);
-  
-  // 如果删除的是选中对象，清除选择
-  if (selectedObject.value && selectedObject.value.uuid === obj.uuid) {
-    editorStore.clearSelection();
-  }
 };
 </script>
 

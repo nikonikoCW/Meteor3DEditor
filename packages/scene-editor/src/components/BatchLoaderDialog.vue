@@ -107,7 +107,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { getAssets, getAssetUrl } from '../services/assetService';
 import { message } from '../utils/message';
-import { AddObjectCommand } from '../core/CommandFactory';
+import { AddObjectCommand, CompositeCommand } from '../core/CommandFactory';
 import { useEditorStore } from '../stores/editorStore';
 
 const props = defineProps({
@@ -222,6 +222,8 @@ const handleImport = async () => {
     // 预加载一次模型，确保缓存（可选优化）
     // await persistenceManager.loadGLTFModel(url);
 
+    const commands = [];
+
     for (const item of items.value) {
       // 加载模型 (每次都需要 clone，loadGLTFModel 内部应该处理 clone)
       const object = await persistenceManager.loadGLTFModel(url);
@@ -248,12 +250,12 @@ const handleImport = async () => {
         object.scale.set(item.scale[0], item.scale[1], item.scale[2]);
       }
 
-      // 添加到场景
-      const command = new AddObjectCommand(sceneManager, object, persistenceManager);
-      historyManager.execute(command);
-      editorStore.addObject(object);
-      
+      commands.push(new AddObjectCommand(sceneManager, object, persistenceManager, editorStore));
       successCount++;
+    }
+
+    if (commands.length > 0) {
+      historyManager.execute(new CompositeCommand(commands));
     }
     
     message.success(`成功生成 ${successCount} 个模型`);
