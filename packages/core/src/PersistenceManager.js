@@ -445,10 +445,7 @@ export class PersistenceManager {
                 (gltf) => {
                     console.log('GLTF 模型加载成功:', url);
                     gltf.scene.position.set(0, 0, 0);
-                    // 确保模型根节点的位置也归零，以避免加载时偏移
-                    if (gltf.scene.children.length > 0) {
-                        gltf.scene.children[0].position.set(0, 0, 0);
-                    }
+                 
                     const model = gltf.scene;
                     model.userData.modelType = 'GLTF';
                     model.userData.modelUrl = url;
