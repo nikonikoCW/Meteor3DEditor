@@ -19,6 +19,20 @@
       >
         🔵 球体
       </div>
+      <div
+        class="item"
+        draggable="true"
+        @dragstart="onDragStart($event, 'Cone')"
+      >
+        🔺 圆锥
+      </div>
+      <div
+        class="item"
+        draggable="true"
+        @dragstart="onDragStart($event, 'Cylinder')"
+      >
+        🛢️ 圆柱
+      </div>
     </div>
 
     <!-- 模型部分 -->

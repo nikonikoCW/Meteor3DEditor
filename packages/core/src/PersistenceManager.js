@@ -396,6 +396,29 @@ export class PersistenceManager {
             } else if (data.geometry.type === 'SphereGeometry') {
                 const p = data.geometry.parameters;
                 geometry = new THREE.SphereGeometry(p.radius, p.widthSegments, p.heightSegments);
+            } else if (data.geometry.type === 'ConeGeometry') {
+                const p = data.geometry.parameters;
+                geometry = new THREE.ConeGeometry(
+                    p.radius,
+                    p.height,
+                    p.radialSegments,
+                    p.heightSegments,
+                    p.openEnded,
+                    p.thetaStart,
+                    p.thetaLength
+                );
+            } else if (data.geometry.type === 'CylinderGeometry') {
+                const p = data.geometry.parameters;
+                geometry = new THREE.CylinderGeometry(
+                    p.radiusTop,
+                    p.radiusBottom,
+                    p.height,
+                    p.radialSegments,
+                    p.heightSegments,
+                    p.openEnded,
+                    p.thetaStart,
+                    p.thetaLength
+                );
             } else {
                 // 默认几何体
                 geometry = new THREE.BoxGeometry(1, 1, 1);

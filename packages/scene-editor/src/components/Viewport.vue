@@ -124,6 +124,12 @@ const onDrop = async (event) => {
     } else if (type === 'Sphere') {
       geometry = new THREE.SphereGeometry(0.5, 32, 32);
       material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+    } else if (type === 'Cone') {
+      geometry = new THREE.ConeGeometry(0.5, 1, 32);
+      material = new THREE.MeshStandardMaterial({ color: 0xffa500 });
+    } else if (type === 'Cylinder') {
+      geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
+      material = new THREE.MeshStandardMaterial({ color: 0x0088ff });
     }
 
     if (geometry && material) {
