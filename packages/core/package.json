@@ -7,12 +7,12 @@
     "exports": {
         ".": {
             "import": "./index.js",
-            "require": "./dist/meteor3d-core.umd.js"
+            "require": "./dist/umd/meteor3d-core.min.js"
         },
         "./src/*": "./src/*"
     },
     "scripts": {
-        "build": "vite build",
+        "build": "node scripts/build.js",
         "dev": "vite build --watch"
     },
     "dependencies": {
