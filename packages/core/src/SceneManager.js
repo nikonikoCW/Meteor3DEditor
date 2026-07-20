@@ -630,6 +630,47 @@ export class SceneManager {
     }
 
     /**
+     * Set an object's visibility by UUID.
+     * @param {string} uuid - Object UUID.
+     * @param {boolean} visible - Whether the object should be visible.
+     * @returns {boolean} Whether the object was found and updated.
+     */
+    setObjectVisible(uuid, visible) {
+        const object = this.findObjectByUUID(uuid);
+        if (!object) {
+            console.warn(`[Visibility] Object not found: ${uuid}`);
+            return false;
+        }
+
+        object.visible = Boolean(visible);
+        return true;
+    }
+
+    /** Show an object by UUID. */
+    showObject(uuid) {
+        return this.setObjectVisible(uuid, true);
+    }
+
+    /** Hide an object by UUID. */
+    hideObject(uuid) {
+        return this.setObjectVisible(uuid, false);
+    }
+
+    /**
+     * Get an object's local visibility flag by UUID.
+     * @returns {boolean|null} Visibility, or null when the object is not found.
+     */
+    isObjectVisible(uuid) {
+        const object = this.findObjectByUUID(uuid);
+        if (!object) {
+            console.warn(`[Visibility] Object not found: ${uuid}`);
+            return null;
+        }
+
+        return object.visible;
+    }
+
+    /**
      * 启用对象描边
      * @param {string} uuid - 对象 UUID
      * @param {Object} options - 配置选项

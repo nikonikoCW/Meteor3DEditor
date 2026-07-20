@@ -37,6 +37,7 @@ export default defineConfig({
                         { text: '辅助显示', link: '/api/helpers' },
                         { text: 'GIS 功能', link: '/api/gis' },
                         { text: '标签系统', link: '/api/labels' },
+                        { text: '对象显隐', link: '/api/visibility' },
                         { text: '描边效果', link: '/api/outline' },
                         { text: '高亮效果', link: '/api/highlight' },
                         { text: '天气效果', link: '/api/weather' }

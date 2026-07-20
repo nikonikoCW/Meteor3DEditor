@@ -276,6 +276,16 @@ function createMeteor3DInstance(sceneManager, resizeObserver) {
         /** 清除所有标签 */
         clearLabels: () => sceneManager.labelManager.clearLabels(),
 
+        // ========== Object visibility API ==========
+        /** Set whether an object is visible. */
+        setObjectVisible: (uuid, visible) => sceneManager.setObjectVisible(uuid, visible),
+        /** Show an object. */
+        showObject: (uuid) => sceneManager.showObject(uuid),
+        /** Hide an object. */
+        hideObject: (uuid) => sceneManager.hideObject(uuid),
+        /** Return the object's local visible flag, or null when not found. */
+        isObjectVisible: (uuid) => sceneManager.isObjectVisible(uuid),
+
         // ========== 描边效果 ==========
         /**
          * 启用对象描边
