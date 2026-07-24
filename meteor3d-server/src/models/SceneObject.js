@@ -7,9 +7,15 @@ const mongoose = require('mongoose');
 const SceneObjectSchema = new mongoose.Schema({
     id: {
         type: String,
-        required: true,
-        unique: true
+        required: true
     },
+    bid: {
+        type: String,
+        index: true
+    },
+    assetId: String,
+    assetVersionId: String,
+    nodeBindings: mongoose.Schema.Types.Mixed,
     sceneId: {
         type: String,
         required: true,
@@ -60,5 +66,8 @@ const SceneObjectSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+SceneObjectSchema.index({ sceneId: 1, bid: 1 }, { unique: true, sparse: true });
+SceneObjectSchema.index({ sceneId: 1, id: 1 }, { unique: true });
 
 module.exports = mongoose.model('SceneObject', SceneObjectSchema);

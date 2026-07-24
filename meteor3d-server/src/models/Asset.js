@@ -52,6 +52,13 @@ const AssetSchema = new mongoose.Schema({
         thumbnail: String,
         compressed: String
     },
+    assetVersionId: {
+        type: String,
+        index: true
+    },
+    nodeManifest: {
+        type: mongoose.Schema.Types.Mixed
+    },
     metadata: {
         type: mongoose.Schema.Types.Mixed // 额外的元数据
     },

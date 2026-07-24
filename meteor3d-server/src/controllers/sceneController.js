@@ -139,7 +139,9 @@ exports.saveScene = async (req, res) => {
         if (metadata.thumbnail) sceneData.thumbnail = metadata.thumbnail;
         if (metadata.environmentUrl !== undefined) sceneData.environmentUrl = metadata.environmentUrl; // 保存环境贴图 URL
         if (metadata.cameraFar !== undefined) sceneData.cameraFar = metadata.cameraFar; // 保存相机的远裁切面
-        if (metadata.gisConfig !== undefined) sceneData.gisConfig = metadata.gisConfig; // 保存 GIS 配置
+        if (metadata.gisConfig !== undefined) sceneData.gisConfig = metadata.gisConfig;
+        if (metadata.nodeGraph !== undefined) sceneData.nodeGraph = metadata.nodeGraph;
+        if (metadata.deletedSourceNodes !== undefined) sceneData.deletedSourceNodes = metadata.deletedSourceNodes;
 
         await Scene.findOneAndUpdate(
             { sceneId: sceneId },

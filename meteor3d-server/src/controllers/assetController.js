@@ -1,6 +1,7 @@
 const Asset = require('../models/Asset');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const { uploadAssetFiles, deleteAssetCloudFiles } = require('../services/upyunService');
@@ -99,6 +100,7 @@ exports.uploadAsset = async (req, res) => {
             fileSize: mainFile.size,
             url: `/uploads/models/${mainFile.filename}`,
             // 流水线处理状态
+            assetVersionId: crypto.randomUUID(),
             processingStatus: assetType === 'model' ? 'pending' : 'skipped'
         };
 
@@ -208,6 +210,7 @@ exports.uploadCadAsset = async (req, res) => {
                 originalCadPath: mainFile.path,
                 convertedGlbPath: convertedPath
             },
+            assetVersionId: crypto.randomUUID(),
             processingStatus: 'pending'
         };
 
@@ -577,6 +580,7 @@ exports.reprocessAsset = async (req, res) => {
 
         // 重置状态
         await Asset.findByIdAndUpdate(req.params.id, {
+            assetVersionId: asset.assetVersionId || crypto.randomUUID(),
             processingStatus: 'pending',
             processingError: null
         });

@@ -10,8 +10,8 @@
         <input type="text" :value="localName" @input="onNameInput">
       </div>
       <div class="prop-row">
-        <label>ID</label>
-        <input type="text" v-model="selectedObject.uuid" :disabled="true">
+        <label>BID</label>
+        <input type="text" :value="selectedObject.userData?.bid || ''" disabled>
       </div>
       <div class="prop-row">
         <label>类型</label>
@@ -95,7 +95,7 @@
     </div>
 
     <div class="debug-info">
-        <small>UUID: {{ selectedObject.uuid.slice(0, 8) }}...</small>
+        <small>BID: {{ selectedObject.userData.bid }}</small>
     </div>
   </div>
   <div class="properties-panel" v-else>

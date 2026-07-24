@@ -124,6 +124,9 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
     }
 
     // ========== 3. 加载场景对象 ==========
+    persistenceManager.setPendingNodeGraph(metadata.nodeGraph);
+    persistenceManager.setPendingDeletedSourceNodes(metadata.deletedSourceNodes);
+
     let successCount = 0;
     let failedCount = 0;
 
@@ -141,6 +144,8 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
     }
 
     console.log(`✅ 场景加载完成: 成功 ${successCount}/${objects.length}`);
+    persistenceManager.applyGlobalNodeGraph();
+
     if (failedCount > 0) {
         console.warn(`⚠️ ${failedCount} 个对象加载失败`);
     }
@@ -187,6 +192,8 @@ function createMeteor3DInstance(sceneManager, resizeObserver) {
         on: (event, callback) => sceneManager.on(event, callback),
         /** 取消订阅事件 */
         off: (event, callback) => sceneManager.off(event, callback),
+        /** Find a persistent scene node by BID. */
+        getObjectByBid: (bid) => sceneManager.findObjectByBid(bid),
 
         // ========== 性能监控 ==========
         /** 启用 FPS 性能监视器 */

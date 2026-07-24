@@ -5,7 +5,11 @@
       class="tree-item"
       :class="{ selected: isSelected }"
       :style="{ paddingLeft: (level * 16 + 8) + 'px' }"
+      draggable="true"
       @click.stop="handleSelect"
+      @dragstart.stop="handleDragStart"
+      @dragover.prevent.stop
+      @drop.prevent.stop="handleDrop"
     >
       <!-- 展开/折叠按钮 -->
       <span browse
@@ -25,7 +29,6 @@
       
       <!-- 删除按钮（仅顶层对象显示） -->
       <button 
-        v-if="level === 0"
         class="delete-btn" 
         @click.stop="handleDelete"
         title="删除"
@@ -38,13 +41,14 @@
     <template v-if="expanded && hasChildren">
       <TreeNode 
         v-for="child in node.children" 
-        :key="child.uuid"
+        :key="child.userData.bid"
         :node="child"
         :level="level + 1"
         :selectedObject="selectedObject"
         :refresh-version="refreshVersion"
         @select="$emit('select', $event)"
         @delete="$emit('delete', $event)"
+        @reparent="$emit('reparent', $event)"
       />
     </template>
   </div>
@@ -72,7 +76,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['select', 'delete']);
+const emit = defineEmits(['select', 'delete', 'reparent']);
 
 const expanded = ref(false); // collapsed by default
 const treeItem = ref(null);
@@ -81,24 +85,24 @@ const hasChildren = computed(() => {
   return props.node.children && props.node.children.length > 0;
 });
 
-const containsUuid = (nodes, uuid) => {
+const containsBid = (nodes, bid) => {
   return nodes.some((node) => {
-    if (node.uuid === uuid) return true;
+    if (node.userData?.bid === bid) return true;
     if (node.children && node.children.length > 0) {
-      return containsUuid(node.children, uuid);
+      return containsBid(node.children, bid);
     }
     return false;
   });
 };
 
-const selectedUuid = computed(() => props.selectedObject?.uuid || null);
-const isSelected = computed(() => selectedUuid.value === props.node.uuid);
+const selectedBid = computed(() => props.selectedObject?.userData?.bid || null);
+const isSelected = computed(() => selectedBid.value === props.node.userData?.bid);
 const containsSelectedObject = computed(() => {
-  return !!selectedUuid.value && hasChildren.value && containsUuid(props.node.children, selectedUuid.value);
+  return !!selectedBid.value && hasChildren.value && containsBid(props.node.children, selectedBid.value);
 });
 
 watch(
-  selectedUuid,
+  selectedBid,
   async () => {
     if (containsSelectedObject.value) {
       expanded.value = true;
@@ -122,6 +126,17 @@ const handleSelect = () => {
 
 const handleDelete = () => {
   emit('delete', props.node);
+};
+
+const handleDragStart = (event) => {
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('application/x-meteor-bid', props.node.userData.bid);
+};
+
+const handleDrop = (event) => {
+  const nodeBid = event.dataTransfer.getData('application/x-meteor-bid');
+  if (!nodeBid || nodeBid === props.node.userData.bid) return;
+  emit('reparent', { nodeBid, parentBid: props.node.userData.bid });
 };
 
 const getIcon = () => {

@@ -4,6 +4,7 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { TilesRenderer } from '3d-tiles-renderer';
 import { message } from './utils/message.js';
+import { generateBid } from './BidRegistry.js';
 
 /**
  * 持久化管理器
@@ -47,6 +48,8 @@ export class PersistenceManager {
 
         this.modelCache = new Map();
         this.currentSceneId = 'default';
+        this.pendingNodeGraph = [];
+        this.pendingDeletedSourceNodes = [];
     }
 
     /**
@@ -168,6 +171,96 @@ export class PersistenceManager {
         return true;
     }
 
+    setPendingNodeGraph(nodeGraph) {
+        this.pendingNodeGraph = Array.isArray(nodeGraph) ? nodeGraph : [];
+    }
+
+    setPendingDeletedSourceNodes(deletedSourceNodes) {
+        this.pendingDeletedSourceNodes = Array.isArray(deletedSourceNodes) ? deletedSourceNodes : [];
+    }
+
+    removeDeletedSourceNodes(root, originObjectBid) {
+        const deletedIds = new Set(this.pendingDeletedSourceNodes.filter((item) => item.originObjectBid === originObjectBid).map((item) => item.assetNodeId));
+        const toRemove = [];
+        root.traverse((node) => {
+            if (node !== root && deletedIds.has(node.userData.assetNodeId)) toRemove.push(node);
+        });
+        toRemove.forEach((node) => node.removeFromParent());
+    }
+
+    getBindingsForObject(data) {
+        const originObjectBid = data.bid || data.id;
+        const globalBindings = this.pendingNodeGraph.filter((item) => item.originObjectBid === originObjectBid);
+        return globalBindings.length > 0 ? globalBindings : (data.nodeBindings || []);
+    }
+
+    serializeSceneGraph() {
+        const records = [];
+        const visited = new Set();
+        for (const trackedRoot of this.sceneManager.objects) {
+            trackedRoot.traverse((node) => {
+                if (visited.has(node)) return;
+                visited.add(node);
+                if (!node.userData.bid) node.userData.bid = generateBid();
+                if (!node.userData.originObjectBid) node.userData.originObjectBid = trackedRoot.userData.bid;
+                records.push({
+                    bid: node.userData.bid,
+                    originObjectBid: node.userData.originObjectBid,
+                    assetNodeId: node.userData.assetNodeId || null,
+                    parentBid: node.parent && node.parent !== this.sceneManager.scene ? node.parent.userData?.bid || null : null,
+                    order: node.parent ? node.parent.children.indexOf(node) : 0,
+                    name: node.name || '',
+                    visible: node.visible,
+                    position: { x: node.position.x, y: node.position.y, z: node.position.z },
+                    rotation: { x: node.rotation.x, y: node.rotation.y, z: node.rotation.z },
+                    scale: { x: node.scale.x, y: node.scale.y, z: node.scale.z }
+                });
+            });
+        }
+        return records;
+    }
+
+    serializeDeletedSourceNodes(nodeGraph) {
+        const deleted = [];
+        for (const root of this.sceneManager.objects) {
+            if (root.userData.modelType !== 'GLTF') continue;
+            const template = this.modelCache.get(root.userData.modelUrl);
+            if (!template) continue;
+            const originObjectBid = root.userData.bid;
+            const liveIds = new Set(nodeGraph.filter((item) => item.originObjectBid === originObjectBid).map((item) => item.assetNodeId).filter(Boolean));
+            template.traverse((node) => {
+                const assetNodeId = node.userData.assetNodeId;
+                if (node !== template && assetNodeId && !liveIds.has(assetNodeId)) deleted.push({ originObjectBid, assetNodeId });
+            });
+        }
+        return deleted;
+    }
+
+    applyGlobalNodeGraph(nodeGraph = this.pendingNodeGraph) {
+        if (!Array.isArray(nodeGraph) || nodeGraph.length === 0) return;
+        for (const record of nodeGraph) {
+            const node = this.sceneManager.findObjectByBid(record.bid);
+            const parent = this.sceneManager.findObjectByBid(record.parentBid);
+            if (node && parent && node !== parent && node.parent !== parent) parent.add(node);
+        }
+        for (const record of nodeGraph) {
+            const node = this.sceneManager.findObjectByBid(record.bid);
+            if (!node) continue;
+            if (record.name !== undefined) node.name = record.name;
+            if (record.visible !== undefined) node.visible = record.visible;
+            if (record.position) node.position.set(record.position.x, record.position.y, record.position.z);
+            if (record.rotation) node.rotation.set(record.rotation.x, record.rotation.y, record.rotation.z);
+            if (record.scale) node.scale.set(record.scale.x, record.scale.y, record.scale.z);
+        }
+        const parentBids = new Set(nodeGraph.map((item) => item.parentBid).filter(Boolean));
+        for (const parentBid of parentBids) {
+            const parent = this.sceneManager.findObjectByBid(parentBid);
+            if (!parent) continue;
+            const orderByBid = new Map(nodeGraph.filter((item) => item.parentBid === parentBid).map((item) => [item.bid, item.order]));
+            parent.children.sort((a, b) => (orderByBid.get(a.userData.bid) ?? 0) - (orderByBid.get(b.userData.bid) ?? 0));
+        }
+    }
+
     /**
      * Apply transform data previously produced by serializeObject.
      * @param {THREE.Object3D} object
@@ -187,6 +280,93 @@ export class PersistenceManager {
         }
     }
 
+    normalizeAssetNodeIds(root, url = '') {
+        const usedIds = new Set();
+        const visit = (node, path) => {
+            const embeddedId = node.userData.meteorAssetNodeId || node.userData.assetNodeId;
+            const fallbackId = path === 'root' ? '__asset_root__' : `legacy:${path}`;
+            node.userData.assetNodeId = embeddedId && !usedIds.has(embeddedId) ? embeddedId : fallbackId;
+            usedIds.add(node.userData.assetNodeId);
+            node.children.forEach((child, index) => visit(child, `${path}/${index}`));
+        };
+        visit(root, 'root');
+        root.userData.assetSourceUrl = url;
+    }
+
+    assignNewTreeBids(root, asset = {}) {
+        const originObjectBid = generateBid();
+        root.traverse((node) => {
+            node.userData.bid = node === root ? originObjectBid : generateBid();
+            node.userData.originObjectBid = originObjectBid;
+            if (asset.assetId) node.userData.assetId = asset.assetId;
+            if (asset.assetVersionId) node.userData.assetVersionId = asset.assetVersionId;
+        });
+        return originObjectBid;
+    }
+
+    restoreTreeBids(root, data) {
+        const bindings = Array.isArray(data.nodeBindings) ? data.nodeBindings : [];
+        const byAssetNodeId = new Map(bindings.filter((item) => item.assetNodeId).map((item) => [item.assetNodeId, item]));
+        const rootBid = data.bid || data.id || generateBid();
+        root.traverse((node) => {
+            const binding = byAssetNodeId.get(node.userData.assetNodeId);
+            node.userData.bid = binding?.bid || (node === root ? rootBid : generateBid());
+            node.userData.originObjectBid = rootBid;
+            if (data.assetId) node.userData.assetId = data.assetId;
+            if (data.assetVersionId) node.userData.assetVersionId = data.assetVersionId;
+        });
+    }
+
+    serializeNodeBindings(root) {
+        const bindings = [];
+        root.traverse((node) => {
+            if (!node.userData.bid) node.userData.bid = generateBid();
+            bindings.push({
+                bid: node.userData.bid,
+                assetNodeId: node.userData.assetNodeId || null,
+                parentBid: node.parent && node.parent !== this.sceneManager.scene ? node.parent.userData?.bid || null : null,
+                order: node.parent ? node.parent.children.indexOf(node) : 0,
+                name: node.name || '',
+                visible: node.visible,
+                position: { x: node.position.x, y: node.position.y, z: node.position.z },
+                rotation: { x: node.rotation.x, y: node.rotation.y, z: node.rotation.z },
+                scale: { x: node.scale.x, y: node.scale.y, z: node.scale.z }
+            });
+        });
+        return bindings;
+    }
+
+    applyNodeBindings(root, bindings = []) {
+        const byBid = new Map();
+        root.traverse((node) => {
+            if (node.userData.bid) byBid.set(node.userData.bid, node);
+        });
+
+        for (const binding of bindings) {
+            const node = byBid.get(binding.bid);
+            const parent = byBid.get(binding.parentBid);
+            if (node && parent && node !== root && node.parent !== parent) parent.add(node);
+        }
+
+        for (const binding of bindings) {
+            const node = byBid.get(binding.bid);
+            if (!node) continue;
+            if (binding.name !== undefined) node.name = binding.name;
+            if (binding.visible !== undefined) node.visible = binding.visible;
+            if (binding.position) node.position.set(binding.position.x, binding.position.y, binding.position.z);
+            if (binding.rotation) node.rotation.set(binding.rotation.x, binding.rotation.y, binding.rotation.z);
+            if (binding.scale) node.scale.set(binding.scale.x, binding.scale.y, binding.scale.z);
+        }
+
+        const orderedParents = new Set(bindings.map((item) => item.parentBid).filter(Boolean));
+        for (const parentBid of orderedParents) {
+            const parent = byBid.get(parentBid);
+            if (!parent) continue;
+            const orders = new Map(bindings.filter((item) => item.parentBid === parentBid).map((item) => [item.bid, item.order]));
+            parent.children.sort((a, b) => (orders.get(a.userData.bid) ?? 0) - (orders.get(b.userData.bid) ?? 0));
+        }
+    }
+
     /**
      * 序列化对象
      * 将 Three.js 对象转换为可存储的 JSON 数据
@@ -196,10 +376,14 @@ export class PersistenceManager {
     serializeObject(object) {
         if (object.userData.modelType === 'GLTF') {
             return {
-                id: object.uuid,
+                id: object.userData.bid || object.uuid,
+                bid: object.userData.bid || object.uuid,
                 type: 'GLTFModel',
                 name: object.name || '',
                 url: object.userData.modelUrl,
+                assetId: object.userData.assetId || null,
+                assetVersionId: object.userData.assetVersionId || null,
+                nodeBindings: this.serializeNodeBindings(object),
                 visible: object.visible,
                 position: { x: object.position.x, y: object.position.y, z: object.position.z },
                 rotation: { x: object.rotation.x, y: object.rotation.y, z: object.rotation.z },
@@ -208,7 +392,8 @@ export class PersistenceManager {
             };
         } else if (object.userData.modelType === 'Tileset') {
             return {
-                id: object.uuid,
+                id: object.userData.bid || object.uuid,
+                bid: object.userData.bid || object.uuid,
                 type: 'Tileset',
                 name: object.name || 'Tileset',
                 url: object.userData.modelUrl,
@@ -220,7 +405,8 @@ export class PersistenceManager {
             };
         } else if (object.userData.modelType === 'GaussianSplat') {
             return {
-                id: object.uuid,
+                id: object.userData.bid || object.uuid,
+                bid: object.userData.bid || object.uuid,
                 type: 'GaussianSplat',
                 name: object.name || 'Gaussian Splat',
                 url: object.userData.modelUrl,
@@ -231,7 +417,8 @@ export class PersistenceManager {
             };
         } else {
             return {
-                id: object.uuid,
+                id: object.userData.bid || object.uuid,
+                bid: object.userData.bid || object.uuid,
                 type: object.geometry?.type || 'Unknown',
                 name: object.name || '',
                 visible: object.visible,
@@ -277,7 +464,7 @@ export class PersistenceManager {
                     child.userData.visibleModified;
 
                 if (hasModifications) {
-                    const path = this.getObjectPath(child, rootObject);
+                    const path = child.userData.assetNodeId || child.userData.bid || this.getObjectPath(child, rootObject);
                     modifications[path] = {};
 
                     if (child.userData.visibleModified) {
@@ -347,8 +534,15 @@ export class PersistenceManager {
      */
     async deserializeObject(data) {
         if (data.type === 'GLTFModel') {
-            const model = await this.loadGLTFModel(data.url);
-            model.uuid = data.id;
+            const model = await this.loadGLTFModel(data.url, {
+                assignBids: false,
+                assetId: data.assetId,
+                assetVersionId: data.assetVersionId
+            });
+            this.removeDeletedSourceNodes(model, data.bid || data.id);
+            const bindings = this.getBindingsForObject(data);
+            this.restoreTreeBids(model, { ...data, nodeBindings: bindings });
+            this.applyNodeBindings(model, bindings);
             model.name = data.name;
             if (data.visible !== undefined) model.visible = data.visible;
             model.position.set(data.position.x, data.position.y, data.position.z);
@@ -360,7 +554,7 @@ export class PersistenceManager {
             return model;
         } else if (data.type === 'Tileset') {
             const tileset = await this.loadTileset(data.url);
-            tileset.uuid = data.id;
+            tileset.userData.bid = data.bid || data.id || generateBid();
             tileset.name = data.name || 'Tileset';
             if (data.visible !== undefined) tileset.visible = data.visible;
 
@@ -381,7 +575,7 @@ export class PersistenceManager {
             return tileset;
         } else if (data.type === 'GaussianSplat') {
             const splat = await this.loadGaussianSplat(data.url);
-            splat.uuid = data.id;
+            splat.userData.bid = data.bid || data.id || generateBid();
             splat.name = data.name || 'Gaussian Splat';
             if (data.visible !== undefined) splat.visible = data.visible;
             splat.position.set(data.position.x, data.position.y, data.position.z);
@@ -441,7 +635,7 @@ export class PersistenceManager {
                 flatShading: data.material.flatShading ?? false
             });
             const mesh = new THREE.Mesh(geometry, material);
-            mesh.uuid = data.id;
+            mesh.userData.bid = data.bid || data.id || generateBid();
             mesh.name = data.name;
             if (data.visible !== undefined) mesh.visible = data.visible;
             mesh.position.set(data.position.x, data.position.y, data.position.z);
@@ -457,9 +651,11 @@ export class PersistenceManager {
      * @param {string} url - 模型 URL
      * @returns {Promise<THREE.Group>} 加载后的模型
      */
-    async loadGLTFModel(url) {
+    async loadGLTFModel(url, options = {}) {
         if (this.modelCache.has(url)) {
-            return SkeletonUtils.clone(this.modelCache.get(url));
+            const instance = SkeletonUtils.clone(this.modelCache.get(url));
+            if (options.assignBids !== false) this.assignNewTreeBids(instance, options);
+            return instance;
         }
         console.log('正在加载 GLTF 模型:', url);
         return new Promise((resolve, reject) => {
@@ -473,9 +669,12 @@ export class PersistenceManager {
                     model.userData.modelType = 'GLTF';
                     model.userData.modelUrl = url;
                     // 缓存原始模型作为模板
+                    this.normalizeAssetNodeIds(model, url);
                     this.modelCache.set(url, model);
                     // 返回克隆的副本，确保每个实例独立且支持骨骼动画
-                    resolve(SkeletonUtils.clone(model));
+                    const instance = SkeletonUtils.clone(model);
+                    if (options.assignBids !== false) this.assignNewTreeBids(instance, options);
+                    resolve(instance);
                 },
                 (progress) => {
                     if (progress.total > 0) {
@@ -652,7 +851,7 @@ export class PersistenceManager {
      */
     applyModifications(rootObject, modifications) {
         for (const [path, mods] of Object.entries(modifications)) {
-            const child = this.findObjectByPath(rootObject, path);
+            const child = this.findObjectByPersistentKey(rootObject, path);
             if (child) {
                 if (mods.visible !== undefined) {
                     child.visible = mods.visible;
@@ -695,6 +894,14 @@ export class PersistenceManager {
         }
     }
 
+    findObjectByPersistentKey(root, key) {
+        let found = null;
+        root.traverse((node) => {
+            if (!found && (node.userData.assetNodeId === key || node.userData.bid === key)) found = node;
+        });
+        return found || this.findObjectByPath(root, key);
+    }
+
     /**
      * 根据路径查找子节点
      * @param {THREE.Object3D} root - 根节点
@@ -723,7 +930,7 @@ export class PersistenceManager {
     async saveObject(object) {
         const data = this.serializeObject(object);
         await this.dbManager.saveObject(data);
-        this.objectMap.set(object.uuid, data.id);
+        this.objectMap.set(object.userData.bid, data.id);
     }
 
     /**
@@ -731,8 +938,8 @@ export class PersistenceManager {
      * @param {THREE.Object3D} object - 要删除的对象
      */
     async deleteObject(object) {
-        await this.dbManager.deleteObject(object.uuid);
-        this.objectMap.delete(object.uuid);
+        await this.dbManager.deleteObject(object.userData.bid);
+        this.objectMap.delete(object.userData.bid);
     }
 
     /**
@@ -801,6 +1008,8 @@ export class PersistenceManager {
         }
         this.sceneManager.emitGisConfigUpdated();
 
+        this.setPendingNodeGraph(sceneData.metadata?.nodeGraph);
+        this.setPendingDeletedSourceNodes(sceneData.metadata?.deletedSourceNodes);
         const objects = sceneData.objects || [];
         let successCount = 0;
         let failedCount = 0;
@@ -812,7 +1021,7 @@ export class PersistenceManager {
                 const object = await this.deserializeObject(data);
                 this.sceneManager.addObject(object);
                 this.editorStore.addObject(object);
-                this.objectMap.set(object.uuid, data.id);
+                this.objectMap.set(object.userData.bid, data.id);
                 successCount++;
             } catch (error) {
                 failedCount++;
@@ -827,6 +1036,9 @@ export class PersistenceManager {
 
         // 📊 加载结果汇总
         console.log(`✅ 场景加载完成: 成功 ${successCount}/${objects.length}`);
+        this.applyGlobalNodeGraph();
+        this.editorStore?.notifyTreeUpdate?.();
+
         if (failedCount > 0) {
             console.warn(`⚠️ ${failedCount} 个对象加载失败（可能是引用的资产已被删除）:`, failedObjects);
             // 通知用户有对象加载失败
@@ -855,6 +1067,7 @@ export class PersistenceManager {
         const serializedObjects = this.sceneManager.objects.map(obj => this.serializeObject(obj));
 
         // 获取当前环境贴图 URL (需要 SceneManager 支持获取)
+        const nodeGraph = this.serializeSceneGraph();
         const environmentUrl = this.sceneManager.environmentUrl || null;
         const gisConfig = this.sceneManager.gisConfig
             ? { ...this.sceneManager.gisConfig, gridVisible: this.sceneManager.gridVisible }
@@ -875,14 +1088,16 @@ export class PersistenceManager {
             lastModified: Date.now(),
             objectCount: this.sceneManager.objects.length,
             environmentUrl: environmentUrl, // 保存环境贴图 URL
-            gisConfig
+            gisConfig,
+            nodeGraph,
+            deletedSourceNodes: this.serializeDeletedSourceNodes(nodeGraph)
         });
 
         // 更新 objectMap
         serializedObjects.forEach(data => {
-            const obj = this.sceneManager.objects.find(o => o.uuid === data.id);
+            const obj = this.sceneManager.objects.find(o => o.userData.bid === data.id);
             if (obj) {
-                this.objectMap.set(obj.uuid, data.id);
+                this.objectMap.set(obj.userData.bid, data.id);
             }
         });
     }

@@ -56,7 +56,7 @@
         :key="model._id"
         class="item" 
         draggable="true" 
-        @dragstart="onDragStart($event, 'GLTFModel', getAssetUrl(model))"
+        @dragstart="onDragStart($event, 'GLTFModel', getAssetUrl(model), model)"
         :title="model.originalName"
       >
         <span class="asset-type-icon iconfont me-jiandanmoxing"></span>
@@ -166,10 +166,12 @@ const tilesets = ref([]);
 const gaussianSplats = ref([]);
 const loading = ref(false);
 
-const onDragStart = (event, type, url = null) => {
+const onDragStart = (event, type, url = null, asset = null) => {
   event.dataTransfer.setData('type', type);
-  if (url) {
-    event.dataTransfer.setData('url', url);
+  if (url) event.dataTransfer.setData('url', url);
+  if (asset?._id) event.dataTransfer.setData('assetId', asset._id);
+  if (asset?.assetVersionId) {
+    event.dataTransfer.setData('assetVersionId', asset.assetVersionId);
   }
 };
 

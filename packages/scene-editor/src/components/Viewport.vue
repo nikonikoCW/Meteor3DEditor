@@ -83,7 +83,10 @@ const onDrop = async (event) => {
     // Load GLTF model
     const url = event.dataTransfer.getData('url');
     try {
-      object = await persistenceManager.loadGLTFModel(url);
+      object = await persistenceManager.loadGLTFModel(url, {
+        assetId: event.dataTransfer.getData('assetId') || null,
+        assetVersionId: event.dataTransfer.getData('assetVersionId') || null
+      });
       
       // 使用统一的放置位置计算
       const dropPosition = getDropPosition(event);

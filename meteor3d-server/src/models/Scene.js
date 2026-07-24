@@ -55,6 +55,14 @@ const SceneSchema = new mongoose.Schema({
             default: false
         }
     },
+    nodeGraph: {
+        type: mongoose.Schema.Types.Mixed,
+        default: []
+    },
+    deletedSourceNodes: {
+        type: mongoose.Schema.Types.Mixed,
+        default: []
+    },
     lastModified: {
         type: Date,
         default: Date.now

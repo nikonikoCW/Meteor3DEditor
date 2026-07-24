@@ -3,14 +3,15 @@
     <h3>场景树</h3>
     <div class="tree-list">
       <TreeNode 
-        v-for="obj in sceneObjects" 
-        :key="obj.uuid"
+        v-for="obj in rootSceneObjects"
+        :key="obj.userData.bid"
         :node="obj"
         :level="0"
         :selectedObject="selectedObject"
         :refresh-version="treeVersion"
         @select="selectObject"
         @delete="deleteObject"
+        @reparent="reparentObject"
       />
       <div v-if="sceneObjects.length === 0" class="empty-message">
         场景中没有对象
@@ -21,16 +22,31 @@
 
 <script setup>
 import { useEditorStore } from '../stores/editorStore';
-import { DeleteObjectCommand } from '../core/CommandFactory';
+import { DeleteObjectCommand, ReparentObjectCommand } from '../core/CommandFactory';
 import { storeToRefs } from 'pinia';
+import { computed } from 'vue';
 import TreeNode from './TreeNode.vue';
 
 const editorStore = useEditorStore();
 const { sceneObjects, selectedObject, treeVersion } = storeToRefs(editorStore);
+const rootSceneObjects = computed(() => sceneObjects.value.filter((obj) => obj.parent?.isScene));
 
 
 const selectObject = (obj) => {
   editorStore.selectObject(obj);
+};
+
+const reparentObject = ({ nodeBid, parentBid }) => {
+  if (!window.editor) return;
+  const { sceneManager, historyManager } = window.editor;
+  const node = sceneManager.findObjectByBid(nodeBid);
+  const parent = sceneManager.findObjectByBid(parentBid);
+  if (!node || !parent) return;
+  try {
+    historyManager.execute(new ReparentObjectCommand(node, parent, editorStore));
+  } catch (error) {
+    console.warn('[SceneTree] Reparent rejected:', error.message);
+  }
 };
 
 const deleteObject = (obj) => {

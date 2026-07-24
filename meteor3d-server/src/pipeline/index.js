@@ -11,6 +11,7 @@ const path = require('path');
 const { convertFormat } = require('./processors/formatConverter');
 const { extractZip } = require('./processors/zipExtractor');
 const { sanitize } = require('./processors/sanitizer');
+const { ensureNodeIdentities } = require('./processors/nodeIdentityProcessor');
 const { compressDraco } = require('./processors/dracoCompressor');
 const { optimizeTextures } = require('./processors/textureOptimizer');
 const { generateLODs } = require('./processors/lodGenerator');
@@ -45,6 +46,9 @@ async function processAsset(asset) {
     // Step 2: 清洗验证 (移除相机/灯光)
     console.log('[Pipeline] Step 2: 清洗验证');
     await sanitize(context);
+
+    // Stable node identities must be injected after sanitizing and before derived files.
+    context.nodeManifest = await ensureNodeIdentities(context);
 
     // Step 3: Draco 压缩
     console.log('[Pipeline] Step 3: Draco 压缩');
@@ -100,7 +104,8 @@ assetQueue.process('process', async (job) => {
                 textures: context.textures || {}
             },
             bounds: context.bounds,
-            stats: context.stats
+            stats: context.stats,
+            nodeManifest: context.nodeManifest
         });
 
         return { success: true, assetId };

@@ -226,7 +226,10 @@ const handleImport = async () => {
 
     for (const item of items.value) {
       // 加载模型 (每次都需要 clone，loadGLTFModel 内部应该处理 clone)
-      const object = await persistenceManager.loadGLTFModel(url);
+      const object = await persistenceManager.loadGLTFModel(url, {
+        assetId: selectedAsset._id,
+        assetVersionId: selectedAsset.assetVersionId || null
+      });
 
       // 转换坐标
       const worldPos = sceneManager.lngLatToWorld(

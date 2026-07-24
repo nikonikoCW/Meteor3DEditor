@@ -16,6 +16,7 @@ import { CameraControlManager } from './CameraControlManager.js';
 import { OrbitCameraControl } from './controls/OrbitCameraControl.js';
 import { GhostCameraControl } from './controls/GhostCameraControl.js';
 import { RaycastManager } from './RaycastManager.js';
+import { BidRegistry, generateBid } from './BidRegistry.js';
 
 /**
  * 场景管理器
@@ -80,6 +81,7 @@ export class SceneManager {
         this.mouse = new THREE.Vector2();
 
         this.objects = []; // 跟踪所有可交互的对象
+        this.bidRegistry = new BidRegistry();
         this.environmentUrl = null; // 当前环境贴图 URL
         this.geoSystem = null;      // Layer 1: 坐标系统
         this.tileMapManager = null; // Layer 2: 瓦片地图
@@ -593,8 +595,12 @@ export class SceneManager {
      * @param {THREE.Object3D} object - 要添加的对象
      */
     addObject(object) {
+        object.traverse((child) => {
+            if (!child.userData.bid) child.userData.bid = generateBid();
+        });
+        this.bidRegistry.registerTree(object);
         this.scene.add(object);
-        this.objects.push(object);
+        if (!this.objects.includes(object)) this.objects.push(object);
         this.markTriangleStatsDirty();
 
         // 自动构建 BVH 以加速射线检测
@@ -609,7 +615,8 @@ export class SceneManager {
         // 销毁 BVH
         this.raycastManager.disposeBVH(object);
 
-        this.scene.remove(object);
+        this.bidRegistry.unregisterTree(object);
+        object.removeFromParent();
         this.objects = this.objects.filter(obj => obj !== object);
         this.markTriangleStatsDirty();
     }
@@ -620,6 +627,9 @@ export class SceneManager {
      * @returns {THREE.Object3D|null}
      */
     findObjectByUUID(uuid) {
+        const byBid = this.bidRegistry.getObject(uuid);
+        if (byBid) return byBid;
+
         let found = null;
         this.scene.traverse((child) => {
             if (child.uuid === uuid) {
@@ -627,6 +637,11 @@ export class SceneManager {
             }
         });
         return found;
+    }
+
+    /** Finds a scene node by its persistent business id. */
+    findObjectByBid(bid) {
+        return this.bidRegistry.getObject(bid);
     }
 
     /**
@@ -768,6 +783,7 @@ export class SceneManager {
             this.scene.remove(object);
         });
         this.objects = [];
+        this.bidRegistry.clear();
         this.markTriangleStatsDirty();
     }
 
