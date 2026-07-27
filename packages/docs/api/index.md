@@ -14,19 +14,19 @@ Meteor3D SDK 提供了一套简洁的 API 用于 3D 场景开发。
 
 | 方法 | 说明 |
 |------|------|
-| `enableOutline(uuid, options)` | 启用描边效果 |
-| `disableOutline(uuid)` | 禁用描边效果 |
-| `enableHighlight(uuid, options)` | 启用高亮效果 |
-| `disableHighlight(uuid)` | 禁用高亮效果 |
+| `enableOutline(bid, options)` | 启用描边效果 |
+| `disableOutline(bid)` | 禁用描边效果 |
+| `enableHighlight(bid, options)` | 启用高亮效果 |
+| `disableHighlight(bid)` | 禁用高亮效果 |
 
 ## 对象显隐 API
 
 | 方法 | 说明 |
 |------|------|
-| `setObjectVisible(uuid, visible)` | 设置对象是否可见 |
-| `showObject(uuid)` | 显示对象 |
-| `hideObject(uuid)` | 隐藏对象 |
-| `isObjectVisible(uuid)` | 获取对象自身的可见性标记 |
+| `setObjectVisible(bid, visible)` | 设置对象是否可见 |
+| `showObject(bid)` | 显示对象 |
+| `hideObject(bid)` | 隐藏对象 |
+| `isObjectVisible(bid)` | 获取对象自身的可见性标记 |
 
 ## 标签 API
 

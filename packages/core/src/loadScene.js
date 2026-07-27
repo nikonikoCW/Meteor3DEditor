@@ -285,51 +285,51 @@ function createMeteor3DInstance(sceneManager, resizeObserver) {
 
         // ========== Object visibility API ==========
         /** Set whether an object is visible. */
-        setObjectVisible: (uuid, visible) => sceneManager.setObjectVisible(uuid, visible),
+        setObjectVisible: (bid, visible) => sceneManager.setObjectVisible(bid, visible),
         /** Show an object. */
-        showObject: (uuid) => sceneManager.showObject(uuid),
+        showObject: (bid) => sceneManager.showObject(bid),
         /** Hide an object. */
-        hideObject: (uuid) => sceneManager.hideObject(uuid),
+        hideObject: (bid) => sceneManager.hideObject(bid),
         /** Return the object's local visible flag, or null when not found. */
-        isObjectVisible: (uuid) => sceneManager.isObjectVisible(uuid),
+        isObjectVisible: (bid) => sceneManager.isObjectVisible(bid),
 
         // ========== 描边效果 ==========
         /**
          * 启用对象描边
-         * @param {string} uuid - 对象 UUID
+         * @param {string} bid - 对象 BID
          * @param {Object} [options] - 配置选项
          * @param {number} [options.color=0x00ff00] - 描边颜色
          * @param {number} [options.thickness=1] - 描边粗细
          * @param {number} [options.strength=3] - 描边强度
          * @returns {boolean}
          */
-        enableOutline: (uuid, options) => sceneManager.enableOutline(uuid, options),
+        enableOutline: (bid, options) => sceneManager.enableOutline(bid, options),
         /**
          * 禁用对象描边
-         * @param {string} [uuid] - 对象 UUID，不传则清除所有
+         * @param {string} [bid] - 对象 BID，不传则清除所有
          * @returns {boolean}
          */
-        disableOutline: (uuid) => sceneManager.disableOutline(uuid),
-        /** 获取当前描边对象的 UUID 列表 */
+        disableOutline: (bid) => sceneManager.disableOutline(bid),
+        /** 获取当前描边对象的 BID 列表 */
         getOutlinedObjects: () => sceneManager.getOutlinedObjects(),
 
         // ========== 高亮效果 ==========
         /**
          * 启用对象高亮
-         * @param {string} uuid - 对象 UUID
+         * @param {string} bid - 对象 BID
          * @param {Object} [options] - 配置选项
          * @param {number} [options.color=0xffff00] - 高亮颜色
          * @param {number} [options.intensity=0.5] - 发光强度
          * @returns {boolean}
          */
-        enableHighlight: (uuid, options) => sceneManager.enableHighlight(uuid, options),
+        enableHighlight: (bid, options) => sceneManager.enableHighlight(bid, options),
         /**
          * 禁用对象高亮
-         * @param {string} [uuid] - 对象 UUID，不传则清除所有
+         * @param {string} [bid] - 对象 BID，不传则清除所有
          * @returns {boolean}
          */
-        disableHighlight: (uuid) => sceneManager.disableHighlight(uuid),
-        /** 获取当前高亮对象的 UUID 列表 */
+        disableHighlight: (bid) => sceneManager.disableHighlight(bid),
+        /** 获取当前高亮对象的 BID 列表 */
         getHighlightedObjects: () => sceneManager.getHighlightedObjects(),
 
         // ========== 天气效果 ==========

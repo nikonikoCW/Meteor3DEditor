@@ -16,26 +16,26 @@ meteor3d.fitCameraToScene();
 
 ```javascript
 // 选中时高亮
-meteor3d.enableOutline(model.uuid, {
+meteor3d.enableOutline(model.userData.bid, {
   color: 0x00ff00,
   thickness: 1
 });
 
 // 取消选中
-meteor3d.disableOutline(model.uuid);
+meteor3d.disableOutline(model.userData.bid);
 ```
 
 ### 高亮效果
 
 ```javascript
 // 鼠标悬停高亮
-meteor3d.enableHighlight(model.uuid, {
+meteor3d.enableHighlight(model.userData.bid, {
   color: 0xffff00,
   intensity: 0.5
 });
 
 // 移开时取消
-meteor3d.disableHighlight(model.uuid);
+meteor3d.disableHighlight(model.userData.bid);
 ```
 
 ### 创建标签

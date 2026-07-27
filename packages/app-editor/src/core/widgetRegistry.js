@@ -422,7 +422,7 @@ const outlineConfig = {
     defaultSize: { width: 150, height: 80 },
     minSize: { width: 80, height: 40 },
     props: [
-        { name: 'uuid', label: '对象 UUID', type: 'text', defaultValue: '' },
+        { name: 'bid', label: '对象 BID', type: 'text', defaultValue: '' },
         { name: 'color', label: '描边颜色', type: 'color', defaultValue: '#00ff00' },
         { name: 'thickness', label: '粗细', type: 'number', defaultValue: 1, min: 0.1, max: 10, step: 0.1 },
         { name: 'strength', label: '强度', type: 'number', defaultValue: 3, min: 0, max: 10, step: 0.5 }
@@ -441,7 +441,7 @@ const highlightConfig = {
     defaultSize: { width: 150, height: 80 },
     minSize: { width: 80, height: 40 },
     props: [
-        { name: 'uuid', label: '对象 UUID', type: 'text', defaultValue: '' },
+        { name: 'bid', label: '对象 BID', type: 'text', defaultValue: '' },
         { name: 'color', label: '高亮颜色', type: 'color', defaultValue: '#ffff00' },
         { name: 'intensity', label: '强度', type: 'number', defaultValue: 0.5, min: 0, max: 1, step: 0.1 }
     ],

@@ -76,11 +76,11 @@ const scrollToBottom = () => {
 // 递归遍历 Three.js 场景，生成场景树 JSON（含空间信息）
 const getSceneTreeJson = () => {
   const scene = meteorInstance?._internal?.sceneManager?.scene;
-  if (!scene) return { name: 'Scene', uuid: '', children: [] };
+  if (!scene) return { name: 'Scene', bid: '', children: [] };
 
   const traverse = (obj) => ({
     name: obj.name || obj.type,
-    uuid: obj.uuid,
+    bid: obj.userData?.bid || '',
     position: obj.position ? { x: obj.position.x, y: obj.position.y, z: obj.position.z } : undefined,
     rotation: obj.rotation ? { x: obj.rotation.x, y: obj.rotation.y, z: obj.rotation.z } : undefined,
     scale: obj.scale ? { x: obj.scale.x, y: obj.scale.y, z: obj.scale.z } : undefined,
@@ -123,10 +123,10 @@ const processToolCall = (functionName, args) => {
   if (!meteorInstance) return;
   console.log('====== AI工具调用 ======', functionName, args);
 
-  const findObjectUuidByName = (targetName) => {
+  const findObjectBidByName = (targetName) => {
     const objects = meteorInstance._internal?.sceneManager?.objects || [];
     const targetObj = objects.find(o => o.name && o.name.toLowerCase().includes(targetName.toLowerCase()));
-    return targetObj ? targetObj.uuid : null;
+    return targetObj ? targetObj.userData?.bid || null : null;
   };
 
   switch (functionName) {
@@ -145,14 +145,14 @@ const processToolCall = (functionName, args) => {
 
     case 'highlight_asset':
     case 'outline_asset':
-      const highlightUuid = findObjectUuidByName(args.target);
-      if (highlightUuid) {
+      const highlightBid = findObjectBidByName(args.target);
+      if (highlightBid) {
         if (functionName === 'highlight_asset') {
-          if (args.enabled) meteorInstance.enableHighlight(highlightUuid, { color: 0x00ff00, intensity: 1.0 });
-          else meteorInstance.disableHighlight(highlightUuid);
+          if (args.enabled) meteorInstance.enableHighlight(highlightBid, { color: 0x00ff00, intensity: 1.0 });
+          else meteorInstance.disableHighlight(highlightBid);
         } else {
-          if (args.enabled) meteorInstance.enableOutline(highlightUuid, { color: 0xffff00, thickness: 2 });
-          else meteorInstance.disableOutline(highlightUuid);
+          if (args.enabled) meteorInstance.enableOutline(highlightBid, { color: 0xffff00, thickness: 2 });
+          else meteorInstance.disableOutline(highlightBid);
         }
       } else {
         console.warn(`未找到目标物体: ${args.target}`);
@@ -163,10 +163,10 @@ const processToolCall = (functionName, args) => {
        if (args.target === 'overview') {
           meteorInstance.fitCameraToScene();
        } else {
-          const focusUuid = findObjectUuidByName(args.target);
-          if (focusUuid) {
+          const focusBid = findObjectBidByName(args.target);
+          if (focusBid) {
             const objects = meteorInstance._internal?.sceneManager?.objects || [];
-            const targetObj = objects.find(o => o.uuid === focusUuid);
+            const targetObj = objects.find(o => o.userData?.bid === focusBid);
             if(targetObj) {
               meteorInstance.setView({ target: targetObj.position });
             }

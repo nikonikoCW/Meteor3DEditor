@@ -73,7 +73,7 @@ const model = await meteor3d.loadModel('/models/building.glb', {
   scale: 1
 });
 
-console.log('模型 UUID:', model.uuid);
+console.log('模型 BID:', model.userData.bid);
 ```
 
 ---

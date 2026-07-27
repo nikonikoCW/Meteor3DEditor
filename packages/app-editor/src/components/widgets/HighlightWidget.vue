@@ -36,7 +36,7 @@ const getCoreInstance = () => {
 };
 
 // 计算属性：从 data 获取参数
-const uuid = computed(() => props.data.uuid || '');
+const bid = computed(() => props.data.bid || props.data.uuid || ''); // uuid 兼容旧应用配置
 const color = computed(() => {
   const c = props.data.color || '#ffff00';
   // 转换 hex 颜色为数字
@@ -52,24 +52,24 @@ const enable = () => {
     return;
   }
   
-  if (!uuid.value) {
-    console.warn('[HighlightWidget] UUID is required');
+  if (!bid.value) {
+    console.warn('[HighlightWidget] BID is required');
     return;
   }
   
-  instance.enableHighlight(uuid.value, {
+  instance.enableHighlight(bid.value, {
     color: color.value,
     intensity: intensity.value
   });
-  console.log('[HighlightWidget] Highlight enabled for:', uuid.value);
+  console.log('[HighlightWidget] Highlight enabled for:', bid.value);
 };
 
 // 禁用高亮
 const disable = () => {
   const instance = getCoreInstance();
-  if (instance && uuid.value) {
-    instance.disableHighlight(uuid.value);
-    console.log('[HighlightWidget] Highlight disabled for:', uuid.value);
+  if (instance && bid.value) {
+    instance.disableHighlight(bid.value);
+    console.log('[HighlightWidget] Highlight disabled for:', bid.value);
   }
 };
 
@@ -83,8 +83,8 @@ watch(() => props.enabled, (isEnabled) => {
 });
 
 // 监听参数变化，自动更新高亮效果
-watch([uuid, color, intensity], () => {
-  if (props.enabled && uuid.value) {
+watch([bid, color, intensity], () => {
+  if (props.enabled && bid.value) {
     enable();
   }
 }, { deep: true });

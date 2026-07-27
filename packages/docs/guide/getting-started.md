@@ -37,8 +37,8 @@ const meteor3d = await loadScene('#container');
 
 // 所有操作都通过 meteor3d 实例进行
 meteor3d.loadModel(url);
-meteor3d.enableOutline(uuid);
-meteor3d.enableHighlight(uuid);
+meteor3d.enableOutline(bid);
+meteor3d.enableHighlight(bid);
 meteor3d.createLabel(options);
 ```
 

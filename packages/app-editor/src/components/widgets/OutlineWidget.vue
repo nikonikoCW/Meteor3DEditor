@@ -36,7 +36,7 @@ const getCoreInstance = () => {
 };
 
 // 计算属性：从 data 获取参数
-const uuid = computed(() => props.data.uuid || '');
+const bid = computed(() => props.data.bid || props.data.uuid || ''); // uuid 兼容旧应用配置
 const color = computed(() => {
   const c = props.data.color || '#00ff00';
   // 转换 hex 颜色为数字
@@ -53,25 +53,25 @@ const enable = () => {
     return;
   }
   
-  if (!uuid.value) {
-    console.warn('[OutlineWidget] UUID is required');
+  if (!bid.value) {
+    console.warn('[OutlineWidget] BID is required');
     return;
   }
   
-  instance.enableOutline(uuid.value, {
+  instance.enableOutline(bid.value, {
     color: color.value,
     thickness: thickness.value,
     strength: strength.value
   });
-  console.log('[OutlineWidget] Outline enabled for:', uuid.value);
+  console.log('[OutlineWidget] Outline enabled for:', bid.value);
 };
 
 // 禁用描边
 const disable = () => {
   const instance = getCoreInstance();
-  if (instance && uuid.value) {
-    instance.disableOutline(uuid.value);
-    console.log('[OutlineWidget] Outline disabled for:', uuid.value);
+  if (instance && bid.value) {
+    instance.disableOutline(bid.value);
+    console.log('[OutlineWidget] Outline disabled for:', bid.value);
   }
 };
 
@@ -85,8 +85,8 @@ watch(() => props.enabled, (isEnabled) => {
 });
 
 // 监听参数变化，自动更新描边效果
-watch([uuid, color, thickness, strength], () => {
-  if (props.enabled && uuid.value) {
+watch([bid, color, thickness, strength], () => {
+  if (props.enabled && bid.value) {
     enable();
   }
 }, { deep: true });

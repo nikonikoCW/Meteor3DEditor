@@ -622,14 +622,13 @@ export class SceneManager {
     }
 
     /**
-     * 通过 UUID 查找场景中的对象
-     * @param {string} uuid - 对象 UUID
+     * 通过 Three.js 运行时 UUID 查找场景中的对象。
+     * 仅用于兼容或引擎内部逻辑；业务定位请使用 findObjectByBid。
+     * @deprecated 业务层请使用 findObjectByBid()。
+     * @param {string} uuid - Three.js 运行时 UUID
      * @returns {THREE.Object3D|null}
      */
     findObjectByUUID(uuid) {
-        const byBid = this.bidRegistry.getObject(uuid);
-        if (byBid) return byBid;
-
         let found = null;
         this.scene.traverse((child) => {
             if (child.uuid === uuid) {
@@ -644,16 +643,21 @@ export class SceneManager {
         return this.bidRegistry.getObject(bid);
     }
 
+    /** Finds a scene node by BID, with runtime UUID fallback for legacy callers. */
+    findObjectById(id) {
+        return this.findObjectByBid(id) || this.findObjectByUUID(id);
+    }
+
     /**
-     * Set an object's visibility by UUID.
-     * @param {string} uuid - Object UUID.
+     * Set an object's visibility by BID.
+     * @param {string} bid - Object BID.
      * @param {boolean} visible - Whether the object should be visible.
      * @returns {boolean} Whether the object was found and updated.
      */
-    setObjectVisible(uuid, visible) {
-        const object = this.findObjectByUUID(uuid);
+    setObjectVisible(bid, visible) {
+        const object = this.findObjectById(bid);
         if (!object) {
-            console.warn(`[Visibility] Object not found: ${uuid}`);
+            console.warn(`[Visibility] Object not found by BID: ${bid}`);
             return false;
         }
 
@@ -661,24 +665,24 @@ export class SceneManager {
         return true;
     }
 
-    /** Show an object by UUID. */
-    showObject(uuid) {
-        return this.setObjectVisible(uuid, true);
+    /** Show an object by BID. */
+    showObject(bid) {
+        return this.setObjectVisible(bid, true);
     }
 
-    /** Hide an object by UUID. */
-    hideObject(uuid) {
-        return this.setObjectVisible(uuid, false);
+    /** Hide an object by BID. */
+    hideObject(bid) {
+        return this.setObjectVisible(bid, false);
     }
 
     /**
-     * Get an object's local visibility flag by UUID.
+     * Get an object's local visibility flag by BID.
      * @returns {boolean|null} Visibility, or null when the object is not found.
      */
-    isObjectVisible(uuid) {
-        const object = this.findObjectByUUID(uuid);
+    isObjectVisible(bid) {
+        const object = this.findObjectById(bid);
         if (!object) {
-            console.warn(`[Visibility] Object not found: ${uuid}`);
+            console.warn(`[Visibility] Object not found by BID: ${bid}`);
             return null;
         }
 
@@ -687,17 +691,17 @@ export class SceneManager {
 
     /**
      * 启用对象描边
-     * @param {string} uuid - 对象 UUID
+     * @param {string} bid - 对象 BID
      * @param {Object} options - 配置选项
      * @param {number} [options.color=0x00ff00] - 描边颜色
      * @param {number} [options.thickness=1] - 描边粗细
      * @param {number} [options.strength=3] - 描边强度
      * @returns {boolean} 是否成功
      */
-    enableOutline(uuid, options = {}) {
-        const object = this.findObjectByUUID(uuid);
+    enableOutline(bid, options = {}) {
+        const object = this.findObjectById(bid);
         if (!object) {
-            console.warn(`[OutlineManager] Object not found: ${uuid}`);
+            console.warn(`[OutlineManager] Object not found by BID: ${bid}`);
             return false;
         }
         return this.outlineManager.enable(object, options);
@@ -705,42 +709,42 @@ export class SceneManager {
 
     /**
      * 禁用对象描边
-     * @param {string} uuid - 对象 UUID，不传则清除所有描边
+     * @param {string} bid - 对象 BID，不传则清除所有描边
      * @returns {boolean} 是否成功
      */
-    disableOutline(uuid) {
-        if (!uuid) {
+    disableOutline(bid) {
+        if (!bid) {
             this.outlineManager.disableAll();
             return true;
         }
-        const object = this.findObjectByUUID(uuid);
+        const object = this.findObjectById(bid);
         if (!object) {
-            console.warn(`[OutlineManager] Object not found: ${uuid}`);
+            console.warn(`[OutlineManager] Object not found by BID: ${bid}`);
             return false;
         }
         return this.outlineManager.disable(object);
     }
 
     /**
-     * 获取当前描边对象的 UUID 列表
+     * 获取当前描边对象的 BID 列表
      * @returns {string[]}
      */
     getOutlinedObjects() {
-        return this.outlineManager.getOutlinedUUIDs();
+        return this.outlineManager.getOutlinedBIDs();
     }
 
     /**
      * 启用对象高亮
-     * @param {string} uuid - 对象 UUID
+     * @param {string} bid - 对象 BID
      * @param {Object} options - 配置选项
      * @param {number} [options.color=0xffff00] - 高亮颜色
      * @param {number} [options.intensity=0.5] - 发光强度
      * @returns {boolean} 是否成功
      */
-    enableHighlight(uuid, options = {}) {
-        const object = this.findObjectByUUID(uuid);
+    enableHighlight(bid, options = {}) {
+        const object = this.findObjectById(bid);
         if (!object) {
-            console.warn(`[HighlightManager] Object not found: ${uuid}`);
+            console.warn(`[HighlightManager] Object not found by BID: ${bid}`);
             return false;
         }
         return this.highlightManager.enable(object, options);
@@ -748,29 +752,29 @@ export class SceneManager {
 
     /**
      * 禁用对象高亮
-     * @param {string} uuid - 对象 UUID，不传则清除所有高亮
+     * @param {string} bid - 对象 BID，不传则清除所有高亮
      * @returns {boolean} 是否成功
      */
-    disableHighlight(uuid) {
-        if (!uuid) {
+    disableHighlight(bid) {
+        if (!bid) {
             this.highlightManager.disableAll();
             return true;
         }
-        const object = this.findObjectByUUID(uuid);
-        console.log(`[disableHighlight] UUID: ${uuid}, Found: ${!!object}, Highlighted: ${this.highlightManager.getHighlightedUUIDs()}`);
+        const object = this.findObjectById(bid);
+        console.log(`[disableHighlight] BID: ${bid}, Found: ${!!object}, Highlighted: ${this.highlightManager.getHighlightedBIDs()}`);
         if (!object) {
-            console.warn(`[HighlightManager] Object not found: ${uuid}`);
+            console.warn(`[HighlightManager] Object not found by BID: ${bid}`);
             return false;
         }
         return this.highlightManager.disable(object);
     }
 
     /**
-     * 获取当前高亮对象的 UUID 列表
+     * 获取当前高亮对象的 BID 列表
      * @returns {string[]}
      */
     getHighlightedObjects() {
-        return this.highlightManager.getHighlightedUUIDs();
+        return this.highlightManager.getHighlightedBIDs();
     }
 
     /**

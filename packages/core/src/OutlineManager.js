@@ -119,11 +119,22 @@ export class OutlineManager {
     }
 
     /**
-     * 获取当前描边对象的 UUID 列表
+     * 获取当前描边对象的 Three.js 运行时 UUID 列表，仅供内部兼容。
+     * @deprecated 业务层请使用 getOutlinedBIDs()。
      * @returns {string[]}
      */
     getOutlinedUUIDs() {
         return Array.from(this.outlinedObjects.keys());
+    }
+
+    /**
+     * 获取当前描边对象的 BID 列表。
+     * @returns {string[]}
+     */
+    getOutlinedBIDs() {
+        return Array.from(this.outlinedObjects.values())
+            .map((object) => object.userData?.bid)
+            .filter(Boolean);
     }
 
     /**

@@ -143,7 +143,7 @@ const tools = [
         type: "function",
         function: {
             name: "query_scene_objects",
-            description: "查询当前 3D 场景中的所有物体概览（名称和UUID），用于了解场景中有什么物体。返回结果只包含名称和UUID的树形结构。如需查询某个物体的详细空间信息（位置、旋转、缩放），请使用 query_object_details 工具。",
+            description: "查询当前 3D 场景中的所有物体概览（名称和BID），用于了解场景中有什么物体。返回结果只包含名称和BID的树形结构。如需查询某个物体的详细空间信息（位置、旋转、缩放），请使用 query_object_details 工具。",
             parameters: {
                 type: "object",
                 properties: {},
@@ -155,17 +155,17 @@ const tools = [
         type: "function",
         function: {
             name: "query_object_details",
-            description: "根据 UUID 列表批量查询场景物体的详细空间信息，包括位置(position)、旋转(rotation)、缩放(scale)。需要先通过 query_scene_objects 获取物体的 UUID，再用此工具查询详情。",
+            description: "根据 BID 列表批量查询场景物体的详细空间信息，包括位置(position)、旋转(rotation)、缩放(scale)。需要先通过 query_scene_objects 获取物体的 BID，再用此工具查询详情。",
             parameters: {
                 type: "object",
                 properties: {
-                    uuids: {
+                    bids: {
                         type: "array",
                         items: { type: "string" },
-                        description: "要查询详情的物体 UUID 列表"
+                        description: "要查询详情的物体 BID 列表"
                     }
                 },
-                required: ["uuids"]
+                required: ["bids"]
             }
         }
     }
@@ -187,27 +187,28 @@ async function executeServerTool(toolName, toolArgs, context) {
 
     switch (toolName) {
         case 'query_scene_objects': {
-            // 只返回轻量的 name+uuid 树，剥离空间详情
+            // 只返回轻量的 name+bid 树，剥离空间详情
             const stripDetails = (node) => ({
                 name: node.name,
-                uuid: node.uuid,
+                bid: node.bid || node.userData?.bid || node.uuid,
                 children: (node.children || []).map(stripDetails)
             });
             return stripDetails(sceneData);
         }
         case 'query_object_details': {
-            const { uuids } = toolArgs;
-            if (!uuids || uuids.length === 0) {
-                return { error: '请提供要查询的 UUID 列表' };
+            const bids = toolArgs.bids || toolArgs.uuids;
+            if (!bids || bids.length === 0) {
+                return { error: '请提供要查询的 BID 列表' };
             }
-            // 扁平化遍历场景树，按 UUID 匹配
-            const uuidSet = new Set(uuids);
+            // 扁平化遍历场景树，按 BID 匹配；node.uuid 仅兼容旧场景数据。
+            const bidSet = new Set(bids);
             const results = [];
             const walk = (node) => {
-                if (uuidSet.has(node.uuid)) {
+                const bid = node.bid || node.userData?.bid || node.uuid;
+                if (bidSet.has(bid)) {
                     results.push({
                         name: node.name,
-                        uuid: node.uuid,
+                        bid,
                         position: node.position,
                         rotation: node.rotation,
                         scale: node.scale

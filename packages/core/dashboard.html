@@ -970,7 +970,7 @@
             gridVisible: false,
             axesVisible: false,
             controlMode: 'orbit',
-            selectedUuid: null,
+            selectedBid: null,
             shieldId: null,
             flowLineIds: [],
             cameraLabelsActive: false,
@@ -1294,11 +1294,11 @@
             if (meteorInstance && data.object) {
                 meteorInstance.disableHighlight();
                 meteorInstance.disableOutline();
-                meteorInstance.enableHighlight(data.object.uuid, { color: 0x00ffff, intensity: 0.6 });
-                meteorInstance.enableOutline(data.object.uuid, { color: 0x00ffff, thickness: 1, strength: 3 });
+                meteorInstance.enableHighlight(data.object.userData?.bid, { color: 0x00ffff, intensity: 0.6 });
+                meteorInstance.enableOutline(data.object.userData?.bid, { color: 0x00ffff, thickness: 1, strength: 3 });
                 const name = data.object.name || data.object.userData?.modelType || 'Object';
-                ui.infoObject.innerText = `${name} (${data.object.uuid.slice(0, 8)})`;
-                state.selectedUuid = data.object.uuid;
+                ui.infoObject.innerText = `${name} (${data.object.userData?.bid?.slice(0, 8) || 'no-bid'})`;
+                state.selectedBid = data.object.userData?.bid;
             } else {
                 ui.infoObject.innerText = '-';
             }

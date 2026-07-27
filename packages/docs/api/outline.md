@@ -9,14 +9,14 @@
 ### 语法
 
 ```javascript
-meteor3d.enableOutline(uuid, options?)
+meteor3d.enableOutline(bid, options?)
 ```
 
 ### 参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| uuid | string | ✅ | 对象 UUID |
+| bid | string | ✅ | 对象 BID |
 | options | object | ❌ | 描边配置 |
 
 #### options
@@ -35,14 +35,14 @@ meteor3d.enableOutline(uuid, options?)
 
 ```javascript
 // 绿色描边
-meteor3d.enableOutline(model.uuid, {
+meteor3d.enableOutline(model.bid, {
   color: 0x00ff00,
   thickness: 1,
   strength: 3
 });
 
 // 红色粗描边
-meteor3d.enableOutline(model.uuid, {
+meteor3d.enableOutline(model.bid, {
   color: 0xff0000,
   thickness: 2,
   strength: 5
@@ -58,20 +58,20 @@ meteor3d.enableOutline(model.uuid, {
 ### 语法
 
 ```javascript
-meteor3d.disableOutline(uuid?)
+meteor3d.disableOutline(bid?)
 ```
 
 ### 参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| uuid | string | ❌ | 对象 UUID，不传则清除所有 |
+| bid | string | ❌ | 对象 BID，不传则清除所有 |
 
 ### 示例
 
 ```javascript
 // 禁用单个对象描边
-meteor3d.disableOutline(model.uuid);
+meteor3d.disableOutline(model.bid);
 
 // 清除所有描边
 meteor3d.disableOutline();
@@ -81,17 +81,17 @@ meteor3d.disableOutline();
 
 ## getOutlinedObjects()
 
-获取当前所有描边对象的 UUID 列表。
+获取当前所有描边对象的 BID 列表。
 
 ### 语法
 
 ```javascript
-const uuids = meteor3d.getOutlinedObjects()
+const bids = meteor3d.getOutlinedObjects()
 ```
 
 ### 返回值
 
-`string[]` - UUID 数组
+`string[]` - BID 数组
 
 ### 示例
 

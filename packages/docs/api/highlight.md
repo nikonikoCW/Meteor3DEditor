@@ -9,14 +9,14 @@
 ### 语法
 
 ```javascript
-meteor3d.enableHighlight(uuid, options?)
+meteor3d.enableHighlight(bid, options?)
 ```
 
 ### 参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| uuid | string | ✅ | 对象 UUID |
+| bid | string | ✅ | 对象 BID |
 | options | object | ❌ | 高亮配置 |
 
 #### options
@@ -34,13 +34,13 @@ meteor3d.enableHighlight(uuid, options?)
 
 ```javascript
 // 黄色高亮
-meteor3d.enableHighlight(model.uuid, {
+meteor3d.enableHighlight(model.bid, {
   color: 0xffff00,
   intensity: 0.5
 });
 
 // 强烈红色高亮
-meteor3d.enableHighlight(model.uuid, {
+meteor3d.enableHighlight(model.bid, {
   color: 0xff0000,
   intensity: 0.8
 });
@@ -55,20 +55,20 @@ meteor3d.enableHighlight(model.uuid, {
 ### 语法
 
 ```javascript
-meteor3d.disableHighlight(uuid?)
+meteor3d.disableHighlight(bid?)
 ```
 
 ### 参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| uuid | string | ❌ | 对象 UUID，不传则清除所有 |
+| bid | string | ❌ | 对象 BID，不传则清除所有 |
 
 ### 示例
 
 ```javascript
 // 禁用单个对象高亮
-meteor3d.disableHighlight(model.uuid);
+meteor3d.disableHighlight(model.bid);
 
 // 清除所有高亮
 meteor3d.disableHighlight();
@@ -78,17 +78,17 @@ meteor3d.disableHighlight();
 
 ## getHighlightedObjects()
 
-获取当前所有高亮对象的 UUID 列表。
+获取当前所有高亮对象的 BID 列表。
 
 ### 语法
 
 ```javascript
-const uuids = meteor3d.getHighlightedObjects()
+const bids = meteor3d.getHighlightedObjects()
 ```
 
 ### 返回值
 
-`string[]` - UUID 数组
+`string[]` - BID 数组
 
 ---
 
