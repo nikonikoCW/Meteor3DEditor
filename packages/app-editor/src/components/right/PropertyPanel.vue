@@ -23,6 +23,7 @@
           <input 
             type="checkbox" 
             v-model="selectedWidget.data.defaultEnabled" 
+            @change="onDefaultEnabledChange"
             :disabled="disabled"
           >
           <span class="slider"></span>
@@ -192,6 +193,14 @@ const getWidgetLabel = (type) => {
 
 // 名称变化时标记未保存
 const onNameChange = () => {
+  hasUnsavedChanges.value = true;
+};
+
+// “初始调用”既是持久化配置，也是编辑器中的即时预览开关。
+const onDefaultEnabledChange = () => {
+  if (!selectedWidget.value) return;
+
+  selectedWidget.value.enabled = selectedWidget.value.data?.defaultEnabled === true;
   hasUnsavedChanges.value = true;
 };
 

@@ -301,7 +301,7 @@ exports.handleChatStream = async (req, res) => {
 
             console.log(`[Agent Loop #${loopCount}] 调用 Zhipu GLM-4 API`);
             const response = await openai.chat.completions.create({
-                model: "glm-4.7",
+                model: "GLM-4.7-Flash",
                 messages: currentMessages,
                 tools: tools,
                 tool_choice: "auto"
