@@ -17,7 +17,7 @@
 </template>
 
 <script setup>
-import { onMounted, watch } from 'vue';
+import { onMounted, onUnmounted, watch } from 'vue';
 import EditorHeader from '../components/header/EditorHeader.vue';
 import LeftPanel from '../components/left/LeftPanel.vue';
 import AppCanvas from '../components/canvas/AppCanvas.vue';
@@ -26,7 +26,29 @@ import { useAppStore } from '../stores/appStore';
 import { storeToRefs } from 'pinia';
 
 const appStore = useAppStore();
-const { isEditMode, appId, isLoading } = storeToRefs(appStore);
+const {
+  isEditMode,
+  appId,
+  appName,
+  canvas,
+  widgets,
+  isLoading,
+  isSaving,
+  hasUnsavedChanges
+} = storeToRefs(appStore);
+
+const AUTO_SAVE_INTERVAL_MS = 10000;
+let autoSaveTimer = null;
+
+const autoSave = async () => {
+  if (!appId.value || isLoading.value || isSaving.value || !hasUnsavedChanges.value) return;
+
+  try {
+    await appStore.saveApp();
+  } catch (error) {
+    console.error('自动保存应用失败:', error);
+  }
+};
 
 // 从 URL 获取 appId
 const getAppIdFromUrl = () => {
@@ -57,7 +79,27 @@ onMounted(async () => {
       updateUrlWithAppId(null);
     }
   }
+
+  autoSaveTimer = window.setInterval(autoSave, AUTO_SAVE_INTERVAL_MS);
 });
+
+onUnmounted(() => {
+  if (autoSaveTimer !== null) {
+    window.clearInterval(autoSaveTimer);
+    autoSaveTimer = null;
+  }
+});
+
+// 统一跟踪会被持久化的编辑数据，覆盖属性编辑、拖拽、缩放和旋转。
+watch(
+  () => [appName.value, canvas.value, widgets.value],
+  () => {
+    if (isEditMode.value && !isLoading.value) {
+      hasUnsavedChanges.value = true;
+    }
+  },
+  { deep: true, flush: 'sync' }
+);
 
 // 监听 appId 变化，更新 URL
 watch(appId, (newId) => {

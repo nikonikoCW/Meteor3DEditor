@@ -61,28 +61,33 @@ export const useAppStore = defineStore('app', () => {
         currentSceneId.value = id;
     }
 
+    function buildAppData() {
+        return {
+            name: appName.value,
+            description: '',
+            canvas: canvas.value,
+            widgets: widgets.value.map(w => ({
+                id: w.id,
+                type: w.type,
+                name: w.name || '',
+                position: w.position,
+                size: w.size,
+                rotation: w.rotation,
+                data: w.data,
+                enabled: w.enabled !== false,
+                interactions: w.interactions || []
+            }))
+        };
+    }
+
     // 保存应用到后端
     async function saveApp() {
         if (isSaving.value) return;
 
         isSaving.value = true;
         try {
-            const appData = {
-                name: appName.value,
-                description: '',
-                canvas: canvas.value,
-                widgets: widgets.value.map(w => ({
-                    id: w.id,
-                    type: w.type,
-                    name: w.name || '',  // 自定义名称
-                    position: w.position,
-                    size: w.size,
-                    rotation: w.rotation,
-                    data: w.data,
-                    enabled: w.enabled !== false,  // 默认启用
-                    interactions: w.interactions || []
-                }))
-            };
+            const appData = buildAppData();
+            const savedSnapshot = JSON.stringify(appData);
 
             if (appId.value) {
                 // 更新现有应用
@@ -93,7 +98,8 @@ export const useAppStore = defineStore('app', () => {
                 appId.value = result.appId;
             }
 
-            hasUnsavedChanges.value = false;
+            // 保存期间若又发生编辑，不能把新修改误标记为已保存。
+            hasUnsavedChanges.value = JSON.stringify(buildAppData()) !== savedSnapshot;
             return true;
         } catch (error) {
             console.error('保存失败:', error);
