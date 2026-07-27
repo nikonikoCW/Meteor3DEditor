@@ -27,7 +27,7 @@
 - **卫星影像底图** - 自动加载瓦片地图，构建真实地理环境
 
 <p align="center">
-  <img src="./packages/scene-editor/public/场景编辑器.jpg" alt="场景编辑器" width="800">
+  <img src="./packages/scene-editor/public/场景编辑器.png" alt="场景编辑器" width="800">
 </p>
 
 ### 📦 资产管理器 (Asset Manager)
@@ -35,6 +35,10 @@
 - **自动缩略图生成** - 基于 Three.js 的智能预览
 - **模型优化处理** - 自动生成 LOD 和 Draco 压缩版本
 - **分类筛选** - 快速定位所需资产
+
+<p align="center">
+  <img src="./packages/scene-editor/public/资产管理.png" alt="资产管理" width="800">
+</p>
 
 ### 🔧 Core SDK
 - **开箱即用** - 独立可用的 3D 渲染核心
