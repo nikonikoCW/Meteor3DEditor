@@ -1,6 +1,6 @@
 # 快速开始
 
-本指南将帮助你快速上手 Meteor3D SDK。
+本指南将帮助你通过 Meteor3D SDK 加载场景并调用公共 API。
 
 ## 安装
 
@@ -8,41 +8,61 @@
 npm install @meteor3d/core
 ```
 
-## 基本使用
+## 加载场景
 
 ```html
 <div id="container" style="width: 100%; height: 500px;"></div>
 
 <script type="module">
-import { loadScene } from '@meteor3d/core';
+import { loadScene } from '@meteor3d/core'
 
-const meteor3d = await loadScene('#container');
+const meteor3d = await loadScene({
+  sceneId: 'your-scene-id',
+  serverUrl: 'http://localhost:3001',
+  container: document.getElementById('container')
+})
 
-// 加载模型
-const model = await meteor3d.loadModel('/models/example.glb');
-
-// 聚焦相机
-meteor3d.fitCameraToScene();
+meteor3d.on('scene-click', (event) => {
+  const bid = event.object?.userData?.bid
+  console.log('点击节点 BID:', bid)
+})
 </script>
 ```
 
-## 核心概念
+场景和模型由场景编辑器保存到 Meteor3D 后端，SDK 使用 `sceneId` 加载完整场景。
 
-### Meteor3DInstance
+## Meteor3DInstance
 
-`loadScene()` 返回一个 `Meteor3DInstance` 对象，它是你与 3D 场景交互的主要接口。
+`loadScene()` 返回 `Meteor3DInstance`，第三方业务通过该实例操作场景：
 
 ```javascript
-const meteor3d = await loadScene('#container');
+// 聚焦整个场景
+meteor3d.fitCameraToScene()
 
-// 所有操作都通过 meteor3d 实例进行
-meteor3d.loadModel(url);
-meteor3d.enableOutline(bid);
-meteor3d.enableHighlight(bid);
-meteor3d.createLabel(options);
+// 根据 BID 查询并聚焦节点
+const object = meteor3d.getObjectByBid('bid_xxx')
+
+if (object) {
+  await meteor3d.focusObject(object.userData.bid, {
+    face: 'front',
+    duration: 1200
+  })
+}
+
+// 视觉反馈
+meteor3d.enableOutline('bid_xxx')
+meteor3d.enableHighlight('bid_xxx')
+```
+
+## 组件卸载
+
+```javascript
+meteor3d.dispose()
 ```
 
 ## 下一步
 
-- [API 参考](/api/) - 详细的 API 文档
-- [示例](/examples/) - 更多使用示例
+- [API 参考](/api/)
+- [相机导航](/api/camera)
+- [对象查询](/api/objects)
+- [完整示例](/examples/)

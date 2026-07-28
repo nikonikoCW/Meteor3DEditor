@@ -2,88 +2,61 @@
 
 ## loadScene()
 
-初始化 3D 场景并返回操作实例。
+从 Meteor3D 后端加载场景并返回公共 SDK 实例。
 
 ### 语法
 
 ```javascript
-const meteor3d = await loadScene(selector, options?)
+const meteor3d = await loadScene({
+  sceneId,
+  serverUrl,
+  container,
+  config
+})
 ```
 
 ### 参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| selector | string | ✅ | CSS 选择器或 DOM 元素 |
-| options | object | ❌ | 配置选项 |
+| sceneId | string | 是 | 场景 ID |
+| serverUrl | string | 是 | Meteor3D 后端地址，不包含 `/api` |
+| container | HTMLElement | 是 | Canvas 或用于承载 Canvas 的 DOM 元素 |
+| config | object | 否 | 加载配置 |
 
-### 返回值
-
-返回 `Meteor3DInstance` 对象。
-
-### 示例
-
-```javascript
-import { loadScene } from '@meteor3d/core';
-
-// 基本用法
-const meteor3d = await loadScene('#container');
-
-// 带配置
-const meteor3d = await loadScene('#container', {
-  backgroundColor: 0x222222
-});
-```
-
----
-
-## loadModel()
-
-加载 GLB/GLTF 模型。
-
-### 语法
-
-```javascript
-const model = await meteor3d.loadModel(url, options?)
-```
-
-### 参数
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| url | string | ✅ | 模型文件 URL |
-| options | object | ❌ | 加载选项 |
-
-#### options
+`config` 支持：
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| position | `{x, y, z}` | `{0, 0, 0}` | 初始位置 |
-| scale | number | 1 | 缩放比例 |
-
-### 返回值
-
-返回 `THREE.Object3D` 模型对象。
+| dracoPath | string | `${serverUrl}/draco/` | Draco 解码器目录 |
+| fitCamera | boolean | `true` | 加载后是否自动聚焦整个场景 |
+| showGrid | boolean | 跟随场景配置 | 是否显示网格 |
+| autoResize | boolean | `true` | 是否自动响应容器尺寸变化 |
 
 ### 示例
 
 ```javascript
-const model = await meteor3d.loadModel('/models/building.glb', {
-  position: { x: 0, y: 0, z: 0 },
-  scale: 1
-});
+import { loadScene } from '@meteor3d/core'
 
-console.log('模型 BID:', model.userData.bid);
+const container = document.getElementById('scene-container')
+
+const meteor3d = await loadScene({
+  sceneId: 'scene-id',
+  serverUrl: 'http://localhost:3001',
+  container,
+  config: {
+    fitCamera: true,
+    autoResize: true
+  }
+})
+
+meteor3d.on('scene-click', (event) => {
+  console.log(event.object)
+})
 ```
 
----
+### 返回值
 
-## fitCameraToScene()
+返回 `Promise<Meteor3DInstance>`。实例方法参见 [API 概览](/api/)。
 
-聚焦相机到场景中所有对象。
-
-### 语法
-
-```javascript
-meteor3d.fitCameraToScene()
-```
+场景加载失败、后端返回失败状态或必要参数无效时，Promise 会被拒绝。

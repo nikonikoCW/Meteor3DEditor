@@ -1,103 +1,59 @@
 # GIS 功能
 
-支持经纬度坐标与 Three.js 世界坐标的转换。
-
-## setGisConfig()
-
-配置 GIS 中心点。
-
-### 语法
-
-```javascript
-meteor3d.setGisConfig(config)
-```
-
-### 参数
-
-#### config
-
-| 属性 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| center | `{lng, lat}` | ✅ | 中心点经纬度 |
-| size | number | ❌ | 覆盖范围（米），默认 1000 |
-
-### 示例
-
-```javascript
-// 设置北京为中心点
-meteor3d.setGisConfig({
-  center: { lng: 116.397428, lat: 39.90923 },
-  size: 2000
-});
-```
-
----
+场景的 GIS 中心点和底图配置由场景编辑器保存，并在 `loadScene()` 时从场景元数据恢复。公共 SDK 提供坐标转换能力。
 
 ## lngLatToWorld()
 
-经纬度转世界坐标。
-
-### 语法
+将经纬度和高度转换为 Three.js 世界坐标。
 
 ```javascript
-const worldPos = meteor3d.lngLatToWorld(lng, lat, height?)
+const position = meteor3d.lngLatToWorld(
+  116.397428,
+  39.90923,
+  10
+)
 ```
-
-### 参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| lng | number | ✅ | 经度 |
-| lat | number | ✅ | 纬度 |
-| height | number | ❌ | 高度（米），默认 0 |
+| lng | number | 是 | 经度 |
+| lat | number | 是 | 纬度 |
+| height | number | 否 | 高度，默认 `0` |
 
-### 返回值
-
-`THREE.Vector3 | null`
-
-### 示例
-
-```javascript
-const pos = meteor3d.lngLatToWorld(116.4, 39.9, 10);
-if (pos) {
-  console.log('世界坐标:', pos.x, pos.y, pos.z);
-}
-```
-
----
+返回 `THREE.Vector3 | null`。场景未启用 GIS 时返回 `null`。
 
 ## worldToLngLat()
 
-世界坐标转经纬度。
-
-### 语法
+将 Three.js 世界坐标转换为经纬度。
 
 ```javascript
-const geo = meteor3d.worldToLngLat(worldPos)
+const lngLat = meteor3d.worldToLngLat({
+  x: 100,
+  y: 20,
+  z: 200
+})
 ```
 
-### 参数
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| worldPos | `{x,y,z}` | 世界坐标 |
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| worldPos | THREE.Vector3 | ✅ | 世界坐标 |
-
-### 返回值
+返回：
 
 ```javascript
-{ lng: number, lat: number, height: number } | null
+{
+  lng: number,
+  lat: number,
+  height: number
+} | null
 ```
 
----
+场景未启用 GIS 时返回 `null`。
 
-## 坐标系说明
+## 坐标方向
 
-Meteor3D 使用以下坐标映射：
-
-| 方向 | 地理 | Three.js |
-|------|------|----------|
-| 东 | +经度 | +X |
-| 北 | +纬度 | +Z |
-| 上 | +高度 | +Y |
-
-GIS 中心点 → Three.js 原点 (0, 0, 0)
+| 世界方向 | Three.js 坐标 |
+|----------|----------------|
+| 东 | +X |
+| 北 | +Z |
+| 上 | +Y |

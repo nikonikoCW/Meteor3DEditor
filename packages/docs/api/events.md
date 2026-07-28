@@ -2,70 +2,43 @@
 
 ## isReady
 
-获取场景是否就绪。
+场景完成加载后为 `true`：
 
 ```javascript
 const ready = meteor3d.isReady
 ```
 
----
-
 ## on()
 
-订阅事件。
+订阅 SDK 事件。
 
 ```javascript
 meteor3d.on(event, callback)
 ```
 
-| 参数 | 类型 | 说明 |
+实际可用事件：
+
+| 事件 | 数据 | 说明 |
 |------|------|------|
-| event | string | 事件名称 |
-| callback | function | 回调函数 |
-
-### 可用事件
-
-| 事件 | 说明 |
-|------|------|
-| `ready` | 场景就绪 |
-| `click` | 点击事件 |
-| `objectLoaded` | 模型加载完成 |
-
-### 示例
+| `scene-ready` | `{ isReady: true }` | SceneManager 被标记为就绪 |
+| `scene-click` | 点击和射线检测结果 | Canvas 左键点击 |
+| `control-mode-changed` | `{ mode, previous }` | 相机控制模式发生变化 |
 
 ```javascript
-meteor3d.on('ready', () => {
-  console.log('场景已就绪');
-});
+const handleSceneClick = (event) => {
+  console.log(event.object)
+  console.log(event.worldPosition)
+}
 
-meteor3d.on('click', (event) => {
-  console.log('点击对象:', event.object);
-});
+meteor3d.on('scene-click', handleSceneClick)
 ```
 
----
+`scene-click` 的完整字段参见 [射线检测](/api/raycast#scene-click-事件)。
 
 ## off()
 
-取消订阅事件。
+取消订阅事件。必须传入订阅时使用的同一个回调函数。
 
 ```javascript
-meteor3d.off(event, callback)
-```
-
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| event | string | 事件名称 |
-| callback | function | 要移除的回调函数 |
-
-### 示例
-
-```javascript
-const handleClick = (e) => console.log(e);
-
-// 订阅
-meteor3d.on('click', handleClick);
-
-// 取消订阅
-meteor3d.off('click', handleClick);
+meteor3d.off('scene-click', handleSceneClick)
 ```
