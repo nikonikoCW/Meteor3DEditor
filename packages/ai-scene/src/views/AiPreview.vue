@@ -14,6 +14,10 @@
         <div v-for="(msg, index) in messages" :key="index" :class="['message', msg.role]">
           <div v-if="msg.role === 'system'" class="message-content" v-html="msg.text"></div>
           <div v-else-if="msg.role === 'user'" class="message-content">{{ msg.text }}</div>
+          <div v-else-if="msg.role === 'status'" class="message-status">
+            <span class="status-icon">{{ msg.state === 'running' ? '◉' : '✓' }}</span>
+            {{ msg.text }}
+          </div>
           <div v-else-if="msg.role === 'assistant'" class="message-content" v-html="msg.text"></div>
           <div v-else-if="msg.role === 'tool'" class="message-tool">
             <span class="tool-icon">⚙️</span>
@@ -228,6 +232,13 @@ const sendMessage = async () => {
 
   isTyping.value = true;
   let assistantMessageIndex = null;
+  let statusMessageIndex = null;
+
+  const completeCurrentStatus = () => {
+    if (statusMessageIndex === null) return;
+    messages.value[statusMessageIndex].state = 'completed';
+    statusMessageIndex = null;
+  };
 
   try {
     await sendChatStream({
@@ -236,6 +247,8 @@ const sendMessage = async () => {
       sceneId: sceneId,
       sceneData: getSceneTreeJson(),
       onText: (chunk) => {
+        if (!chunk) return;
+        completeCurrentStatus();
         if (assistantMessageIndex === null) {
           messages.value.push({ role: 'assistant', text: chunk });
           assistantMessageIndex = messages.value.length - 1;
@@ -244,8 +257,16 @@ const sendMessage = async () => {
         }
         scrollToBottom();
       },
+      onStatus: (statusText) => {
+        completeCurrentStatus();
+        messages.value.push({ role: 'status', text: statusText, state: 'running' });
+        statusMessageIndex = messages.value.length - 1;
+        scrollToBottom();
+      },
       onToolCall: (functionName, args) => {
+        completeCurrentStatus();
         messages.value.push({ role: 'tool', functionName, args });
+        assistantMessageIndex = null;
         processToolCall(functionName, args);
         scrollToBottom();
       },
@@ -256,6 +277,7 @@ const sendMessage = async () => {
   } catch (error) {
     messages.value.push({ role: 'system', text: `<span style="color: #ffaaaa">发送失败: ${error.message}</span>` });
   } finally {
+    completeCurrentStatus();
     isTyping.value = false;
     scrollToBottom();
   }
@@ -397,6 +419,24 @@ const sendMessage = async () => {
   border: 1px solid rgba(0, 102, 204, 0.3);
   color: #cce0ff;
   margin-right: 20px;
+}
+
+.message.status {
+  padding: 4px 10px;
+  background: transparent;
+  color: #9aa6b2;
+  font-size: 12px;
+}
+
+.message-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-icon {
+  color: #66b3ff;
+  font-size: 10px;
 }
 
 .message.tool {

@@ -1,4 +1,5 @@
 const { OpenAI } = require("openai");
+const { randomUUID } = require("crypto");
 
 // 初始化 Zhipu AI
 const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY;
@@ -12,6 +13,76 @@ const openai = new OpenAI({
     apiKey: ZHIPU_API_KEY,
     baseURL: "https://open.bigmodel.cn/api/paas/v4/"
 });
+
+function writeRunEvent(res, runState, type, payload = {}) {
+    runState.sequence += 1;
+    const event = {
+        type,
+        runId: runState.runId,
+        sequence: runState.sequence,
+        timestamp: new Date().toISOString(),
+        ...payload
+    };
+
+    res.write(`id: ${runState.runId}:${runState.sequence}\n`);
+    res.write(`event: ${type}\n`);
+    res.write(`data: ${JSON.stringify(event)}\n\n`);
+}
+
+async function createStreamingCompletion({
+    model,
+    messages,
+    tools: completionTools,
+    toolChoice,
+    signal,
+    onTextDelta
+}) {
+    const request = { model, messages, stream: true };
+    if (completionTools) request.tools = completionTools;
+    if (toolChoice) request.tool_choice = toolChoice;
+
+    const stream = await openai.chat.completions.create(request, { signal });
+    const toolCallsByIndex = new Map();
+    let content = "";
+
+    for await (const chunk of stream) {
+        const choice = chunk.choices?.[0];
+        if (!choice) continue;
+
+        const delta = choice.delta || {};
+        if (delta.content) {
+            content += delta.content;
+            onTextDelta?.(delta.content);
+        }
+
+        for (const toolCallDelta of delta.tool_calls || []) {
+            const index = toolCallDelta.index ?? 0;
+            const accumulated = toolCallsByIndex.get(index) || {
+                id: "",
+                type: "function",
+                function: { name: "", arguments: "" }
+            };
+            if (toolCallDelta.id) accumulated.id += toolCallDelta.id;
+            if (toolCallDelta.type) accumulated.type = toolCallDelta.type;
+            if (toolCallDelta.function?.name) accumulated.function.name += toolCallDelta.function.name;
+            if (toolCallDelta.function?.arguments) accumulated.function.arguments += toolCallDelta.function.arguments;
+            toolCallsByIndex.set(index, accumulated);
+        }
+    }
+
+    const toolCalls = [...toolCallsByIndex.entries()]
+        .sort(([left], [right]) => left - right)
+        .map(([index, toolCall]) => ({
+            ...toolCall,
+            id: toolCall.id || `tool_${index}_${randomUUID()}`
+        }));
+
+    return {
+        role: "assistant",
+        content: content || null,
+        ...(toolCalls.length > 0 ? { tool_calls: toolCalls } : {})
+    };
+}
 
 const SYSTEM_PROMPT = [
     "你是园区 3D 场景控制中枢也是一个全能的智能助手。",
@@ -264,12 +335,23 @@ exports.handleChatStream = async (req, res) => {
     }
 
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders?.();
+
+    const runState = { runId: randomUUID(), sequence: 0 };
+    const abortController = new AbortController();
+    res.on('close', () => abortController.abort());
 
     try {
         const { id, session } = getSession(sessionId || "http-stream");
         console.log(`\n[Meteor3D Stream Session ${id}] 用户: ${lastUserMsg}`);
+        writeRunEvent(res, runState, "run.started", { sessionId: id });
+        writeRunEvent(res, runState, "status.updated", {
+            stage: "model",
+            message: "正在理解你的请求…"
+        });
 
         // 追加用户的新输入
         session.messages.push({ role: "user", content: lastUserMsg });
@@ -300,15 +382,16 @@ exports.handleChatStream = async (req, res) => {
             loopCount++;
 
             console.log(`[Agent Loop #${loopCount}] 调用 Zhipu GLM-4 API`);
-            const response = await openai.chat.completions.create({
+            const message = await createStreamingCompletion({
                 model: "GLM-4.7-Flash",
                 messages: currentMessages,
-                tools: tools,
-                tool_choice: "auto"
+                tools,
+                toolChoice: "auto",
+                signal: abortController.signal,
+                onTextDelta: (delta) => {
+                    writeRunEvent(res, runState, "assistant.delta", { delta });
+                }
             });
-
-            const choice = response.choices[0];
-            const message = choice.message;
             currentMessages.push(message);
             session.messages.push(message);
 
@@ -335,11 +418,12 @@ exports.handleChatStream = async (req, res) => {
                 // 客户端工具 -> 向流写入指令
                 for (const fc of clientCalls) {
                     console.log(`[Agent Loop #${loopCount}] 前端工具: ${fc.functionName}`);
-                    res.write(`data: ${JSON.stringify({
-                        type: "tool_call",
+                    writeRunEvent(res, runState, "tool.started", {
+                        toolCallId: fc.toolCall.id,
                         functionName: fc.functionName,
-                        args: fc.functionArgs
-                    })}\n\n`);
+                        args: fc.functionArgs,
+                        executionTarget: "client"
+                    });
 
                     // 标记工具已经执行完毕返回客户端，补充进对话上下文继续后面的思考
                     const toolReply = {
@@ -355,7 +439,19 @@ exports.handleChatStream = async (req, res) => {
                 if (serverCalls.length > 0) {
                     for (const sc of serverCalls) {
                         console.log(`[Agent Loop #${loopCount}] 服务端工具: ${sc.functionName}`);
+                        writeRunEvent(res, runState, "tool.started", {
+                            toolCallId: sc.toolCall.id,
+                            functionName: sc.functionName,
+                            args: sc.functionArgs,
+                            executionTarget: "server"
+                        });
                         const result = await executeServerTool(sc.functionName, sc.functionArgs, { sceneId, sceneData });
+                        writeRunEvent(res, runState, "tool.completed", {
+                            toolCallId: sc.toolCall.id,
+                            functionName: sc.functionName,
+                            result,
+                            executionTarget: "server"
+                        });
 
                         const toolReply = {
                             role: "tool",
@@ -366,43 +462,51 @@ exports.handleChatStream = async (req, res) => {
                         currentMessages.push(toolReply);
                         session.messages.push(toolReply);
                     }
+                    writeRunEvent(res, runState, "status.updated", {
+                        stage: "model",
+                        message: "正在根据场景信息继续处理…"
+                    });
                     continue; // 有服务端工具则查完就再进行下一轮思考
                 }
 
                 // 全是客户端工具的话，进行最后一次总结
                 if (serverCalls.length === 0) {
-                    if (message.content) {
-                        res.write(`data: ${JSON.stringify({ type: "text", chunk: message.content })}\n\n`);
-                    }
-                    // 让大模型做最后总结，避免只输出 tool_call 没有文本安抚用户
-                    const summaryResponse = await openai.chat.completions.create({
-                        model: "glm-4-flash",
-                        messages: currentMessages
+                    writeRunEvent(res, runState, "status.updated", {
+                        stage: "summary",
+                        message: "空间指令已发送，正在生成结果…"
                     });
-                    const summaryMsg = summaryResponse.choices[0]?.message;
-                    if (summaryMsg && summaryMsg.content) {
+                    // 让大模型做最后总结，避免只输出 tool_call 没有文本安抚用户
+                    const summaryMsg = await createStreamingCompletion({
+                        model: "glm-4-flash",
+                        messages: currentMessages,
+                        signal: abortController.signal,
+                        onTextDelta: (delta) => {
+                            writeRunEvent(res, runState, "assistant.delta", { delta });
+                        }
+                    });
+                    if (summaryMsg.content) {
                         currentMessages.push(summaryMsg);
                         session.messages.push(summaryMsg);
-                        res.write(`data: ${JSON.stringify({ type: "text", chunk: summaryMsg.content })}\n\n`);
                     }
                     break;
                 }
             } else {
-                // 没有 tool calls，直接输出纯文本
-                if (message.content) {
-                    res.write(`data: ${JSON.stringify({ type: "text", chunk: message.content })}\n\n`);
-                }
+                // 没有 tool calls 时，文本已在模型生成过程中逐段写入 SSE
                 break;
             }
         }
 
-        res.write(`data: [DONE]\n\n`);
+        writeRunEvent(res, runState, "run.completed");
         res.end();
 
     } catch (error) {
         console.error("Zhipu Agent Loop 失败:", error);
-        res.write(`data: ${JSON.stringify({ error: error.message || error.toString() })}\n\n`);
-        res.end();
+        if (!res.writableEnded && !abortController.signal.aborted) {
+            writeRunEvent(res, runState, "run.failed", {
+                error: error.message || error.toString()
+            });
+            res.end();
+        }
     }
 };
 

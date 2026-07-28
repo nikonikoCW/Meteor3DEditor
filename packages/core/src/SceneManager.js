@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
-import { Group, Tween, Easing } from '@tweenjs/tween.js';
+import { Group } from '@tweenjs/tween.js';
 import { GeoCoordinateSystem } from './GeoCoordinateSystem.js';
 import { TileMapManager } from './TileMapManager.js';
 import { StatsManager } from './StatsManager.js';
@@ -13,6 +13,7 @@ import { RainManager } from './RainManager.js';
 import { VFXManager } from './VFXManager.js';
 import { LineManager } from './LineManager.js';
 import { CameraControlManager } from './CameraControlManager.js';
+import { CameraNavigationManager } from './CameraNavigationManager.js';
 import { OrbitCameraControl } from './controls/OrbitCameraControl.js';
 import { GhostCameraControl } from './controls/GhostCameraControl.js';
 import { RaycastManager } from './RaycastManager.js';
@@ -76,6 +77,13 @@ export class SceneManager {
 
         // 兼容旧代码：保留 controls 引用指向当前 OrbitControls
         this.controls = orbitControl.getOrbitControls();
+
+        // 程序化相机导航（定位、聚焦和视角动画）
+        this.cameraNavigationManager = new CameraNavigationManager(
+            this.camera,
+            this.controls,
+            this.tweenGroup
+        );
 
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
@@ -792,128 +800,39 @@ export class SceneManager {
     }
 
     /**
-     * 聚焦相机到所有物体
-     * 计算包围盒并调整相机位置
+     * 聚焦相机到所有场景物体。
      */
     fitCameraToScene() {
-        if (this.objects.length === 0) return;
-
-        const box = new THREE.Box3();
-
-        // 计算所有对象的包围盒
-        this.objects.forEach(obj => {
-            box.expandByObject(obj);
-        });
-
-        if (box.isEmpty()) return;
-
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-
-        // 调整 FOV 距离
-        const fov = this.camera.fov * (Math.PI / 180);
-        let cameraZ = Math.abs(maxDim / 2 * Math.tan(fov * 2));
-        cameraZ *= 1.5; // 增加一点缓冲距离
-
-        // 设置相机位置
-        const direction = this.camera.position.clone().sub(this.controls.target).normalize();
-        const newPos = direction.multiplyScalar(cameraZ).add(center);
-
-        this.camera.position.copy(newPos);
-        this.camera.lookAt(center);
-        this.controls.target.copy(center);
-        this.controls.update();
+        return this.cameraNavigationManager.fitObjects(this.objects);
     }
 
     /**
-     * 获取当前相机视角
-     * @param {Function} [callback] - 可选的回调函数，接收 view 对象
-     * @returns {{position: {x,y,z}, target: {x,y,z}}}
-     */
-    getView(callback) {
-        const view = {
-            position: {
-                x: this.camera.position.x,
-                y: this.camera.position.y,
-                z: this.camera.position.z
-            },
-            target: {
-                x: this.controls.target.x,
-                y: this.controls.target.y,
-                z: this.controls.target.z
-            }
-        };
-
-        if (callback && typeof callback === 'function') {
-            callback(view);
-        }
-
-        return view;
-    }
-
-    /**
-     * 设置相机视角（支持动画过渡）
-     * @param {Object} options - 配置选项
-     * @param {Object} options.position - 目标位置 {x, y, z}
-     * @param {Object} [options.target] - 目标观察点 {x, y, z}
-     * @param {number} [options.duration=1500] - 动画时长（毫秒），0 表示立即跳转
-     * @param {Function} [options.onComplete] - 完成回调
+     * 根据 BID 从物体局部六面之一聚焦物体。
+     *
+     * @param {string} bid - 场景节点的持久化 BID
+     * @param {Object} [options] - 聚焦配置
      * @returns {Promise<void>}
      */
-    setView(options) {
-        const { position, target, duration = 1500, onComplete } = options;
-
-        const endTarget = target || {
-            x: this.controls.target.x,
-            y: this.controls.target.y,
-            z: this.controls.target.z
-        };
-
-        // 立即跳转
-        if (duration <= 0) {
-            this.camera.position.set(position.x, position.y, position.z);
-            this.controls.target.set(endTarget.x, endTarget.y, endTarget.z);
-            this.controls.update();
-            if (onComplete) onComplete();
-            return Promise.resolve();
+    focusObject(bid, options = {}) {
+        const object = this.findObjectByBid(bid);
+        if (!object) {
+            return Promise.reject(new Error(`Cannot focus object: BID not found (${bid})`));
         }
+        return this.cameraNavigationManager.focusObject(object, options);
+    }
 
-        // 动画过渡（使用 Tween.js）
-        return new Promise((resolve) => {
-            const startPos = {
-                x: this.camera.position.x,
-                y: this.camera.position.y,
-                z: this.camera.position.z
-            };
-            const startTarget = {
-                x: this.controls.target.x,
-                y: this.controls.target.y,
-                z: this.controls.target.z
-            };
+    /**
+     * 获取当前相机视角。
+     */
+    getView(callback) {
+        return this.cameraNavigationManager.getView(callback);
+    }
 
-            // 同时动画相机位置和观察点
-            new Tween(startPos, this.tweenGroup)
-                .to(position, duration)
-                .easing(Easing.Quadratic.Out)
-                .onUpdate(() => {
-                    this.camera.position.set(startPos.x, startPos.y, startPos.z);
-                })
-                .start();
-
-            new Tween(startTarget, this.tweenGroup)
-                .to(endTarget, duration)
-                .easing(Easing.Quadratic.Out)
-                .onUpdate(() => {
-                    this.controls.target.set(startTarget.x, startTarget.y, startTarget.z);
-                    this.controls.update();
-                })
-                .onComplete(() => {
-                    if (onComplete) onComplete();
-                    resolve();
-                })
-                .start();
-        });
+    /**
+     * 设置相机视角（支持动画过渡）。
+     */
+    setView(options) {
+        return this.cameraNavigationManager.setView(options);
     }
 
     /**

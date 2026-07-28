@@ -9,6 +9,7 @@ Meteor3D SDK 提供了一套简洁的 API 用于 3D 场景开发。
 | `loadScene(selector)` | 初始化 3D 场景 |
 | `loadModel(url)` | 加载 GLB/GLTF 模型 |
 | `fitCameraToScene()` | 聚焦相机到场景 |
+| `focusObject(bid, options)` | 按 BID 从指定物体面聚焦节点 |
 
 ## 效果 API
 

@@ -217,6 +217,17 @@ function createMeteor3DInstance(sceneManager, resizeObserver) {
         // ========== 相机控制 ==========
         /** 聚焦相机到所有场景物体 */
         fitCameraToScene: () => sceneManager.fitCameraToScene(),
+        /**
+         * 根据 BID 从物体局部六面之一聚焦物体
+         * @param {string} bid - 场景节点的持久化 BID
+         * @param {Object} [options] - 聚焦配置
+         * @param {'front'|'back'|'left'|'right'|'top'|'bottom'} [options.face='front'] - 观察面
+         * @param {number} [options.duration=1500] - 动画时长（毫秒）
+         * @param {number} [options.padding=1.2] - 画面留白倍率
+         * @param {Function} [options.onComplete] - 完成回调
+         * @returns {Promise<void>}
+         */
+        focusObject: (bid, options) => sceneManager.focusObject(bid, options),
         /** 手动触发尺寸调整 */
         resize: (width, height) => sceneManager.onWindowResize(width, height),
         /** 获取当前相机视角 */
