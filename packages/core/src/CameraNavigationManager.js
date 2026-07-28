@@ -19,29 +19,30 @@ export class CameraNavigationManager {
         this.camera = camera;
         this.controls = controls;
         this.tweenGroup = tweenGroup;
+        this._activeNavigation = null;
     }
 
     fitObjects(objects) {
         if (!objects || objects.length === 0) return;
 
         const box = new THREE.Box3();
-        objects.forEach((object) => box.expandByObject(object));
+        objects.forEach((object) => box.expandByObject(object, true));
         if (box.isEmpty()) return;
 
         const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const fov = this.camera.fov * (Math.PI / 180);
-        let cameraZ = Math.abs(maxDim / 2 * Math.tan(fov * 2));
-        cameraZ *= 1.5;
-
         const direction = this.camera.position.clone()
-            .sub(this.controls.target)
-            .normalize();
-        const newPosition = direction.multiplyScalar(cameraZ).add(center);
+            .sub(this.controls.target);
+        if (direction.lengthSq() === 0) {
+            direction.set(1, 1, 1);
+        }
+        direction.normalize();
 
-        this.camera.position.copy(newPosition);
-        this.camera.lookAt(center);
+        const corners = this._getBoxCorners(box);
+        const distance = this._calculateFocusDistance(box, center, direction, 1.2, corners);
+
+        this._stopActiveNavigation();
+        this._updateFocusNearPlane(box, center, direction, distance, corners);
+        this.camera.position.copy(center).addScaledVector(direction, distance);
         this.controls.target.copy(center);
         this.controls.update();
     }
@@ -81,13 +82,13 @@ export class CameraNavigationManager {
         const cameraDirection = new THREE.Vector3(...directionValues)
             .applyQuaternion(worldQuaternion)
             .normalize();
-        const { upDirection } = this._getFocusViewBasis(cameraDirection);
+        const corners = box.isEmpty() ? null : this._getBoxCorners(box);
         const distance = box.isEmpty()
             ? Math.max(this.camera.position.distanceTo(this.controls.target), 1)
-            : this._calculateFocusDistance(box, center, cameraDirection, padding);
+            : this._calculateFocusDistance(box, center, cameraDirection, padding, corners);
 
-        this._updateFocusNearPlane(box, center, cameraDirection, distance);
-        this.camera.up.copy(upDirection);
+        this._updateFocusNearPlane(box, center, cameraDirection, distance, corners);
+        this.camera.up.set(0, 1, 0);
 
         return this.setView({
             position: center.clone().addScaledVector(cameraDirection, distance),
@@ -123,6 +124,8 @@ export class CameraNavigationManager {
             z: this.controls.target.z
         };
 
+        this._stopActiveNavigation();
+
         if (duration <= 0) {
             this.camera.position.set(position.x, position.y, position.z);
             this.controls.target.set(endTarget.x, endTarget.y, endTarget.z);
@@ -132,38 +135,60 @@ export class CameraNavigationManager {
         }
 
         return new Promise((resolve) => {
-            const startPosition = {
-                x: this.camera.position.x,
-                y: this.camera.position.y,
-                z: this.camera.position.z
+            const state = {
+                positionX: this.camera.position.x,
+                positionY: this.camera.position.y,
+                positionZ: this.camera.position.z,
+                targetX: this.controls.target.x,
+                targetY: this.controls.target.y,
+                targetZ: this.controls.target.z
             };
-            const startTarget = {
-                x: this.controls.target.x,
-                y: this.controls.target.y,
-                z: this.controls.target.z
+            const endState = {
+                positionX: position.x,
+                positionY: position.y,
+                positionZ: position.z,
+                targetX: endTarget.x,
+                targetY: endTarget.y,
+                targetZ: endTarget.z
             };
-
-            new Tween(startPosition, this.tweenGroup)
-                .to(position, duration)
+            const tween = new Tween(state, this.tweenGroup)
+                .to(endState, duration)
                 .easing(Easing.Quadratic.Out)
                 .onUpdate(() => {
-                    this.camera.position.set(startPosition.x, startPosition.y, startPosition.z);
-                })
-                .start();
-
-            new Tween(startTarget, this.tweenGroup)
-                .to(endTarget, duration)
-                .easing(Easing.Quadratic.Out)
-                .onUpdate(() => {
-                    this.controls.target.set(startTarget.x, startTarget.y, startTarget.z);
+                    this.camera.position.set(
+                        state.positionX,
+                        state.positionY,
+                        state.positionZ
+                    );
+                    this.controls.target.set(
+                        state.targetX,
+                        state.targetY,
+                        state.targetZ
+                    );
                     this.controls.update();
                 })
                 .onComplete(() => {
-                    if (onComplete) onComplete();
+                    this.tweenGroup.remove(tween);
+                    if (this._activeNavigation?.tween === tween) {
+                        this._activeNavigation = null;
+                    }
                     resolve();
-                })
-                .start();
+                    if (onComplete) onComplete();
+                });
+
+            this._activeNavigation = { tween, resolve };
+            tween.start();
         });
+    }
+
+    _stopActiveNavigation() {
+        if (!this._activeNavigation) return;
+
+        const { tween, resolve } = this._activeNavigation;
+        this._activeNavigation = null;
+        tween.stop();
+        this.tweenGroup.remove(tween);
+        resolve();
     }
 
     _getFocusViewBasis(cameraDirection) {
@@ -181,14 +206,21 @@ export class CameraNavigationManager {
         return { rightDirection, upDirection };
     }
 
-    _calculateFocusDistance(box, center, cameraDirection, padding) {
+    _calculateFocusDistance(
+        box,
+        center,
+        cameraDirection,
+        padding,
+        corners = this._getBoxCorners(box)
+    ) {
         const { rightDirection, upDirection } = this._getFocusViewBasis(cameraDirection);
         const verticalTangent = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) / this.camera.zoom;
         const horizontalTangent = verticalTangent * this.camera.aspect;
 
         let distance = Number.EPSILON;
-        this._getBoxCorners(box).forEach((corner) => {
-            const offset = corner.sub(center);
+        const offset = new THREE.Vector3();
+        corners.forEach((corner) => {
+            offset.subVectors(corner, center);
             const depthOffset = offset.dot(cameraDirection);
             const widthDistance = depthOffset
                 + Math.abs(offset.dot(rightDirection)) * padding / horizontalTangent;
@@ -199,14 +231,16 @@ export class CameraNavigationManager {
         return distance;
     }
 
-    _updateFocusNearPlane(box, center, cameraDirection, distance) {
-        if (box.isEmpty()) return;
+    _updateFocusNearPlane(box, center, cameraDirection, distance, corners = null) {
+        if (box.isEmpty() || !corners) return;
 
         let maximumDepthOffset = -Infinity;
-        this._getBoxCorners(box).forEach((corner) => {
+        const offset = new THREE.Vector3();
+        corners.forEach((corner) => {
+            offset.subVectors(corner, center);
             maximumDepthOffset = Math.max(
                 maximumDepthOffset,
-                corner.sub(center).dot(cameraDirection)
+                offset.dot(cameraDirection)
             );
         });
 
