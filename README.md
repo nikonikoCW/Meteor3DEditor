@@ -61,7 +61,7 @@
 - 🚀 **一键预览** - 所见即所得，秒级部署上线
 
 <p align="center">
-  <img src="./packages/scene-editor/public/应用编辑器.jpg" alt="应用编辑器" width="800">
+  <img src="./packages/scene-editor/public/应用编辑器.png" alt="应用编辑器" width="800">
 </p>
 
 ---
