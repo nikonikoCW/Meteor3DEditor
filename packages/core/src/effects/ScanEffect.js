@@ -30,15 +30,21 @@ export class ScanEffect extends BaseEffect {
 
         // 顶点着色器
         const vertexShader = `
+            #include <common>
+            #include <logdepthbuf_pars_vertex>
+
             varying vec2 vUv;
             void main() {
                 vUv = uv;
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                #include <logdepthbuf_vertex>
             }
         `;
 
         // 片元着色器
         const fragmentShader = `
+            #include <logdepthbuf_pars_fragment>
+
             uniform sampler2D uTexture;
             uniform float uRepeat;
             uniform float uTime;
@@ -46,6 +52,8 @@ export class ScanEffect extends BaseEffect {
             varying vec2 vUv;
 
             void main() {
+                #include <logdepthbuf_fragment>
+
                 vec2 center = vec2(0.5, 0.5);
                 float dist = distance(vUv, center);
                 
@@ -86,6 +94,7 @@ export class ScanEffect extends BaseEffect {
                 uColor: { value: new THREE.Color(color) }
             },
             side: THREE.DoubleSide,
+            depthTest: true,
             depthWrite: false,
             blending: THREE.AdditiveBlending
         });

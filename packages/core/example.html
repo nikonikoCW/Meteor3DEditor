@@ -73,11 +73,11 @@
             instance.on('scene-click', (data) => {
                 console.log('🖱️ [事件] scene-click:', data);
 
-                // window.meteor3d.createEffect('shield', {
-                //     position: data.worldPosition,
-                //     scale: 5,
-                //     color: '#00ff00'
-                // });
+                window.meteor3d.createEffect('shield', {
+                    position: data.worldPosition,
+                    scale: 5,
+                    color: '#00ff00'
+                });
             });
 
         }).catch(err => {

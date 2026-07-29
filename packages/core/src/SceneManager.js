@@ -1052,8 +1052,7 @@ export class SceneManager {
                 const material = new THREE.MeshBasicMaterial({
                     map: texture,
                     side: THREE.DoubleSide,
-                    transparent: true,
-                    opacity: 1.0
+                    transparent: false
                 });
 
                 const mesh = new THREE.Mesh(geometry, material);

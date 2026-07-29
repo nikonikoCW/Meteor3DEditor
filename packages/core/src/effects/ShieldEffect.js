@@ -28,6 +28,9 @@ export class ShieldEffect extends BaseEffect {
 
         // 2. Shader 定义
         const vertexShader = `
+            #include <common>
+            #include <logdepthbuf_pars_vertex>
+
             uniform float uTime;
             uniform sampler2D uTexture;
             uniform float uDisplacementStrength;
@@ -52,10 +55,14 @@ export class ShieldEffect extends BaseEffect {
                 vec4 mvPosition = modelViewMatrix * vec4(displacedPosition, 1.0);
                 vViewPosition = -mvPosition.xyz;
                 gl_Position = projectionMatrix * mvPosition;
+
+                #include <logdepthbuf_vertex>
             }
         `;
 
         const fragmentShader = `
+            #include <logdepthbuf_pars_fragment>
+
             uniform float uTime;
             uniform sampler2D uTexture;
             
@@ -68,6 +75,8 @@ export class ShieldEffect extends BaseEffect {
             varying vec3 vViewPosition;
 
             void main() {
+                #include <logdepthbuf_fragment>
+
                 // 1. 基础噪波动画
                 vec2 uv = vUv;
                 uv.x += uTime * 0.1;
@@ -107,6 +116,7 @@ export class ShieldEffect extends BaseEffect {
             },
             vertexShader: vertexShader,
             fragmentShader: fragmentShader,
+            depthTest: true,
             depthWrite: false,
             transparent: true,
             blending: THREE.AdditiveBlending,
