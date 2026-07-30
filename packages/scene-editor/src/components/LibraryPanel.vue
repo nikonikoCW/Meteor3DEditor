@@ -35,6 +35,53 @@
       </div>
     </div>
 
+    <!-- 仅用于当前编辑器会话的可视化预览，不参与场景保存 -->
+    <div class="section">
+      <div class="section-header">
+        <h4>
+          可视化效果
+          <span class="temporary-badge">不可保存</span>
+          <span v-if="previewCount > 0" class="preview-count">{{ previewCount }}</span>
+        </h4>
+        <button
+          class="clear-preview-btn"
+          type="button"
+          :disabled="previewCount === 0"
+          title="清除当前场景中的所有临时可视化效果"
+          @click="clearVisualPreviews"
+        >
+          清除预览
+        </button>
+      </div>
+
+     <div
+        class="item"
+        draggable="true"
+        @dragstart="onDragStart($event, 'PreviewShield')"
+      >
+        <span class="preview-icon">🛡</span>
+        <span class="item-name">护盾</span>
+      </div>
+
+      <div
+        class="item"
+        draggable="true"
+        @dragstart="onDragStart($event, 'PreviewScan')"
+      >
+        <span class="preview-icon">◉</span>
+        <span class="item-name">扫描</span>
+      </div>
+
+      <div
+        class="item"
+        draggable="true"
+        @dragstart="onDragStart($event, 'PreviewLabel')"
+      >
+        <span class="preview-icon">🏷</span>
+        <span class="item-name">标签</span>
+      </div>
+    </div>
+
     <!-- 模型部分 -->
     <div class="section">
       <div class="section-header">
@@ -157,7 +204,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { getAssets, getAssetUrl as _getAssetUrl, getCompressedAssetUrl, getCloudAssetUrl } from '../services/assetService';
 
 const models = ref([]);
@@ -165,6 +212,7 @@ const environments = ref([]);
 const tilesets = ref([]);
 const gaussianSplats = ref([]);
 const loading = ref(false);
+const previewCount = ref(0);
 
 const onDragStart = (event, type, url = null, asset = null) => {
   event.dataTransfer.setData('type', type);
@@ -173,6 +221,14 @@ const onDragStart = (event, type, url = null, asset = null) => {
   if (asset?.assetVersionId) {
     event.dataTransfer.setData('assetVersionId', asset.assetVersionId);
   }
+};
+
+const clearVisualPreviews = () => {
+  window.dispatchEvent(new CustomEvent('clear-visual-previews'));
+};
+
+const handlePreviewCountChanged = (event) => {
+  previewCount.value = event.detail?.count || 0;
 };
 
 const isCloudAsset = (asset) => {
@@ -219,7 +275,12 @@ const loadAssets = async () => {
 };
 
 onMounted(() => {
+  window.addEventListener('visual-preview-count-changed', handlePreviewCountChanged);
   loadAssets();
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('visual-preview-count-changed', handlePreviewCountChanged);
 });
 </script>
 
@@ -313,6 +374,61 @@ h4 {
 
 .item:active {
   cursor: grabbing;
+}
+
+
+.temporary-badge {
+  display: inline-flex;
+  margin-left: 6px;
+  padding: 2px 5px;
+  border: 1px solid rgba(255, 183, 77, 0.45);
+  border-radius: 3px;
+  color: #ffb74d;
+  font-size: 10px;
+  vertical-align: middle;
+}
+
+.preview-count {
+  display: inline-flex;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #3578c8;
+  color: white;
+  font-size: 10px;
+}
+
+
+.preview-icon {
+  flex-shrink: 0;
+  width: 18px;
+  color: #72aef5;
+  text-align: center;
+  font-size: 16px;
+}
+
+.clear-preview-btn {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border: 1px solid #4a4a4a;
+  border-radius: 3px;
+  background: #292929;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.clear-preview-btn:hover:not(:disabled) {
+  border-color: #777;
+  color: white;
+}
+
+.clear-preview-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .asset-type-icon {

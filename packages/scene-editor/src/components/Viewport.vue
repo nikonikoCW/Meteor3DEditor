@@ -19,6 +19,7 @@ import { InputManager } from '../core/InputManager';
 import { TransformManager } from '../core/TransformManager';
 import { HistoryManager } from '../core/HistoryManager';
 import { AddObjectCommand } from '../core/CommandFactory';
+import { VisualPreviewManager } from '../core/VisualPreviewManager';
 import { useEditorStore } from '../stores/editorStore';
 import { storeToRefs } from 'pinia';
 
@@ -35,6 +36,7 @@ let historyManager = null;
 let persistenceManager = null;
 let dbManager = null;
 let resizeObserver = null;
+let visualPreviewManager = null;
 
 // Expose managers to parent/global if needed, or use a composable/provide-inject
 // For now, we attach them to the window for debugging or simple access
@@ -63,9 +65,99 @@ const getDropPosition = (event) => {
   return groundPoint || new THREE.Vector3(0, 0, 0);
 };
 
+const emitVisualPreviewCount = (count) => {
+  window.dispatchEvent(new CustomEvent('visual-preview-count-changed', {
+    detail: { count }
+  }));
+};
+
+const clearVisualPreviews = () => {
+  visualPreviewManager?.clear();
+};
+
+const createPreviewLabelContent = () => `
+  <div class="visual-preview-billboard">
+    <div class="visual-preview-billboard__card">
+      <div class="visual-preview-billboard__header">
+        <span class="visual-preview-billboard__status"></span>
+        设备运行信息
+        <span class="visual-preview-billboard__code">EQ-001</span>
+      </div>
+      <div class="visual-preview-billboard__rows">
+        <div><span>设备名称</span><strong>一号监测设备</strong></div>
+        <div><span>运行状态</span><strong class="is-normal">正常</strong></div>
+        <div><span>实时温度</span><strong>36.8 ℃</strong></div>
+        <div><span>工作电压</span><strong>220 V</strong></div>
+        <div><span>当前功率</span><strong>18.6 kW</strong></div>
+        <div><span>累计时长</span><strong>1,286 h</strong></div>
+        <div><span>所属区域</span><strong>A 区</strong></div>
+        <div><span>更新时间</span><strong>刚刚</strong></div>
+      </div>
+    </div>
+    <div class="visual-preview-billboard__stem"></div>
+    <div class="visual-preview-billboard__anchor"></div>
+  </div>
+`;
+
+const createVisualPreview = (type, event) => {
+  if (!visualPreviewManager) return;
+
+  const dropPosition = getDropPosition(event);
+
+  if (type === 'PreviewShield') {
+    const scale = 5;
+    visualPreviewManager.createEffect('shield', {
+      position: {
+        x: dropPosition.x,
+        y: dropPosition.y + scale,
+        z: dropPosition.z
+      },
+      scale,
+      color: '#00ff88',
+      rimColor: '#66ffff'
+    });
+    return;
+  }
+
+  if (type === 'PreviewScan') {
+    visualPreviewManager.createEffect('scan', {
+      position: {
+        x: dropPosition.x,
+        y: dropPosition.y + 0.05,
+        z: dropPosition.z
+      },
+      scale: 5,
+      color: '#00ff88'
+    });
+    return;
+  }
+
+  if (type === 'PreviewLabel') {
+    visualPreviewManager.createLabel({
+      position: {
+        x: dropPosition.x,
+        y: dropPosition.y + 0.05,
+        z: dropPosition.z
+      },
+      content: createPreviewLabelContent(),
+      style: {
+        width: '0',
+        height: '0',
+        overflow: 'visible',
+        pointerEvents: 'none'
+      }
+    });
+  }
+};
+
 const onDrop = async (event) => {
   const type = event.dataTransfer.getData('type');
   if (!type) return;
+
+  if (type === 'PreviewShield' || type === 'PreviewScan' || type === 'PreviewLabel') {
+    createVisualPreview(type, event);
+    return;
+  }
 
   if (type === 'Environment') {
     const url = event.dataTransfer.getData('url');
@@ -154,6 +246,8 @@ const onDrop = async (event) => {
 
 onMounted(async () => {
   sceneManager = new SceneManager(canvas.value);
+  visualPreviewManager = new VisualPreviewManager(sceneManager, emitVisualPreviewCount);
+  window.addEventListener('clear-visual-previews', clearVisualPreviews);
   historyManager = new HistoryManager();
   dbManager = new DBManager({ apiBaseUrl: API_BASE_URL });
   persistenceManager = new PersistenceManager(sceneManager, editorStore, dbManager);
@@ -173,6 +267,7 @@ onMounted(async () => {
     historyManager,
     transformManager,
     inputManager,
+    visualPreviewManager,
     persistenceManager,
     dbManager
   };
@@ -202,6 +297,8 @@ onMounted(async () => {
 
 
 onBeforeUnmount(() => {
+  window.removeEventListener('clear-visual-previews', clearVisualPreviews);
+  visualPreviewManager?.clear();
   if (inputManager) {
     inputManager.dispose();
   }
