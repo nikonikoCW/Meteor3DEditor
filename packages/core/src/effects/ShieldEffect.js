@@ -1,8 +1,6 @@
 import * as THREE from 'three';
 import { BaseEffect } from './BaseEffect.js';
-
-// TODO: 用户请在此处填入 noise.png 的 Base64 字符串
-// 格式: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+import defaultNoiseTextureUrl from '../assets/noise.jpg';
 
 export class ShieldEffect extends BaseEffect {
     constructor(config) {
@@ -15,13 +13,12 @@ export class ShieldEffect extends BaseEffect {
             position = { x: 0, y: 0, z: 0 },
             scale = 1,
             color = '#00aa00',
-            rimColor = '#00ff00'
+            rimColor = '#00ff00',
+            textureUrl = defaultNoiseTextureUrl
         } = this.config;
 
-
-
         const textureLoader = new THREE.TextureLoader();
-        const noiseTexture = textureLoader.load('http://localhost:3003/assets/noise.jpg');
+        const noiseTexture = textureLoader.load(textureUrl);
 
         noiseTexture.wrapS = THREE.RepeatWrapping;
         noiseTexture.wrapT = THREE.RepeatWrapping;

@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { BaseEffect } from './BaseEffect.js';
-
-// TODO: 用户请在此处填入 beeNoise.png 的 Base64 字符串
+import defaultScanTextureUrl from '../assets/beeNoise.png';
 
 export class ScanEffect extends BaseEffect {
     constructor(manager, config) {
@@ -15,12 +14,13 @@ export class ScanEffect extends BaseEffect {
             position = { x: 0, y: 0, z: 0 },
             scale = 1,
             color = '#ff3300',
-            repeat = 3.0
+            repeat = 3.0,
+            textureUrl = defaultScanTextureUrl
         } = this.config;
 
         // 纹理加载
         const textureLoader = new THREE.TextureLoader();
-        const texture = textureLoader.load('http://localhost:3003/assets/beeNoise.png');
+        const texture = textureLoader.load(textureUrl);
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
         texture.repeat.set(2, 2);
