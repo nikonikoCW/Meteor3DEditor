@@ -31,6 +31,23 @@
     </div>
 
     <div class="section">
+      <h4>初始视角</h4>
+      <div class="hint view-hint">
+        将当前相机位置和观察中心保存为场景打开时的初始视角
+      </div>
+      <button
+        class="save-view-btn"
+        :disabled="isSavingInitialView"
+        @click="onSaveInitialView"
+      >
+        {{ isSavingInitialView ? '保存中...' : '保存当前视角' }}
+      </button>
+      <div class="view-status">
+        {{ editorStore.sceneMetadata.initialView ? '已设置初始视角' : '尚未设置初始视角' }}
+      </div>
+    </div>
+
+    <div class="section">
       <h4>调试设置</h4>
       <div class="prop-row switch-row">
         <label>性能监视器</label>
@@ -118,8 +135,11 @@
 <script setup>
 import { ref, reactive, onBeforeUnmount, onMounted } from 'vue';
 import { useEditorStore } from '../stores/editorStore';
+import { saveInitialView } from '../services/sceneService';
+import { message } from '../utils/message';
 
 const editorStore = useEditorStore();
+const isSavingInitialView = ref(false);
 
 // 模拟的场景配置数据，未来应该连接到 Store (部分暂未接入后端的数据)
 const sceneConfig = reactive({
@@ -161,6 +181,28 @@ const onStatsToggle = () => {
 const onCameraFarChange = () => {
   if (window.editor && window.editor.sceneManager) {
     window.editor.sceneManager.setCameraFar(editorStore.sceneMetadata.cameraFar);
+  }
+};
+
+const onSaveInitialView = async () => {
+  const sceneManager = window.editor?.sceneManager;
+  const sceneId = window.editor?.persistenceManager?.currentSceneId;
+
+  if (!sceneManager || !sceneId) {
+    message.error('编辑器尚未初始化');
+    return;
+  }
+
+  isSavingInitialView.value = true;
+  try {
+    const currentView = sceneManager.getView();
+    const savedView = await saveInitialView(sceneId, currentView);
+    editorStore.setSceneMetadata({ initialView: savedView });
+    message.success('初始视角已保存');
+  } catch (error) {
+    message.error(`初始视角保存失败：${error.message}`);
+  } finally {
+    isSavingInitialView.value = false;
   }
 };
 
@@ -292,6 +334,39 @@ input[type="color"] {
   padding: 0;
   border: none;
   cursor: pointer;
+}
+
+.view-hint {
+  margin: 0 0 10px;
+  padding: 0;
+  line-height: 1.5;
+}
+
+.save-view-btn {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #3d7fbd;
+  border-radius: 3px;
+  background: #28649c;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.save-view-btn:hover:not(:disabled) {
+  background: #3478b8;
+}
+
+.save-view-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.view-status {
+  margin-top: 8px;
+  color: #777;
+  font-size: 10px;
+  text-align: center;
 }
 
 .debug-info {

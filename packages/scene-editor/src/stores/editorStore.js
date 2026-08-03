@@ -10,7 +10,8 @@ export const useEditorStore = defineStore('editor', () => {
     const sceneMetadata = ref({
         name: '未命名场景',
         description: '',
-        cameraFar: 1000000
+        cameraFar: 1000000,
+        initialView: null
     });
 
     // 版本号：markRaw 对象的深层属性变化无法被 Vue 追踪，

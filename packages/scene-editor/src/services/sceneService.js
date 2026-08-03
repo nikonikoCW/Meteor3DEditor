@@ -102,3 +102,30 @@ export async function getSceneData(sceneId) {
         throw error;
     }
 }
+/**
+ * 保存场景初始视角
+ * @param {string} sceneId - 场景 ID
+ * @param {{position: Object, target: Object}} view - 当前相机视角
+ * @returns {Promise<Object>}
+ */
+export async function saveInitialView(sceneId, view) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/scene/${sceneId}/initial-view`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(view)
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || '初始视角保存失败');
+        }
+
+        return data.initialView;
+    } catch (error) {
+        console.error(`保存初始视角失败 [${sceneId}]:`, error);
+        throw error;
+    }
+}

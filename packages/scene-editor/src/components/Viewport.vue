@@ -255,9 +255,16 @@ onMounted(async () => {
   // Initialize IndexedDB and load saved scene
   const sceneId = route.params.sceneId || 'default';
   await persistenceManager.init(sceneId);
-  
-  // 在加载完成后聚焦相机
-  sceneManager.fitCameraToScene();
+
+  // 场景存在初始视角时直接恢复；未设置时保留 SceneManager 默认视角
+  const initialView = editorStore.sceneMetadata.initialView;
+  if (initialView) {
+    await sceneManager.setView({
+      position: initialView.position,
+      target: initialView.target,
+      duration: 0
+    });
+  }
   
   transformManager = new TransformManager(sceneManager, historyManager, persistenceManager);
   inputManager = new InputManager(sceneManager, editorStore, transformManager);

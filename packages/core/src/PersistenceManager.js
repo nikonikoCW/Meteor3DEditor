@@ -967,7 +967,8 @@ export class PersistenceManager {
                 this.editorStore.setSceneMetadata({
                     name: sceneData.metadata.name || '未命名场景',
                     description: sceneData.metadata.description || '',
-                    cameraFar: sceneData.metadata.cameraFar || 1000000
+                    cameraFar: sceneData.metadata.cameraFar || 1000000,
+                    initialView: sceneData.metadata.initialView || null
                 });
             }
 

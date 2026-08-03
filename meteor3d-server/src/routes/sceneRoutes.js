@@ -12,6 +12,8 @@ router.get('/list', sceneController.getScenes);
 // POST /api/scene/create - 创建新场景
 router.post('/create', sceneController.createScene);
 
+// PATCH /api/scene/:sceneId/initial-view - 保存场景初始视角
+router.patch('/:sceneId/initial-view', sceneController.saveInitialView);
 // DELETE /api/scene/:id - 删除场景
 router.delete('/:id', sceneController.deleteScene);
 

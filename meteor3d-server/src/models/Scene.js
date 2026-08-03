@@ -21,6 +21,18 @@ const SceneSchema = new mongoose.Schema({
         type: Number,
         default: 1000000
     },
+    initialView: {
+        position: {
+            x: Number,
+            y: Number,
+            z: Number
+        },
+        target: {
+            x: Number,
+            y: Number,
+            z: Number
+        }
+    },
 
     // GIS 配置
     gisConfig: {

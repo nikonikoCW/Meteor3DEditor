@@ -100,6 +100,64 @@ exports.deleteScene = async (req, res) => {
 };
 
 /**
+ * 保存场景初始视角
+ */
+exports.saveInitialView = async (req, res) => {
+    try {
+        const { sceneId } = req.params;
+        const { position, target } = req.body || {};
+        const coordinates = [
+            position?.x,
+            position?.y,
+            position?.z,
+            target?.x,
+            target?.y,
+            target?.z
+        ];
+
+        if (!coordinates.every(Number.isFinite)) {
+            return res.status(400).json({
+                success: false,
+                message: '初始视角参数无效'
+            });
+        }
+
+        const initialView = {
+            position: { x: position.x, y: position.y, z: position.z },
+            target: { x: target.x, y: target.y, z: target.z }
+        };
+        const scene = await Scene.findOneAndUpdate(
+            { sceneId },
+            {
+                initialView,
+                lastModified: Date.now()
+            },
+            { new: true }
+        );
+
+        if (!scene) {
+            return res.status(404).json({
+                success: false,
+                message: '场景不存在'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: '初始视角保存成功',
+            initialView: scene.initialView
+        });
+    } catch (error) {
+        console.error('保存初始视角失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '保存初始视角失败',
+            error: error.message
+        });
+    }
+};
+
+/**
  * 保存场景
  * 保存所有场景对象和元数据
  */
