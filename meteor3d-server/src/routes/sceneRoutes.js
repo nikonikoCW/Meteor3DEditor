@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const sceneController = require('../controllers/sceneController');
+const upload = require('../config/upload');
 
 /**
  * 场景 API 路由
@@ -14,6 +15,10 @@ router.post('/create', sceneController.createScene);
 
 // PATCH /api/scene/:sceneId/initial-view - 保存场景初始视角
 router.patch('/:sceneId/initial-view', sceneController.saveInitialView);
+
+// POST /api/scene/:sceneId/thumbnail - 上传场景封面图
+router.post('/:sceneId/thumbnail', upload.single('thumbnail'), sceneController.uploadThumbnail);
+
 // DELETE /api/scene/:id - 删除场景
 router.delete('/:id', sceneController.deleteScene);
 

@@ -2,6 +2,25 @@ const SceneObject = require('../models/SceneObject');
 const Scene = require('../models/Scene');
 const { v4: uuidv4 } = require('uuid');
 const { generateBaseMap } = require('../services/baseMapGenerator');
+const fs = require('fs');
+const path = require('path');
+
+const removeThumbnailFile = (thumbnailPath) => {
+    if (!thumbnailPath) return;
+
+    try {
+        const filePath = path.join(
+            __dirname,
+            '../../uploads/thumbnails',
+            path.basename(thumbnailPath)
+        );
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+    } catch (error) {
+        console.warn(`清理旧场景封面失败 [${thumbnailPath}]:`, error);
+    }
+};
 
 /**
  * 获取场景列表（支持分页）
@@ -79,8 +98,9 @@ exports.deleteScene = async (req, res) => {
     try {
         const { id } = req.params; // 这里是 sceneId
 
-        // 删除场景元数据
-        await Scene.findOneAndDelete({ sceneId: id });
+        // 删除场景元数据及其封面图
+        const scene = await Scene.findOneAndDelete({ sceneId: id });
+        removeThumbnailFile(scene?.thumbnail);
 
         // 删除场景内的所有对象
         await SceneObject.deleteMany({ sceneId: id });
@@ -152,6 +172,56 @@ exports.saveInitialView = async (req, res) => {
         res.status(500).json({
             success: false,
             message: '保存初始视角失败',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * 上传并保存场景封面图
+ */
+exports.uploadThumbnail = async (req, res) => {
+    try {
+        const { sceneId } = req.params;
+        const scene = await Scene.findOne({ sceneId });
+
+        if (!scene) {
+            if (req.file?.path && fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+            }
+            return res.status(404).json({
+                success: false,
+                message: '场景不存在'
+            });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: '没有上传封面图文件'
+            });
+        }
+
+        const previousThumbnail = scene.thumbnail;
+        const thumbnail = `/uploads/thumbnails/${req.file.filename}`;
+        scene.thumbnail = thumbnail;
+        scene.lastModified = Date.now();
+        await scene.save();
+        removeThumbnailFile(previousThumbnail);
+
+        res.status(200).json({
+            success: true,
+            message: '场景封面保存成功',
+            thumbnail
+        });
+    } catch (error) {
+        if (req.file?.path && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+        console.error('保存场景封面失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '保存场景封面失败',
             error: error.message
         });
     }

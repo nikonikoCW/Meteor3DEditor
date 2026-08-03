@@ -16,7 +16,14 @@
         @click="enterScene(scene.sceneId)"
       >
         <div class="scene-preview">
-          <span class="scene-icon">🏝️</span>
+          <img
+            v-if="scene.thumbnail"
+            :src="getSceneThumbnailUrl(scene.thumbnail)"
+            :alt="`${scene.name}封面`"
+            class="scene-cover"
+            @error="handleThumbnailError(scene)"
+          >
+          <span v-else class="scene-icon">🏝️</span>
         </div>
         <div class="scene-info">
           <div class="scene-name" :title="scene.name">
@@ -119,6 +126,7 @@ import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { getScenes, createScene, deleteScene } from '../services/sceneService';
 import { message } from '../utils/message';
+import { ASSET_BASE_URL } from '../config';
 
 const router = useRouter();
 const scenes = ref([]);
@@ -209,6 +217,18 @@ const handleDelete = async (scene) => {
   } catch (error) {
     message.error('删除场景失败: ' + error.message);
   }
+};
+
+const getSceneThumbnailUrl = (thumbnail) => {
+  if (/^(https?:)?\/\//.test(thumbnail) || thumbnail.startsWith('data:')) {
+    return thumbnail;
+  }
+  const path = thumbnail.startsWith('/') ? thumbnail : `/${thumbnail}`;
+  return `${ASSET_BASE_URL}${path}`;
+};
+
+const handleThumbnailError = (scene) => {
+  scene.thumbnail = null;
 };
 
 const formatDate = (dateString) => {
@@ -316,6 +336,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.scene-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .scene-icon {

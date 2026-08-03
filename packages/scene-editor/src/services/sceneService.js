@@ -129,3 +129,31 @@ export async function saveInitialView(sceneId, view) {
         throw error;
     }
 }
+
+/**
+ * 上传场景封面图
+ * @param {string} sceneId - 场景 ID
+ * @param {Blob} thumbnail - PNG 封面图
+ * @returns {Promise<string>} 封面图 URL
+ */
+export async function uploadSceneThumbnail(sceneId, thumbnail) {
+    try {
+        const formData = new FormData();
+        formData.append('thumbnail', thumbnail, 'scene-cover.png');
+
+        const response = await fetch(`${API_BASE_URL}/scene/${sceneId}/thumbnail`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || '场景封面保存失败');
+        }
+
+        return data.thumbnail;
+    } catch (error) {
+        console.error(`保存场景封面失败 [${sceneId}]:`, error);
+        throw error;
+    }
+}

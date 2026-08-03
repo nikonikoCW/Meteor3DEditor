@@ -33,14 +33,14 @@
     <div class="section">
       <h4>初始视角</h4>
       <div class="hint view-hint">
-        将当前相机位置和观察中心保存为场景打开时的初始视角
+        保存场景初始视角，并将当前画面更新为场景封面
       </div>
       <button
         class="save-view-btn"
         :disabled="isSavingInitialView"
         @click="onSaveInitialView"
       >
-        {{ isSavingInitialView ? '保存中...' : '保存当前视角' }}
+        {{ isSavingInitialView ? '保存中...' : '保存视角并更新封面' }}
       </button>
       <div class="view-status">
         {{ editorStore.sceneMetadata.initialView ? '已设置初始视角' : '尚未设置初始视角' }}
@@ -135,7 +135,7 @@
 <script setup>
 import { ref, reactive, onBeforeUnmount, onMounted } from 'vue';
 import { useEditorStore } from '../stores/editorStore';
-import { saveInitialView } from '../services/sceneService';
+import { saveInitialView, uploadSceneThumbnail } from '../services/sceneService';
 import { message } from '../utils/message';
 
 const editorStore = useEditorStore();
@@ -184,6 +184,26 @@ const onCameraFarChange = () => {
   }
 };
 
+const captureCurrentView = (sceneManager) => {
+  const renderer = sceneManager.renderer;
+  const canvas = renderer?.domElement;
+  if (!renderer || !canvas) {
+    return Promise.reject(new Error('渲染画布不可用'));
+  }
+
+  // WebGL 未开启 preserveDrawingBuffer，因此在导出前同步渲染当前视角。
+  renderer.render(sceneManager.scene, sceneManager.camera);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error('截图内容为空'));
+      }
+    }, 'image/png');
+  });
+};
+
 const onSaveInitialView = async () => {
   const sceneManager = window.editor?.sceneManager;
   const sceneId = window.editor?.persistenceManager?.currentSceneId;
@@ -194,11 +214,33 @@ const onSaveInitialView = async () => {
   }
 
   isSavingInitialView.value = true;
+  const currentView = sceneManager.getView();
+  let thumbnailBlob = null;
+  let screenshotError = null;
+
   try {
-    const currentView = sceneManager.getView();
+    try {
+      thumbnailBlob = await captureCurrentView(sceneManager);
+    } catch (error) {
+      screenshotError = error;
+      console.error('当前视角截图失败:', error);
+    }
+
     const savedView = await saveInitialView(sceneId, currentView);
     editorStore.setSceneMetadata({ initialView: savedView });
-    message.success('初始视角已保存');
+
+    if (!thumbnailBlob) {
+      message.warning(`初始视角已保存，但封面截图失败：${screenshotError.message}`);
+      return;
+    }
+
+    try {
+      const thumbnail = await uploadSceneThumbnail(sceneId, thumbnailBlob);
+      editorStore.setSceneMetadata({ thumbnail });
+      message.success('初始视角和场景封面已保存');
+    } catch (error) {
+      message.warning(`初始视角已保存，但场景封面保存失败：${error.message}`);
+    }
   } catch (error) {
     message.error(`初始视角保存失败：${error.message}`);
   } finally {
