@@ -11,9 +11,10 @@ import { API_BASE_URL } from '../config';
  * @param {number} pageSize - 每页数量，默认 12
  * @returns {Promise<{scenes: Array, pagination: Object}>}
  */
-export async function getScenes(page = 1, pageSize = 12) {
+export async function getScenes(page = 1, pageSize = 12, category = 'normal') {
     try {
-        const response = await fetch(`${API_BASE_URL}/scene/list?page=${page}&pageSize=${pageSize}`);
+        const params = new URLSearchParams({ page, pageSize, category });
+        const response = await fetch(`${API_BASE_URL}/scene/list?${params}`);
         const data = await response.json();
 
         if (data.success) {
@@ -30,6 +31,31 @@ export async function getScenes(page = 1, pageSize = 12) {
     }
 }
 
+/**
+ * 更新场景的精品案例状态
+ * @param {string} sceneId - 场景 ID
+ * @param {boolean} isFeatured - 是否为精品案例
+ * @returns {Promise<Object>}
+ */
+export async function updateSceneFeaturedStatus(sceneId, isFeatured) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/scene/${sceneId}/featured`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isFeatured })
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || '更新精品案例状态失败');
+        }
+
+        return data.scene;
+    } catch (error) {
+        console.error(`更新精品案例状态失败 [${sceneId}]:`, error);
+        throw error;
+    }
+}
 /**
  * 创建新场景
  * @param {string} name - 场景名称

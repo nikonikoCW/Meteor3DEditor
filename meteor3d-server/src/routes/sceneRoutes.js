@@ -13,6 +13,9 @@ router.get('/list', sceneController.getScenes);
 // POST /api/scene/create - 创建新场景
 router.post('/create', sceneController.createScene);
 
+// PATCH /api/scene/:sceneId/featured - 设置或取消精品案例
+router.patch('/:sceneId/featured', sceneController.updateFeaturedStatus);
+
 // PATCH /api/scene/:sceneId/initial-view - 保存场景初始视角
 router.patch('/:sceneId/initial-view', sceneController.saveInitialView);
 

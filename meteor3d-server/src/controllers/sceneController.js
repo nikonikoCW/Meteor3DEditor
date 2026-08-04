@@ -30,12 +30,13 @@ exports.getScenes = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const pageSize = parseInt(req.query.pageSize) || 12;
         const skip = (page - 1) * pageSize;
+        const filter = req.query.category === 'featured' ? { isFeatured: true } : {};
 
         // 获取总数
-        const total = await Scene.countDocuments();
+        const total = await Scene.countDocuments(filter);
 
         // 获取分页数据
-        const scenes = await Scene.find()
+        const scenes = await Scene.find(filter)
             .sort({ lastModified: -1 })
             .skip(skip)
             .limit(pageSize);
@@ -60,6 +61,48 @@ exports.getScenes = async (req, res) => {
     }
 };
 
+/**
+ * 设置或取消场景的精品案例状态
+ */
+exports.updateFeaturedStatus = async (req, res) => {
+    try {
+        const { sceneId } = req.params;
+        const { isFeatured } = req.body || {};
+
+        if (typeof isFeatured !== 'boolean') {
+            return res.status(400).json({
+                success: false,
+                message: 'isFeatured 必须是布尔值'
+            });
+        }
+
+        const scene = await Scene.findOneAndUpdate(
+            { sceneId },
+            { isFeatured },
+            { new: true }
+        );
+
+        if (!scene) {
+            return res.status(404).json({
+                success: false,
+                message: '场景不存在'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: isFeatured ? '已设为精品案例' : '已取消精品案例',
+            scene
+        });
+    } catch (error) {
+        console.error('更新精品案例状态失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '更新精品案例状态失败',
+            error: error.message
+        });
+    }
+};
 /**
  * 创建新场景
  */

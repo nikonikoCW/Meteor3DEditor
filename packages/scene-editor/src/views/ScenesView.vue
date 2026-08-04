@@ -7,12 +7,30 @@
         <span>➕</span> 新建场景
       </button>
     </div>
-
+    <div class="scene-tabs" role="tablist" aria-label="场景分类">
+      <button
+        class="scene-tab"
+        :class="{ active: activeCategory === 'normal' }"
+        @click="switchCategory('normal')"
+      >
+        普通场景
+      </button>
+      <button
+        class="scene-tab"
+        :class="{ active: activeCategory === 'featured' }"
+        @click="switchCategory('featured')"
+      >
+        精品案例
+      </button>
+    </div>
     <div class="scenes-grid" v-if="scenes.length > 0">
       <div 
         v-for="scene in scenes" 
         :key="scene.sceneId"
         class="scene-card"
+        :class="{ 'is-featured': scene.isFeatured }"
+        @mouseenter="startFeaturedHover(scene)"
+        @mouseleave="cancelFeaturedHover(scene.sceneId)"
         @click="enterScene(scene.sceneId)"
       >
         <div class="scene-preview">
@@ -24,6 +42,17 @@
             @error="handleThumbnailError(scene)"
           >
           <span v-else class="scene-icon">🏝️</span>
+          <span v-if="scene.isFeatured" class="featured-badge">精品</span>
+          <button
+            v-if="featuredButtonSceneId === scene.sceneId"
+            class="feature-scene-btn"
+            :disabled="promotingSceneId === scene.sceneId"
+            title="设为精品案例"
+            @click.stop="openFeaturedPasswordModal(scene)"
+          >
+            <span class="feature-icon">★</span>
+            <span>{{ promotingSceneId === scene.sceneId ? '设置中' : '设为精品' }}</span>
+          </button>
         </div>
         <div class="scene-info">
           <div class="scene-name" :title="scene.name">
@@ -90,8 +119,10 @@
     </div>
 
     <div v-if="scenes.length === 0 && !loading" class="empty-state">
-      <p>暂无场景</p>
-      <p class="hint">点击上方"新建场景"按钮开始创建</p>
+      <p>{{ activeCategory === 'featured' ? '暂无精品案例' : '暂无场景' }}</p>
+      <p class="hint">
+        {{ activeCategory === 'featured' ? '在普通场景卡片上悬停 10 秒即可设置' : '点击上方"新建场景"按钮开始创建' }}
+      </p>
     </div>
 
     <!-- 创建场景模态框 -->
@@ -118,13 +149,46 @@
         </div>
       </div>
     </div>
+    <!-- 精品案例密码确认 -->
+    <div v-if="showFeaturedPasswordModal" class="modal-overlay" @click.self="closeFeaturedPasswordModal">
+      <div class="modal password-modal">
+        <h3>设置精品案例</h3>
+        <p class="password-tip">请输入密码后，将“{{ pendingFeaturedScene?.name }}”设为精品案例。</p>
+        <form @submit.prevent="confirmFeaturedPassword">
+          <div class="form-group">
+            <label for="featured-password">密码</label>
+            <input
+              id="featured-password"
+              ref="featuredPasswordInput"
+              v-model="featuredPassword"
+              type="password"
+              placeholder="请输入密码"
+              autocomplete="off"
+              @input="featuredPasswordError = ''"
+            >
+            <p v-if="featuredPasswordError" class="password-error">{{ featuredPasswordError }}</p>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" @click="closeFeaturedPasswordModal">取消</button>
+            <button type="submit" class="confirm-btn" :disabled="promotingSceneId !== null">
+              {{ promotingSceneId ? '设置中' : '确认' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
-import { getScenes, createScene, deleteScene } from '../services/sceneService';
+import {
+  getScenes,
+  createScene,
+  deleteScene,
+  updateSceneFeaturedStatus
+} from '../services/sceneService';
 import { message } from '../utils/message';
 import { ASSET_BASE_URL } from '../config';
 
@@ -134,6 +198,15 @@ const showCreateModal = ref(false);
 const newScene = ref({ name: '', description: '', enableOnboarding: true });
 const nameInput = ref(null);
 const loading = ref(false);
+const activeCategory = ref('normal');
+const featuredButtonSceneId = ref(null);
+const promotingSceneId = ref(null);
+const showFeaturedPasswordModal = ref(false);
+const pendingFeaturedScene = ref(null);
+const featuredPassword = ref('');
+const featuredPasswordError = ref('');
+const featuredPasswordInput = ref(null);
+const featuredHoverTimers = new Map();
 
 // 分页状态
 const pagination = ref({
@@ -163,10 +236,17 @@ const visiblePages = computed(() => {
   return pages;
 });
 
+const clearFeaturedHoverTimers = () => {
+  featuredHoverTimers.forEach((timer) => clearTimeout(timer));
+  featuredHoverTimers.clear();
+  featuredButtonSceneId.value = null;
+};
+
 const loadScenes = async (page = pagination.value.page) => {
+  clearFeaturedHoverTimers();
   loading.value = true;
   try {
-    const result = await getScenes(page, pagination.value.pageSize);
+    const result = await getScenes(page, pagination.value.pageSize, activeCategory.value);
     scenes.value = result.scenes;
     pagination.value = result.pagination;
   } catch (error) {
@@ -176,6 +256,76 @@ const loadScenes = async (page = pagination.value.page) => {
   }
 };
 
+
+const switchCategory = (category) => {
+  if (activeCategory.value === category) return;
+  activeCategory.value = category;
+  loadScenes(1);
+};
+
+const startFeaturedHover = (scene) => {
+  if (activeCategory.value !== 'normal' || scene.isFeatured) return;
+
+  cancelFeaturedHover(scene.sceneId);
+  const timer = setTimeout(() => {
+    featuredButtonSceneId.value = scene.sceneId;
+    featuredHoverTimers.delete(scene.sceneId);
+  }, 10000);
+  featuredHoverTimers.set(scene.sceneId, timer);
+};
+
+const cancelFeaturedHover = (sceneId) => {
+  const timer = featuredHoverTimers.get(sceneId);
+  if (timer) {
+    clearTimeout(timer);
+    featuredHoverTimers.delete(sceneId);
+  }
+  if (featuredButtonSceneId.value === sceneId) {
+    featuredButtonSceneId.value = null;
+  }
+};
+
+const openFeaturedPasswordModal = (scene) => {
+  pendingFeaturedScene.value = scene;
+  featuredPassword.value = '';
+  featuredPasswordError.value = '';
+  showFeaturedPasswordModal.value = true;
+  nextTick(() => featuredPasswordInput.value?.focus());
+};
+
+const closeFeaturedPasswordModal = () => {
+  if (promotingSceneId.value) return;
+  showFeaturedPasswordModal.value = false;
+  pendingFeaturedScene.value = null;
+  featuredPassword.value = '';
+  featuredPasswordError.value = '';
+};
+
+const confirmFeaturedPassword = async () => {
+  if (featuredPassword.value !== '123456') {
+    featuredPasswordError.value = '密码错误';
+    featuredPasswordInput.value?.focus();
+    return;
+  }
+
+  const scene = pendingFeaturedScene.value;
+  if (!scene || promotingSceneId.value) return;
+
+  promotingSceneId.value = scene.sceneId;
+  try {
+    const updatedScene = await updateSceneFeaturedStatus(scene.sceneId, true);
+    Object.assign(scene, updatedScene);
+    featuredButtonSceneId.value = null;
+    showFeaturedPasswordModal.value = false;
+    pendingFeaturedScene.value = null;
+    featuredPassword.value = '';
+    message.success(`“${scene.name}”已设为精品案例`);
+  } catch (error) {
+    message.error('设置精品案例失败: ' + error.message);
+  } finally {
+    promotingSceneId.value = null;
+  }
+};
 const goToPage = (page) => {
   if (page < 1 || page > pagination.value.totalPages) return;
   loadScenes(page);
@@ -249,6 +399,10 @@ const focusInput = () => {
 onMounted(() => {
   loadScenes(1);
 });
+
+onUnmounted(() => {
+  clearFeaturedHoverTimers();
+});
 </script>
 
 <style scoped>
@@ -306,6 +460,35 @@ onMounted(() => {
   background: #0052a3;
 }
 
+
+.scene-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 18px 30px 0;
+  background: #1a1a1a;
+}
+
+.scene-tab {
+  padding: 9px 18px;
+  border: 1px solid #444;
+  border-radius: 6px;
+  background: #282828;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.scene-tab:hover {
+  color: white;
+  border-color: #666;
+}
+
+.scene-tab.active {
+  color: white;
+  background: #0066cc;
+  border-color: #0066cc;
+}
 .scenes-grid {
   flex: 1;
   padding: 30px;
@@ -338,6 +521,69 @@ onMounted(() => {
   justify-content: center;
 }
 
+
+.featured-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f6c945, #e89614);
+  color: #241700;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.feature-scene-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 92px;
+  height: 92px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  background: rgba(0, 102, 204, 0.92);
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+  z-index: 2;
+  animation: feature-button-in 0.2s ease-out;
+}
+
+.feature-scene-btn:hover:not(:disabled) {
+  background: #0879e8;
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.feature-scene-btn:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
+.feature-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+@keyframes feature-button-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
 .scene-cover {
   width: 100%;
   height: 100%;
@@ -445,6 +691,19 @@ onMounted(() => {
   font-size: 20px;
 }
 
+
+.password-tip {
+  margin: -8px 0 20px;
+  color: #aaa;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.password-error {
+  margin: 8px 0 0;
+  color: #ff5f5f;
+  font-size: 13px;
+}
 .form-group {
   margin-bottom: 20px;
 }
