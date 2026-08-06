@@ -11,8 +11,12 @@ export const useEditorStore = defineStore('editor', () => {
         name: '未命名场景',
         description: '',
         cameraFar: 1000000,
-        initialView: null
+        initialView: null,
+        isFeatured: false
     });
+
+    // 精品案例场景解锁状态
+    const isUnlocked = ref(false);
 
     // 版本号：markRaw 对象的深层属性变化无法被 Vue 追踪，
     // 通过递增此值来通知依赖组件（如 SceneTree）强制刷新。
@@ -20,6 +24,8 @@ export const useEditorStore = defineStore('editor', () => {
 
     function setSceneMetadata(metadata) {
         sceneMetadata.value = { ...sceneMetadata.value, ...metadata };
+        // 每次设置场景元数据时重置解锁状态
+        isUnlocked.value = false;
     }
 
     function selectObject(object) {
@@ -56,6 +62,7 @@ export const useEditorStore = defineStore('editor', () => {
         sceneObjects,
         ignoreInvisibleOnPick,
         sceneMetadata,
+        isUnlocked,
         treeVersion,
         setSceneMetadata,
         selectObject,

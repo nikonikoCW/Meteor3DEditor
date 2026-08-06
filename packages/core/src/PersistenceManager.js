@@ -997,7 +997,8 @@ export class PersistenceManager {
                     name: sceneData.metadata.name || '未命名场景',
                     description: sceneData.metadata.description || '',
                     cameraFar: sceneData.metadata.cameraFar || 1000000,
-                    initialView: sceneData.metadata.initialView || null
+                    initialView: sceneData.metadata.initialView || null,
+                    isFeatured: sceneData.metadata.isFeatured || false
                 });
             }
 
