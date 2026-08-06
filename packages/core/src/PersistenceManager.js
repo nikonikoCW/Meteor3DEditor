@@ -36,15 +36,17 @@ export class PersistenceManager {
         this.editorStore = editorStore;
         this.dbManager = dbManager;
         this.objectMap = new Map();
+        this.disposed = false;
+        this.pendingSplatMeshes = new Set();
 
         // 设置 DRACO 解码器（优先使用实例配置，其次全局配置）
-        const dracoLoader = new DRACOLoader();
+        this.dracoLoader = new DRACOLoader();
         const dracoPath = options.dracoPath || PersistenceManager.dracoPath;
-        dracoLoader.setDecoderPath(dracoPath);
+        this.dracoLoader.setDecoderPath(dracoPath);
 
         // 设置 GLTF 加载器并启用 DRACO 支持
         this.gltfLoader = new GLTFLoader();
-        this.gltfLoader.setDRACOLoader(dracoLoader);
+        this.gltfLoader.setDRACOLoader(this.dracoLoader);
 
         this.modelCache = new Map();
         this.currentSceneId = 'default';
@@ -58,8 +60,10 @@ export class PersistenceManager {
      * @param {string} sceneId - 场景 ID
      */
     async init(sceneId = 'default') {
+        if (this.disposed) throw new Error('PersistenceManager has been disposed');
         this.currentSceneId = sceneId;
         await this.dbManager.init();
+        if (this.disposed) return;
         await this.loadScene(sceneId);
     }
 
@@ -796,8 +800,14 @@ export class PersistenceManager {
      * @returns {SparkRenderer}
      */
     async ensureSparkRenderer() {
+        if (this.disposed || this.sceneManager?.disposed) {
+            throw new Error('Cannot create SparkRenderer after disposal');
+        }
         if (!this.sceneManager._sparkRenderer) {
             const { SparkRenderer } = await import('@sparkjsdev/spark');
+            if (this.disposed || this.sceneManager?.disposed) {
+                throw new Error('Cannot create SparkRenderer after disposal');
+            }
             const sparkRenderer = new SparkRenderer({
                 renderer: this.sceneManager.renderer
             });
@@ -814,18 +824,32 @@ export class PersistenceManager {
      * @returns {Promise<THREE.Object3D>} 高斯泼溅对象
      */
     async loadGaussianSplat(url) {
+        let splat = null;
         try {
             await this.ensureSparkRenderer();
 
             const { SplatMesh } = await import('@sparkjsdev/spark');
-            const splat = new SplatMesh({ url });
+            if (this.disposed || this.sceneManager?.disposed) {
+                throw new Error('Gaussian splat load cancelled');
+            }
+
+            splat = new SplatMesh({ url });
+            this.pendingSplatMeshes.add(splat);
             await splat.initialized;
 
+            this.pendingSplatMeshes.delete(splat);
+
+            if (this.disposed || this.sceneManager?.disposed) {
+                splat.dispose();
+                splat = null;
+                throw new Error('Gaussian splat load cancelled');
+            }
             const wrapper = new THREE.Group();
             wrapper.userData.modelType = 'GaussianSplat';
             wrapper.userData.modelUrl = url;
             wrapper.name = 'Gaussian Splat';
 
+            wrapper.userData.splatMesh = splat;
             const box = splat.getBoundingBox(false);
             if (!box.isEmpty()) {
                 const center = box.getCenter(new THREE.Vector3());
@@ -838,6 +862,10 @@ export class PersistenceManager {
 
             return wrapper;
         } catch (error) {
+            if (splat) {
+                this.pendingSplatMeshes.delete(splat);
+                if (this.disposed || this.sceneManager?.disposed) splat.dispose();
+            }
             console.error('高斯泼溅初始化失败:', error);
             throw error;
         }
@@ -952,6 +980,7 @@ export class PersistenceManager {
 
         // 获取场景元数据和对象列表
         const sceneData = await this.dbManager.getSceneData(this.currentSceneId);
+        if (this.disposed || this.sceneManager?.disposed) return;
 
         // 清空当前场景
         this.sceneManager.clearScene();
@@ -1018,9 +1047,12 @@ export class PersistenceManager {
 
         // 🛡️ 容错加载：即使部分对象加载失败，也继续加载其他对象
         for (const data of objects) {
+            if (this.disposed || this.sceneManager?.disposed) break;
             try {
                 const object = await this.deserializeObject(data);
-                this.sceneManager.addObject(object);
+                if (!this.sceneManager.addObject(object)) {
+                    break;
+                }
                 this.editorStore.addObject(object);
                 this.objectMap.set(object.userData.bid, data.id);
                 successCount++;
@@ -1111,5 +1143,24 @@ export class PersistenceManager {
         if (!this.currentSceneId) return;
         await this.dbManager.clearAllObjects(this.currentSceneId);
         this.objectMap.clear();
+    }
+
+    /** Stops pending work and releases loader caches owned by this manager. */
+    dispose() {
+        if (this.disposed) return;
+        this.disposed = true;
+
+        for (const splat of this.pendingSplatMeshes) splat.dispose?.();
+        this.pendingSplatMeshes.clear();
+
+        for (const model of this.modelCache.values()) {
+            this.sceneManager?.disposeObjectResources?.(model);
+        }
+        this.modelCache.clear();
+        this.objectMap.clear();
+        this.pendingNodeGraph = [];
+        this.pendingDeletedSourceNodes = [];
+
+        this.dracoLoader?.dispose();
     }
 }

@@ -38,7 +38,8 @@ import { PersistenceManager } from './PersistenceManager.js';
 export async function loadScene({ sceneId, serverUrl, container, config = {} }) {
     // 创建 canvas 元素（如果容器不是 canvas）
     let canvas = container;
-    if (container.tagName !== 'CANVAS') {
+    const ownsCanvas = container.tagName !== 'CANVAS';
+    if (ownsCanvas) {
         canvas = document.createElement('canvas');
         canvas.style.width = '100%';
         canvas.style.height = '100%';
@@ -134,7 +135,9 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
         try {
             const object = await persistenceManager.deserializeObject(objData);
             if (object) {
-                sceneManager.addObject(object);
+                if (!sceneManager.addObject(object)) {
+                    break;
+                }
                 successCount++;
             }
         } catch (err) {
@@ -172,7 +175,13 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
     sceneManager.setReady(true);
 
     // ========== 6. 返回封装后的 API ==========
-    return createMeteor3DInstance(sceneManager, resizeObserver);
+    return createMeteor3DInstance({
+        sceneManager,
+        persistenceManager,
+        resizeObserver,
+        canvas,
+        ownsCanvas
+    });
 }
 
 /**
@@ -183,7 +192,7 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
  * @param {ResizeObserver} resizeObserver 
  * @returns {Meteor3DInstance}
  */
-function createMeteor3DInstance(sceneManager, resizeObserver) {
+function createMeteor3DInstance({ sceneManager, persistenceManager, resizeObserver, canvas, ownsCanvas }) {
     return {
         // ========== 基础状态与事件 ==========
         /** 获取场景是否就绪 */
@@ -420,8 +429,11 @@ function createMeteor3DInstance(sceneManager, resizeObserver) {
         // ========== 生命周期 ==========
         /** 销毁实例，释放资源 */
         dispose: () => {
-            if (resizeObserver) {
-                resizeObserver.disconnect();
+            resizeObserver?.disconnect();
+            persistenceManager?.dispose();
+            sceneManager.dispose();
+            if (ownsCanvas) {
+                canvas.remove();
             }
             // 未来可以在这里添加更多清理逻辑
         },

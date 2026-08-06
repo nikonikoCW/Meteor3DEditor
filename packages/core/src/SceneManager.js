@@ -26,6 +26,8 @@ import { BidRegistry, generateBid } from './BidRegistry.js';
 export class SceneManager {
     constructor(canvas) {
         this.canvas = canvas;
+        this.disposed = false;
+        this.animationFrameId = null;
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x000000); // 深灰色背景，便于观察
 
@@ -152,7 +154,7 @@ export class SceneManager {
         this.canvas.addEventListener('click', this._onCanvasClick);
 
         this.animate = this.animate.bind(this);
-        this.animate();
+        this.animationFrameId = requestAnimationFrame(this.animate);
     }
 
     /**
@@ -204,7 +206,8 @@ export class SceneManager {
      * 负责渲染场景和更新控制器
      */
     animate(time) {
-        requestAnimationFrame(this.animate);
+        if (this.disposed) return;
+        this.animationFrameId = requestAnimationFrame(this.animate);
 
         // 计算帧间隔
         const delta = (time - this.lastTime) / 1000;
@@ -584,10 +587,19 @@ export class SceneManager {
                 url,
                 (texture) => {
                     texture.mapping = THREE.EquirectangularReflectionMapping;
+                    if (this.disposed) {
+                        texture.dispose();
+                        resolve(null);
+                        return;
+                    }
+                    const oldEnvironment = this.scene.environment;
                     this.scene.background = texture;
                     this.scene.environment = texture;
                     this.environmentUrl = url; // 记录当前环境贴图 URL
                     resolve(texture);
+                    if (oldEnvironment && oldEnvironment !== texture) {
+                        oldEnvironment.dispose();
+                    }
                 },
                 undefined,
                 (error) => {
@@ -603,6 +615,10 @@ export class SceneManager {
      * @param {THREE.Object3D} object - 要添加的对象
      */
     addObject(object) {
+        if (this.disposed) {
+            this.disposeObjectResources(object);
+            return false;
+        }
         object.traverse((child) => {
             if (!child.userData.bid) child.userData.bid = generateBid();
         });
@@ -613,6 +629,7 @@ export class SceneManager {
 
         // 自动构建 BVH 以加速射线检测
         this.raycastManager.buildBVH(object);
+        return true;
     }
 
     /**
@@ -789,14 +806,65 @@ export class SceneManager {
      * 清空场景
      * 移除所有可交互对象
      */
-    clearScene() {
+    clearScene({ disposeResources = true } = {}) {
         // 移除所有跟踪的对象
         this.objects.forEach(object => {
-            this.scene.remove(object);
+            if (disposeResources) {
+                this.disposeObjectResources(object);
+            } else {
+                this.scene.remove(object);
+            }
         });
         this.objects = [];
         this.bidRegistry.clear();
         this.markTriangleStatsDirty();
+    }
+
+    /**
+     * Permanently releases resources owned by a scene object tree.
+     * This is intentionally separate from removeObject(), which must remain undoable.
+     */
+    disposeObjectResources(root) {
+        if (!root) return;
+
+        const geometries = new Set();
+        const materials = new Set();
+        const textures = new Set();
+        const splatMeshes = new Set();
+        const tilesRenderers = new Set();
+
+        root.traverse((node) => {
+            const splatMesh = node.userData?.splatMesh;
+            if (splatMesh?.dispose) splatMeshes.add(splatMesh);
+
+            const tilesRenderer = node.userData?.tilesRenderer;
+            if (tilesRenderer?.dispose) tilesRenderers.add(tilesRenderer);
+
+            if (node.geometry?.dispose) geometries.add(node.geometry);
+            const nodeMaterials = Array.isArray(node.material) ? node.material : [node.material];
+            for (const material of nodeMaterials) {
+                if (!material?.dispose) continue;
+                materials.add(material);
+                for (const value of Object.values(material)) {
+                    if (value?.isTexture && value.dispose) textures.add(value);
+                }
+            }
+        });
+
+        for (const splatMesh of splatMeshes) splatMesh.dispose();
+        for (const tilesRenderer of tilesRenderers) {
+            tilesRenderer.dispose();
+            if (this._tilesets) {
+                this._tilesets = this._tilesets.filter(item => item !== tilesRenderer);
+            }
+        }
+
+        this.raycastManager?.disposeBVH(root);
+        root.removeFromParent();
+
+        for (const texture of textures) texture.dispose();
+        for (const material of materials) material.dispose();
+        for (const geometry of geometries) geometry.dispose();
     }
 
     /**
@@ -849,6 +917,8 @@ export class SceneManager {
         // 先移除旧的网格
         if (this.gridHelper) {
             this.scene.remove(this.gridHelper);
+            this.gridHelper.geometry?.dispose();
+            this.gridHelper.material?.dispose();
             this.gridHelper = null;
         }
 
@@ -883,6 +953,8 @@ export class SceneManager {
         // 先移除旧的坐标轴
         if (this.axesHelper) {
             this.scene.remove(this.axesHelper);
+            this.axesHelper.geometry?.dispose();
+            this.axesHelper.material?.dispose();
             this.axesHelper = null;
         }
 
@@ -1039,7 +1111,10 @@ export class SceneManager {
             urlWithCacheBust,
             (texture) => {
                 // 检查是否仍然是当前请求的 URL
-                if (this.baseMapLoading !== url) return;
+                if (this.disposed || this.baseMapLoading !== url) {
+                    texture.dispose();
+                    return;
+                }
 
                 texture.colorSpace = THREE.SRGBColorSpace;
                 texture.wrapS = THREE.ClampToEdgeWrapping;
@@ -1137,5 +1212,77 @@ export class SceneManager {
      */
     getRainConfig() {
         return this.rainManager ? this.rainManager.getConfig() : null;
+    }
+
+    /** Permanently destroys this engine instance and all resources it owns. */
+    dispose() {
+        if (this.disposed) return;
+        this.disposed = true;
+
+        if (this.animationFrameId !== null) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+        this.renderer?.setAnimationLoop?.(null);
+        this.canvas?.removeEventListener('click', this._onCanvasClick);
+
+        this.clearScene({ disposeResources: true });
+
+        if (this._tilesets) {
+            for (const tilesRenderer of this._tilesets) tilesRenderer.dispose?.();
+            this._tilesets = [];
+        }
+
+        const sparkRenderer = this._sparkRenderer;
+        if (sparkRenderer) {
+            sparkRenderer.autoUpdate = false;
+            if (sparkRenderer.updateTimeoutId !== -1) {
+                clearTimeout(sparkRenderer.updateTimeoutId);
+                sparkRenderer.updateTimeoutId = -1;
+            }
+            if (sparkRenderer.sortTimeoutId !== -1) {
+                clearTimeout(sparkRenderer.sortTimeoutId);
+                sparkRenderer.sortTimeoutId = -1;
+            }
+            sparkRenderer.clearSplats?.();
+            sparkRenderer.removeFromParent();
+            sparkRenderer.dispose?.();
+            sparkRenderer.geometry?.dispose();
+            sparkRenderer.material?.dispose();
+            this._sparkRenderer = null;
+        }
+
+        this.tileMapManager?.dispose();
+        this.tileMapManager = null;
+        this.setGridHelper(false);
+        this.setAxesHelper(false);
+        this.setBaseMap(null, null, null, false);
+
+        this.controlManager?.dispose();
+        this.statsManager?.disable();
+        this.triangleStatsManager?.dispose();
+        this.labelManager?.dispose();
+        this.outlineManager?.dispose();
+        this.highlightManager?.dispose();
+        this.snowManager?.dispose();
+        this.rainManager?.dispose();
+        this.vfxManager?.clear();
+        this.lineManager?.clear();
+
+        const environment = this.scene.environment;
+        if (environment?.dispose) environment.dispose();
+        if (this.scene.background?.isTexture && this.scene.background !== environment) {
+            this.scene.background.dispose();
+        }
+        this.scene.environment = null;
+        this.scene.background = null;
+        this.scene.clear();
+
+        this.renderer?.renderLists?.dispose();
+        this.renderer?.dispose();
+        this.renderer?.forceContextLoss?.();
+
+        this.events = {};
+        this.canvas = null;
     }
 }

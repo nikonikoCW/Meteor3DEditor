@@ -75,8 +75,8 @@ export class TransformManager {
         });
 
         // 使用 getHelper() 将控制器添加到场景中
-        const transformControlsHelper = this.controls.getHelper();
-        sceneManager.scene.add(transformControlsHelper);
+        this.helper = this.controls.getHelper();
+        sceneManager.scene.add(this.helper);
     }
 
     /**
@@ -121,5 +121,15 @@ export class TransformManager {
         // TransformControls 在循环中会自动更新，
         // 此方法用于满足 PropertiesPanel 的调用接口。
         // 未来可以在此处添加特定的更新逻辑。
+    }
+
+    dispose() {
+        this.controls.detach();
+        this.helper?.removeFromParent();
+        this.controls.dispose();
+        this.helper = null;
+        this.sceneManager = null;
+        this.historyManager = null;
+        this.persistenceManager = null;
     }
 }

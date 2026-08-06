@@ -37,6 +37,8 @@ let persistenceManager = null;
 let dbManager = null;
 let resizeObserver = null;
 let visualPreviewManager = null;
+let unsubscribeEditorStore = null;
+let isUnmounted = false;
 
 // Expose managers to parent/global if needed, or use a composable/provide-inject
 // For now, we attach them to the window for debugging or simple access
@@ -255,6 +257,11 @@ onMounted(async () => {
   // Initialize IndexedDB and load saved scene
   const sceneId = route.params.sceneId || 'default';
   await persistenceManager.init(sceneId);
+  if (isUnmounted) {
+    persistenceManager.dispose();
+    sceneManager.dispose();
+    return;
+  }
 
   // 场景存在初始视角时直接恢复；未设置时保留 SceneManager 默认视角
   const initialView = editorStore.sceneMetadata.initialView;
@@ -280,7 +287,7 @@ onMounted(async () => {
   };
 
   // Watch for selection changes to attach transform controls
-  editorStore.$subscribe((mutation, state) => {
+  unsubscribeEditorStore = editorStore.$subscribe((mutation, state) => {
     if (state.selectedObject) {
       transformManager.attach(state.selectedObject);
     } else {
@@ -304,14 +311,34 @@ onMounted(async () => {
 
 
 onBeforeUnmount(() => {
+  isUnmounted = true;
   window.removeEventListener('clear-visual-previews', clearVisualPreviews);
+
+  unsubscribeEditorStore?.();
+  unsubscribeEditorStore = null;
+  resizeObserver?.disconnect();
+  resizeObserver = null;
+
+  inputManager?.dispose();
+  transformManager?.dispose();
   visualPreviewManager?.clear();
-  if (inputManager) {
-    inputManager.dispose();
+  editorStore.clearSelection();
+  editorStore.resetObjects();
+
+  persistenceManager?.dispose();
+  sceneManager?.dispose();
+
+  if (window.editor?.sceneManager === sceneManager) {
+    window.editor = {};
   }
-  if (resizeObserver) {
-    resizeObserver.disconnect();
-  }
+
+  inputManager = null;
+  transformManager = null;
+  visualPreviewManager = null;
+  historyManager = null;
+  persistenceManager = null;
+  dbManager = null;
+  sceneManager = null;
 });
 </script>
 
