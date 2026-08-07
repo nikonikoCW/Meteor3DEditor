@@ -142,20 +142,22 @@ export class DBManager {
     async getSceneData(sceneId = 'default') {
         try {
             const response = await fetch(`${this.apiBaseUrl}/scene/load?sceneId=${sceneId}`);
-            const data = await response.json();
-
-            if (data.success) {
-                return {
-                    objects: data.objects || [],
-                    metadata: data.metadata || {}
-                };
-            } else {
-                console.error('加载场景失败:', data.message);
-                return { objects: [], metadata: {} };
+            if (!response.ok) {
+                throw new Error(`加载场景失败: HTTP ${response.status}`);
             }
+
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.message || '加载场景失败');
+            }
+
+            return {
+                objects: data.objects || [],
+                metadata: data.metadata || {}
+            };
         } catch (error) {
             console.error('获取场景数据失败:', error);
-            return { objects: [], metadata: {} };
+            throw error;
         }
     }
 

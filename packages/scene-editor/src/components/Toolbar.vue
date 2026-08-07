@@ -124,15 +124,36 @@ const redo = () => {
   }
 };
 
+const isSaving = ref(false);
+
 const save = async (isAutoSave = false) => {
-  if (!canSave.value) return;
-  if (window.editor && window.editor.persistenceManager) {
-    await window.editor.persistenceManager.saveScene();
-    if (isAutoSave === true) {
-      // Auto save implicitly without toast
-    } else {
+  if (!canSave.value || isSaving.value) return;
+
+  const sceneManager = window.editor?.sceneManager;
+  const persistenceManager = window.editor?.persistenceManager;
+
+  if (!sceneManager?.isReady) {
+    if (!isAutoSave) {
+      message.warning('场景尚未完整加载，当前不能保存');
+    }
+    return;
+  }
+
+  if (!persistenceManager) return;
+
+  isSaving.value = true;
+  try {
+    await persistenceManager.saveScene();
+    if (!isAutoSave) {
       message.success('场景已保存！');
     }
+  } catch (error) {
+    console.error(isAutoSave ? '自动保存失败:' : '场景保存失败:', error);
+    if (!isAutoSave) {
+      message.warning(error.message || '场景保存失败');
+    }
+  } finally {
+    isSaving.value = false;
   }
 };
 
@@ -140,8 +161,8 @@ let autoSaveTimer = null;
 
 onMounted(() => {
   autoSaveTimer = setInterval(() => {
-    if (!canSave.value) return;
-    save(true);
+    if (!canSave.value || !window.editor?.sceneManager?.isReady) return;
+    void save(true);
   }, 10000);
 });
 

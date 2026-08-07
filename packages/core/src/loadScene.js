@@ -49,115 +49,33 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
     // 初始化场景管理器
     const sceneManager = new SceneManager(canvas);
 
-    // 从服务器获取场景数据
+    // 从服务器获取场景数据。对外入口只负责取数和生命周期编排，
+    // 实际恢复逻辑统一委托给 PersistenceManager.restoreScene。
     const response = await fetch(`${serverUrl}/api/scene/load?sceneId=${sceneId}`);
     if (!response.ok) {
         throw new Error(`Failed to load scene: ${response.statusText}`);
     }
     const responseData = await response.json();
 
-    // 检查 API 响应状态
     if (!responseData.success) {
         throw new Error(`Failed to load scene: ${responseData.message || 'Unknown error'}`);
     }
 
-    // 提取数据（与 DBManager.getSceneData 保持一致）
-    const objects = responseData.objects || [];
-    const metadata = responseData.metadata || {};
-
-    // Draco 路径：优先使用 config.dracoPath，否则使用 serverUrl + /draco/
     const dracoPath = config.dracoPath || `${serverUrl}/draco/`;
-
-    // 创建 PersistenceManager 用于反序列化
     const persistenceManager = new PersistenceManager(sceneManager, null, null, { dracoPath });
+    const loadResult = await persistenceManager.restoreScene({
+        objects: responseData.objects || [],
+        metadata: responseData.metadata || {}
+    }, {
+        serverUrl,
+        showGrid: config.showGrid,
+        syncEditorStore: false,
+        notifyFailures: false
+    });
 
-    // ========== 1. 加载环境贴图/天空盒 ==========
-    // 使用后端本地 URL
-    const envUrl = metadata.environmentUrl
-        ? (metadata.environmentUrl.startsWith('http')
-            ? metadata.environmentUrl
-            : `${serverUrl}${metadata.environmentUrl}`)
-        : null;
-
-    if (envUrl) {
-        try {
-            await sceneManager.loadEnvironment(envUrl);
-            console.log('✅ 环境贴图加载成功');
-        } catch (error) {
-            console.warn('⚠️ 加载环境贴图失败:', error);
-        }
-    }
-
-    // ========== 2. 恢复 GIS 配置 ==========
-    if (metadata.gisConfig) {
-        const gisConfig = metadata.gisConfig;
-
-        // 设置 GIS 配置
-        if (gisConfig.enable) {
-            sceneManager.setGisConfig(gisConfig);
-        }
-
-        // 恢复辅助网格线
-        const showGrid = config.showGrid !== undefined ? config.showGrid : gisConfig.gridVisible;
-        if (showGrid && gisConfig.size) {
-            sceneManager.setGridHelper(true, gisConfig.size, gisConfig.size);
-        }
-
-        // 恢复底图显示
-        if (gisConfig.showBaseMap && gisConfig.baseMapUrl) {
-            const fullUrl = `${serverUrl}${gisConfig.baseMapUrl}`;
-            sceneManager.setBaseMap(
-                fullUrl,
-                gisConfig.bounds,
-                gisConfig.size,
-                true
-            );
-            console.log('✅ 底图加载成功');
-        }
-
-        sceneManager.emitGisConfigUpdated();
-    }
-
-    // ========== 2.5 恢复相机配置 ==========
-    if (metadata.cameraFar) {
-        sceneManager.setCameraFar(metadata.cameraFar);
-        // console.log(`✅ 相机配置加载成功: 远裁切面 ${metadata.cameraFar}`);
-    }
-
-    // ========== 3. 加载场景对象 ==========
-    persistenceManager.setPendingNodeGraph(metadata.nodeGraph);
-    persistenceManager.setPendingDeletedSourceNodes(metadata.deletedSourceNodes);
-
-    let successCount = 0;
-    let failedCount = 0;
-
-    for (const objData of objects) {
-        try {
-            const object = await persistenceManager.deserializeObject(objData);
-            if (object) {
-                if (!sceneManager.addObject(object)) {
-                    break;
-                }
-                successCount++;
-            }
-        } catch (err) {
-            failedCount++;
-            console.warn('⚠️ Failed to load object:', objData.name, err);
-        }
-    }
-
-    console.log(`✅ 场景加载完成: 成功 ${successCount}/${objects.length}`);
-    persistenceManager.applyGlobalNodeGraph();
-
-    if (failedCount > 0) {
-        console.warn(`⚠️ ${failedCount} 个对象加载失败`);
-    }
-
-    // ========== 4. 调整相机视角 ==========
     if (config.fitCamera !== false) {
         sceneManager.fitCameraToScene();
     }
-
     // ========== 5. 设置窗口自适应 ==========
     let resizeObserver = null;
     if (config.autoResize !== false) {
@@ -171,16 +89,14 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
         resizeObserver.observe(container);
     }
 
-    // 标记场景就绪
-    sceneManager.setReady(true);
-
     // ========== 6. 返回封装后的 API ==========
     return createMeteor3DInstance({
         sceneManager,
         persistenceManager,
         resizeObserver,
         canvas,
-        ownsCanvas
+        ownsCanvas,
+        loadResult
     });
 }
 
@@ -192,11 +108,13 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
  * @param {ResizeObserver} resizeObserver 
  * @returns {Meteor3DInstance}
  */
-function createMeteor3DInstance({ sceneManager, persistenceManager, resizeObserver, canvas, ownsCanvas }) {
+function createMeteor3DInstance({ sceneManager, persistenceManager, resizeObserver, canvas, ownsCanvas, loadResult }) {
     return {
         // ========== 基础状态与事件 ==========
         /** 获取场景是否就绪 */
         get isReady() { return sceneManager.isReady; },
+        /** 获取本次场景恢复报告 */
+        get loadResult() { return loadResult; },
         /** 订阅事件 */
         on: (event, callback) => sceneManager.on(event, callback),
         /** 取消订阅事件 */

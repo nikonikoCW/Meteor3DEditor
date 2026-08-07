@@ -256,7 +256,7 @@ onMounted(async () => {
   
   // Initialize IndexedDB and load saved scene
   const sceneId = route.params.sceneId || 'default';
-  await persistenceManager.init(sceneId);
+  const loadResult = await persistenceManager.init(sceneId);
   if (isUnmounted) {
     persistenceManager.dispose();
     sceneManager.dispose();
@@ -283,7 +283,8 @@ onMounted(async () => {
     inputManager,
     visualPreviewManager,
     persistenceManager,
-    dbManager
+    dbManager,
+    loadResult
   };
 
   // Watch for selection changes to attach transform controls

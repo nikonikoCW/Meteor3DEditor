@@ -222,7 +222,9 @@ BID 是 Meteor3D 的持久化业务节点 ID，用来解决 Three.js UUID 和模
 
 ### 6.3 PersistenceManager
 
-`PersistenceManager` 负责场景数据与 Three.js 对象之间的转换：
+`PersistenceManager` 负责场景数据与 Three.js 对象之间的转换。`restoreScene(sceneData, options)` 是场景编辑器和对外 SDK 共用的唯一恢复流程；`loadScene(sceneId)` 只负责通过 DBManager 取数后调用它。
+
+主要职责：
 
 - 序列化和反序列化顶层场景对象。
 - 保存基础几何体、GLB、3D Tiles 和 Gaussian Splat。
@@ -277,7 +279,7 @@ const instance = await loadScene({
 });
 ```
 
-加载过程包括创建运行时、请求场景、恢复环境/GIS/相机、反序列化对象、恢复节点图、调整相机并返回 Meteor3DInstance 公共 API。
+对外 `loadScene()` 是 SDK 门面：负责创建运行时、请求场景、调用 `PersistenceManager.restoreScene()`、建立 ResizeObserver，并返回 Meteor3DInstance 公共 API。恢复结果通过 `instance.loadResult` 暴露；只有所有对象和关键资源恢复成功时 `instance.isReady` 才为 `true`。
 
 ## 7. 场景编辑器
 

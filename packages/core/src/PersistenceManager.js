@@ -8,7 +8,7 @@ import { generateBid } from './BidRegistry.js';
 
 /**
  * 持久化管理器
- * 负责场景对象的序列化、反序列化以及与 IndexedDB 的交互
+ * 负责场景对象的序列化、反序列化以及场景数据恢复
  * 支持 GLTF 模型的增量保存（只保存修改过的属性）
  */
 export class PersistenceManager {
@@ -61,10 +61,11 @@ export class PersistenceManager {
      */
     async init(sceneId = 'default') {
         if (this.disposed) throw new Error('PersistenceManager has been disposed');
+        if (!this.dbManager) throw new Error('PersistenceManager.init requires a dbManager');
         this.currentSceneId = sceneId;
         await this.dbManager.init();
-        if (this.disposed) return;
-        await this.loadScene(sceneId);
+        if (this.disposed) return null;
+        return this.loadScene(sceneId);
     }
 
     /**
@@ -971,95 +972,129 @@ export class PersistenceManager {
     }
 
     /**
-     * 加载整个场景
-     * 从数据库读取所有对象并添加到场景中
+     * 从数据源加载并恢复场景。
+     * 编辑器使用此方法通过 DBManager 获取数据；对外 SDK 直接调用 restoreScene。
      * @param {string} sceneId - 场景 ID
+     * @returns {Promise<Object>}
      */
     async loadScene(sceneId) {
+        if (!this.dbManager) {
+            throw new Error('PersistenceManager.loadScene requires a dbManager');
+        }
+
         this.currentSceneId = sceneId || this.currentSceneId;
-
-        // 获取场景元数据和对象列表
         const sceneData = await this.dbManager.getSceneData(this.currentSceneId);
-        if (this.disposed || this.sceneManager?.disposed) return;
+        const serverUrl = this.dbManager.apiBaseUrl?.replace(/\/api\/?$/, '');
 
-        // 清空当前场景
+        return this.restoreScene(sceneData, {
+            serverUrl,
+            syncEditorStore: true,
+            notifyFailures: true
+        });
+    }
+
+    /**
+     * 将已经取得的场景数据恢复到 SceneManager。
+     * 这是编辑器与对外 SDK 共用的唯一场景恢复流程。
+     * @param {{objects?: Array, metadata?: Object}} sceneData - 后端场景数据
+     * @param {Object} [options] - 恢复选项
+     * @param {string} [options.serverUrl] - 用于解析相对资源 URL 的服务端地址
+     * @param {boolean} [options.showGrid] - 是否覆盖场景保存的网格显示状态
+     * @param {boolean} [options.syncEditorStore] - 是否同步编辑器 Store
+     * @param {boolean} [options.notifyFailures] - 是否显示对象加载失败提示
+     * @returns {Promise<Object>}
+     */
+    async restoreScene(sceneData, options = {}) {
+        if (this.disposed) throw new Error('PersistenceManager has been disposed');
+        if (!this.sceneManager || this.sceneManager.disposed) {
+            throw new Error('Cannot restore a scene without an active SceneManager');
+        }
+
+        const metadata = sceneData?.metadata || {};
+        const objects = sceneData?.objects || [];
+        const serverUrl = (options.serverUrl || '').replace(/\/$/, '');
+        const syncEditorStore = options.syncEditorStore ?? Boolean(this.editorStore);
+        const notifyFailures = options.notifyFailures ?? Boolean(this.editorStore);
+        const failedObjects = [];
+        const failedResources = [];
+        let successCount = 0;
+
+        this.sceneManager.setReady(false);
         this.sceneManager.clearScene();
-        this.editorStore.clearSelection();
-        if (typeof this.editorStore.resetObjects === 'function') {
-            this.editorStore.resetObjects();
+        this.editorStore?.clearSelection?.();
+        this.editorStore?.resetObjects?.();
+        this.objectMap.clear();
+
+        if (syncEditorStore) {
+            this.editorStore?.setSceneMetadata?.({
+                name: metadata.name || '未命名场景',
+                description: metadata.description || '',
+                cameraFar: metadata.cameraFar || 1000000,
+                initialView: metadata.initialView || null,
+                isFeatured: metadata.isFeatured || false
+            });
         }
 
-        // 恢复环境贴图
-        if (sceneData.metadata) {
-            // 同步元数据到 Pinia Store
-            if (this.editorStore && typeof this.editorStore.setSceneMetadata === 'function') {
-                this.editorStore.setSceneMetadata({
-                    name: sceneData.metadata.name || '未命名场景',
-                    description: sceneData.metadata.description || '',
-                    cameraFar: sceneData.metadata.cameraFar || 1000000,
-                    initialView: sceneData.metadata.initialView || null,
-                    isFeatured: sceneData.metadata.isFeatured || false
-                });
-            }
+        if (metadata.cameraFar) {
+            this.sceneManager.setCameraFar(metadata.cameraFar);
+        }
 
-            // 应用相机远裁切面到场景
-            if (sceneData.metadata.cameraFar) {
-                this.sceneManager.setCameraFar(sceneData.metadata.cameraFar);
-            }
+        const resolveResourceUrl = (url) => {
+            if (!url || /^(https?:|data:|blob:)/i.test(url) || !serverUrl) return url;
+            return `${serverUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+        };
 
-            const envUrl = sceneData.metadata.environmentUrl
-                ? (sceneData.metadata.environmentUrl.startsWith('http')
-                    ? sceneData.metadata.environmentUrl
-                    : `${this.dbManager.apiBaseUrl.replace('/api', '')}${sceneData.metadata.environmentUrl}`)
-                : null;
-            if (envUrl) {
-                try {
-                    await this.sceneManager.loadEnvironment(envUrl);
-                } catch (error) {
-                    console.warn('加载环境贴图失败:', error);
+        if (metadata.environmentUrl) {
+            try {
+                await this.sceneManager.loadEnvironment(resolveResourceUrl(metadata.environmentUrl));
+            } catch (error) {
+                failedResources.push({ type: 'environment', url: metadata.environmentUrl, error: error.message });
+                console.warn('加载环境贴图失败:', error);
+            }
+        }
+
+        if (metadata.gisConfig) {
+            const gisConfig = metadata.gisConfig;
+            try {
+                this.sceneManager.setGisConfig(gisConfig);
+
+                const showGrid = options.showGrid ?? gisConfig.gridVisible;
+                if (showGrid && gisConfig.size) {
+                    this.sceneManager.setGridHelper(true, gisConfig.size, gisConfig.size);
                 }
-            }
-        }
 
-        // 恢复 GIS 配置
-        if (sceneData.metadata && sceneData.metadata.gisConfig) {
-            const gisConfig = sceneData.metadata.gisConfig;
-            this.sceneManager.setGisConfig(gisConfig);
-
-            // 自动恢复底图显示
-            if (gisConfig.showBaseMap && gisConfig.baseMapUrl) {
-                const fullUrl = `${this.dbManager.apiBaseUrl.replace('/api', '')}${gisConfig.baseMapUrl}`;
-                this.sceneManager.setBaseMap(
-                    fullUrl,
-                    gisConfig.bounds,
-                    gisConfig.size,
-                    true
-                );
+                if (gisConfig.showBaseMap && gisConfig.baseMapUrl) {
+                    this.sceneManager.setBaseMap(
+                        resolveResourceUrl(gisConfig.baseMapUrl),
+                        gisConfig.bounds,
+                        gisConfig.size,
+                        true
+                    );
+                }
+            } catch (error) {
+                failedResources.push({ type: 'gis', error: error.message });
+                console.warn('恢复 GIS 配置失败:', error);
             }
         }
         this.sceneManager.emitGisConfigUpdated();
 
-        this.setPendingNodeGraph(sceneData.metadata?.nodeGraph);
-        this.setPendingDeletedSourceNodes(sceneData.metadata?.deletedSourceNodes);
-        const objects = sceneData.objects || [];
-        let successCount = 0;
-        let failedCount = 0;
-        const failedObjects = [];
+        this.setPendingNodeGraph(metadata.nodeGraph);
+        this.setPendingDeletedSourceNodes(metadata.deletedSourceNodes);
 
-        // 🛡️ 容错加载：即使部分对象加载失败，也继续加载其他对象
         for (const data of objects) {
-            if (this.disposed || this.sceneManager?.disposed) break;
+            if (this.disposed || this.sceneManager.disposed) break;
+
             try {
                 const object = await this.deserializeObject(data);
-                if (!this.sceneManager.addObject(object)) {
-                    break;
-                }
-                this.editorStore.addObject(object);
+                if (!object || !this.sceneManager.addObject(object)) break;
+
+                this.editorStore?.addObject?.(object);
                 this.objectMap.set(object.userData.bid, data.id);
                 successCount++;
             } catch (error) {
-                failedCount++;
                 failedObjects.push({
+                    id: data.id,
+                    bid: data.bid,
                     name: data.name || '未命名',
                     type: data.type,
                     error: error.message
@@ -1068,30 +1103,48 @@ export class PersistenceManager {
             }
         }
 
-        // 📊 加载结果汇总
-        console.log(`✅ 场景加载完成: 成功 ${successCount}/${objects.length}`);
         this.applyGlobalNodeGraph();
         this.editorStore?.notifyTreeUpdate?.();
 
-        if (failedCount > 0) {
-            console.warn(`⚠️ ${failedCount} 个对象加载失败（可能是引用的资产已被删除）:`, failedObjects);
-            // 通知用户有对象加载失败
-            if (typeof window !== 'undefined' && failedCount > 0) {
-                setTimeout(() => {
-                    message.warning(
-                        `场景加载完成，但有 ${failedCount} 个对象加载失败（可能引用的文件已被删除）。\n\n建议重新保存场景以清理无效引用。`,
-                        5000 // 显示 5 秒，因为这是重要警告
-                    );
-                }, 500);
-            }
-        }
-    }
+        const result = {
+            complete: successCount === objects.length && failedResources.length === 0,
+            totalCount: objects.length,
+            successCount,
+            failedCount: failedObjects.length,
+            failedObjects,
+            failedResources
+        };
 
+        this.sceneManager.setReady(result.complete);
+        console.log(`✅ 场景加载完成: 成功 ${successCount}/${objects.length}`);
+
+        if (!result.complete) {
+            console.warn('⚠️ 场景未完整恢复，保存功能应保持禁用:', result);
+        }
+
+        if (notifyFailures && !result.complete && typeof window !== 'undefined') {
+            const failureCount = failedObjects.length + failedResources.length;
+            setTimeout(() => {
+                message.warning(
+                    `场景有 ${failureCount} 项内容加载失败，自动保存已禁用。请刷新重试或检查资源地址。`,
+                    7000
+                );
+            }, 500);
+        }
+
+        return result;
+    }
     /**
      * 保存整个场景
      * 保存所有对象和场景元数据
      */
     async saveScene() {
+        if (!this.sceneManager?.isReady) {
+            throw new Error('场景尚未完整加载，拒绝保存不完整的场景数据');
+        }
+        if (!this.dbManager) {
+            throw new Error('PersistenceManager.saveScene requires a dbManager');
+        }
         if (!this.currentSceneId) {
             console.error('未设置 sceneId，无法保存场景');
             return;
