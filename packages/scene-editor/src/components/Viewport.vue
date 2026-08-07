@@ -6,6 +6,23 @@
     @drop="onDrop"
   >
     <canvas ref="canvas"></canvas>
+
+    <div v-if="loadingState.visible" class="scene-loading-overlay">
+      <div class="scene-loading-card" :class="`is-${loadingState.status}`">
+        <div v-if="loadingState.status === 'loading'" class="loading-spinner"></div>
+        <h3>{{ loadingTitle }}</h3>
+        <div class="loading-progress-track">
+          <div class="loading-progress-bar" :class="{ 'has-error': loadingState.status === 'degraded' || loadingState.status === 'error' }" :style="{ width: `${loadingState.percent}%` }"></div>
+        </div>
+        <div class="loading-progress-summary">
+          <span>{{ loadingState.processedCount }} / {{ loadingState.totalCount }} 个对象</span>
+          <strong>{{ loadingState.percent }}%</strong>
+        </div>
+        <p v-if="loadingState.currentName && loadingState.status === 'loading'" class="loading-current-object">正在加载：{{ loadingState.currentName }}</p>
+        <p v-if="loadingState.message" class="loading-message">{{ loadingState.message }}</p>
+        <button v-if="loadingState.status === 'degraded' || loadingState.status === 'error'" class="loading-dismiss-btn" type="button" @click="loadingState.visible = false">查看已加载内容</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -29,6 +46,17 @@ const editorStore = useEditorStore();
 const { selectedObject } = storeToRefs(editorStore);
 const route = useRoute();
 
+const loadingState = ref({
+  visible: true,
+  status: 'loading',
+  percent: 0,
+  processedCount: 0,
+  totalCount: 0,
+  currentName: '',
+  message: '正在读取场景数据...'
+});
+const loadingTitle = ref('正在加载场景');
+
 let sceneManager = null;
 let inputManager = null;
 let transformManager = null;
@@ -39,6 +67,34 @@ let resizeObserver = null;
 let visualPreviewManager = null;
 let unsubscribeEditorStore = null;
 let isUnmounted = false;
+let loadingHideTimer = null;
+
+const handleLoadProgress = (progress) => {
+  if (isUnmounted) return;
+
+  loadingState.value.visible = true;
+  loadingState.value.percent = progress.percent ?? loadingState.value.percent;
+  loadingState.value.processedCount = progress.processedCount ?? 0;
+  loadingState.value.totalCount = progress.totalCount ?? 0;
+  loadingState.value.currentName = progress.currentObject?.name || '';
+
+  if (progress.phase === 'complete') {
+    if (progress.status === 'ready') {
+      loadingTitle.value = '场景加载完成';
+      loadingState.value.status = 'ready';
+      loadingState.value.message = `已成功加载 ${progress.successCount} 个对象`;
+    } else {
+      loadingTitle.value = '场景未完整加载';
+      loadingState.value.status = 'degraded';
+      loadingState.value.message = `成功 ${progress.successCount} 个，失败 ${progress.failedCount} 个；自动保存已禁用`;
+    }
+    return;
+  }
+
+  loadingTitle.value = '正在加载场景';
+  loadingState.value.status = 'loading';
+  loadingState.value.message = progress.totalCount > 0 ? '' : '场景中没有对象';
+};
 
 // Expose managers to parent/global if needed, or use a composable/provide-inject
 // For now, we attach them to the window for debugging or simple access
@@ -253,17 +309,36 @@ onMounted(async () => {
   historyManager = new HistoryManager();
   dbManager = new DBManager({ apiBaseUrl: API_BASE_URL });
   persistenceManager = new PersistenceManager(sceneManager, editorStore, dbManager);
-  
-  // Initialize IndexedDB and load saved scene
+
   const sceneId = route.params.sceneId || 'default';
-  const loadResult = await persistenceManager.init(sceneId);
+  let loadResult = null;
+
+  try {
+    loadResult = await persistenceManager.init(sceneId, {
+      onProgress: handleLoadProgress
+    });
+  } catch (error) {
+    if (isUnmounted) return;
+    console.error('场景加载失败:', error);
+    loadingTitle.value = '场景加载失败';
+    loadingState.value.status = 'error';
+    loadingState.value.message = error.message || '无法读取场景数据';
+    return;
+  }
+
   if (isUnmounted) {
     persistenceManager.dispose();
     sceneManager.dispose();
     return;
   }
 
-  // 场景存在初始视角时直接恢复；未设置时保留 SceneManager 默认视角
+  if (loadResult?.complete) {
+    loadingHideTimer = window.setTimeout(() => {
+      loadingState.value.visible = false;
+      loadingHideTimer = null;
+    }, 500);
+  }
+
   const initialView = editorStore.sceneMetadata.initialView;
   if (initialView) {
     await sceneManager.setView({
@@ -272,7 +347,7 @@ onMounted(async () => {
       duration: 0
     });
   }
-  
+
   transformManager = new TransformManager(sceneManager, historyManager, persistenceManager);
   inputManager = new InputManager(sceneManager, editorStore, transformManager);
 
@@ -287,7 +362,6 @@ onMounted(async () => {
     loadResult
   };
 
-  // Watch for selection changes to attach transform controls
   unsubscribeEditorStore = editorStore.$subscribe((mutation, state) => {
     if (state.selectedObject) {
       transformManager.attach(state.selectedObject);
@@ -297,15 +371,14 @@ onMounted(async () => {
   });
 
   resizeObserver = new ResizeObserver((entries) => {
-      if (sceneManager && sceneManager.renderer) {
-          const entry = entries[0];
-          if (entry && entry.contentRect) {
-             const { width, height } = entry.contentRect;
-             sceneManager.onWindowResize(width, height);
-          } else {
-             sceneManager.onWindowResize();
-          }
-      }
+    if (!sceneManager?.renderer) return;
+    const entry = entries[0];
+    if (entry?.contentRect) {
+      const { width, height } = entry.contentRect;
+      sceneManager.onWindowResize(width, height);
+    } else {
+      sceneManager.onWindowResize();
+    }
   });
   resizeObserver.observe(container.value);
 });
@@ -314,6 +387,10 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   isUnmounted = true;
   window.removeEventListener('clear-visual-previews', clearVisualPreviews);
+  if (loadingHideTimer !== null) {
+    window.clearTimeout(loadingHideTimer);
+    loadingHideTimer = null;
+  }
 
   unsubscribeEditorStore?.();
   unsubscribeEditorStore = null;
@@ -345,9 +422,108 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .viewport-container {
+  position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
+}
+
+.scene-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 12, 18, 0.82);
+  backdrop-filter: blur(4px);
+}
+
+.scene-loading-card {
+  width: min(440px, calc(100% - 48px));
+  padding: 28px;
+  color: #e8f4ff;
+  background: rgba(20, 29, 40, 0.96);
+  border: 1px solid rgba(74, 167, 255, 0.35);
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+}
+
+.scene-loading-card h3 {
+  margin: 0 0 20px;
+  text-align: center;
+  font-size: 18px;
+}
+
+.loading-spinner {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto 14px;
+  border: 3px solid rgba(74, 167, 255, 0.2);
+  border-top-color: #4aa7ff;
+  border-radius: 50%;
+  animation: scene-loading-spin 0.8s linear infinite;
+}
+
+.loading-progress-track {
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  background: #0d1620;
+  border-radius: 999px;
+}
+
+.loading-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #1976d2, #55c7ff);
+  border-radius: inherit;
+  transition: width 0.25s ease;
+}
+
+.loading-progress-bar.has-error {
+  background: linear-gradient(90deg, #c77700, #ffb648);
+}
+
+.loading-progress-summary {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  color: #a9bfd2;
+  font-size: 13px;
+}
+
+.loading-progress-summary strong {
+  color: #fff;
+}
+
+.loading-current-object,
+.loading-message {
+  margin: 16px 0 0;
+  overflow: hidden;
+  color: #c8d9e8;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loading-message {
+  color: #8fa8bd;
+  font-size: 13px;
+}
+
+.loading-dismiss-btn {
+  display: block;
+  margin: 20px auto 0;
+  padding: 8px 18px;
+  color: #fff;
+  background: #b66b00;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+@keyframes scene-loading-spin {
+  to { transform: rotate(360deg); }
 }
 
 canvas {

@@ -58,14 +58,15 @@ export class PersistenceManager {
      * 初始化管理器
      * 连接数据库并加载场景
      * @param {string} sceneId - 场景 ID
+     * @param {Object} [options] - 场景恢复选项
      */
-    async init(sceneId = 'default') {
+    async init(sceneId = 'default', options = {}) {
         if (this.disposed) throw new Error('PersistenceManager has been disposed');
         if (!this.dbManager) throw new Error('PersistenceManager.init requires a dbManager');
         this.currentSceneId = sceneId;
         await this.dbManager.init();
         if (this.disposed) return null;
-        return this.loadScene(sceneId);
+        return this.loadScene(sceneId, options);
     }
 
     /**
@@ -977,7 +978,7 @@ export class PersistenceManager {
      * @param {string} sceneId - 场景 ID
      * @returns {Promise<Object>}
      */
-    async loadScene(sceneId) {
+    async loadScene(sceneId, options = {}) {
         if (!this.dbManager) {
             throw new Error('PersistenceManager.loadScene requires a dbManager');
         }
@@ -987,9 +988,10 @@ export class PersistenceManager {
         const serverUrl = this.dbManager.apiBaseUrl?.replace(/\/api\/?$/, '');
 
         return this.restoreScene(sceneData, {
-            serverUrl,
-            syncEditorStore: true,
-            notifyFailures: true
+            ...options,
+            serverUrl: options.serverUrl || serverUrl,
+            syncEditorStore: options.syncEditorStore ?? true,
+            notifyFailures: options.notifyFailures ?? true
         });
     }
 
@@ -1002,6 +1004,7 @@ export class PersistenceManager {
      * @param {boolean} [options.showGrid] - 是否覆盖场景保存的网格显示状态
      * @param {boolean} [options.syncEditorStore] - 是否同步编辑器 Store
      * @param {boolean} [options.notifyFailures] - 是否显示对象加载失败提示
+     * @param {Function} [options.onProgress] - 对象级加载进度回调
      * @returns {Promise<Object>}
      */
     async restoreScene(sceneData, options = {}) {
@@ -1017,7 +1020,27 @@ export class PersistenceManager {
         const notifyFailures = options.notifyFailures ?? Boolean(this.editorStore);
         const failedObjects = [];
         const failedResources = [];
+        const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
         let successCount = 0;
+        let processedCount = 0;
+
+        const emitProgress = (progress) => {
+            if (!onProgress) return;
+            try {
+                onProgress({
+                    totalCount: objects.length,
+                    processedCount,
+                    successCount,
+                    failedCount: failedObjects.length,
+                    percent: objects.length === 0
+                        ? 100
+                        : Math.round((processedCount / objects.length) * 100),
+                    ...progress
+                });
+            } catch (error) {
+                console.warn('场景加载进度回调执行失败:', error);
+            }
+        };
 
         this.sceneManager.setReady(false);
         this.sceneManager.clearScene();
@@ -1080,26 +1103,53 @@ export class PersistenceManager {
 
         this.setPendingNodeGraph(metadata.nodeGraph);
         this.setPendingDeletedSourceNodes(metadata.deletedSourceNodes);
+        emitProgress({ phase: 'objects', status: 'ready-to-load' });
 
         for (const data of objects) {
             if (this.disposed || this.sceneManager.disposed) break;
 
+            const currentObject = {
+                id: data.id,
+                bid: data.bid,
+                name: data.name || '未命名',
+                type: data.type
+            };
+            let status = 'success';
+            let failure = null;
+
+            emitProgress({
+                phase: 'objects',
+                status: 'loading',
+                currentIndex: processedCount + 1,
+                currentObject
+            });
+
             try {
                 const object = await this.deserializeObject(data);
-                if (!object || !this.sceneManager.addObject(object)) break;
+                if (!object || !this.sceneManager.addObject(object)) {
+                    throw new Error('场景对象未能加入 SceneManager');
+                }
 
                 this.editorStore?.addObject?.(object);
                 this.objectMap.set(object.userData.bid, data.id);
                 successCount++;
             } catch (error) {
+                status = 'failed';
+                failure = error;
                 failedObjects.push({
-                    id: data.id,
-                    bid: data.bid,
-                    name: data.name || '未命名',
-                    type: data.type,
+                    ...currentObject,
                     error: error.message
                 });
                 console.warn(`⚠️ 对象加载失败: ${data.name || data.id}`, error);
+            } finally {
+                processedCount++;
+                emitProgress({
+                    phase: 'objects',
+                    status,
+                    currentIndex: processedCount,
+                    currentObject,
+                    error: failure?.message
+                });
             }
         }
 
@@ -1107,7 +1157,7 @@ export class PersistenceManager {
         this.editorStore?.notifyTreeUpdate?.();
 
         const result = {
-            complete: successCount === objects.length && failedResources.length === 0,
+            complete: processedCount === objects.length && failedObjects.length === 0 && failedResources.length === 0,
             totalCount: objects.length,
             successCount,
             failedCount: failedObjects.length,
@@ -1121,6 +1171,12 @@ export class PersistenceManager {
         if (!result.complete) {
             console.warn('⚠️ 场景未完整恢复，保存功能应保持禁用:', result);
         }
+
+        emitProgress({
+            phase: 'complete',
+            status: result.complete ? 'ready' : 'degraded',
+            result
+        });
 
         if (notifyFailures && !result.complete && typeof window !== 'undefined') {
             const failureCount = failedObjects.length + failedResources.length;
