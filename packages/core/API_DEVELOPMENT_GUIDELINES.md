@@ -401,6 +401,14 @@ enableOutline, disableOutline, getOutlinedObjects
 enableHighlight, disableHighlight, getHighlightedObjects
 ```
 
+### 模型动画
+
+```text
+getAnimations, getAnimationState
+setAnimationClip, setAnimationSpeed
+setAnimationEnabled, setAnimationPlaying
+```
+
 ### 天气、特效与流动线
 
 ```text

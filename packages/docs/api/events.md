@@ -23,6 +23,7 @@ meteor3d.on(event, callback)
 | `scene-ready` | `{ isReady: true }` | SceneManager 被标记为就绪 |
 | `scene-click` | 点击和射线检测结果 | Canvas 左键点击 |
 | `control-mode-changed` | `{ mode, previous }` | 相机控制模式发生变化 |
+| `animation-state-changed` | `{ rootBid, state }` | 动画片段、速度、开启或播放状态发生变化 |
 
 ```javascript
 const handleSceneClick = (event) => {

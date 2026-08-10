@@ -33,6 +33,7 @@ export default defineConfig({
                         { text: '场景加载', link: '/api/scene-loading' },
                         { text: '事件与状态', link: '/api/events' },
                         { text: '对象查询', link: '/api/objects' },
+                        { text: '模型动画', link: '/api/animations' },
                         { text: '相机导航', link: '/api/camera' },
                         { text: '射线检测', link: '/api/raycast' },
                         { text: '生命周期与尺寸', link: '/api/lifecycle' },

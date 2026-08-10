@@ -5,20 +5,31 @@
     <div v-if="selectedObject" class="section">
       <div class="section-header">
         <div>
-          <h4>动画播放</h4>
-          <p>选择并配置当前模型的动画片段</p>
+          <h4>开启动画</h4>
+          <p>关闭时停止动画并恢复模型初始姿势</p>
         </div>
         <label class="switch" :class="{ disabled: !hasAnimations }">
-          <input v-model="animationEnabled" type="checkbox" :disabled="!hasAnimations" aria-label="开启动画">
+          <input v-model="animationEnabled" type="checkbox" :disabled="!hasAnimations" @change="onEnabledChange" aria-label="开启动画">
           <span class="switch-track" aria-hidden="true"></span>
         </label>
       </div>
 
       <div class="divider"></div>
 
+      <div class="playback-row">
+        <div class="playback-copy">
+          <label for="animation-playing">播放状态</label>
+          <span>{{ !animationEnabled ? '未开启' : animationPlaying ? '播放中' : '已暂停' }}</span>
+        </div>
+        <label class="switch" :class="{ disabled: !hasAnimations || !animationEnabled }">
+          <input id="animation-playing" v-model="animationPlaying" type="checkbox" :disabled="!hasAnimations || !animationEnabled" @change="onPlayingChange" aria-label="播放动画">
+          <span class="switch-track" aria-hidden="true"></span>
+        </label>
+      </div>
+
       <div class="prop-row">
         <label for="animation-clip">动画片段</label>
-        <select id="animation-clip" v-model="selectedAnimation" :disabled="!hasAnimations">
+        <select id="animation-clip" v-model="selectedAnimation" :disabled="!hasAnimations" @change="onClipChange">
           <option value="" disabled>请选择动画</option>
           <option v-for="animation in animationOptions" :key="animation.value" :value="animation.value">
             {{ animation.label }}
@@ -31,7 +42,7 @@
           <label for="animation-speed">播放速度</label>
           <span>{{ playbackSpeed.toFixed(1) }}×</span>
         </div>
-        <input id="animation-speed" v-model.number="playbackSpeed" type="range" min="0.1" max="3" step="0.1" :disabled="!hasAnimations">
+        <input id="animation-speed" v-model.number="playbackSpeed" type="range" min="0.1" max="3" step="0.1" :disabled="!hasAnimations" @input="onSpeedInput">
         <div class="range-marks" aria-hidden="true">
           <span>0.1×</span><span>1.0×</span><span>3.0×</span>
         </div>
@@ -44,7 +55,7 @@
     </div>
 
     <p v-else class="empty-message">请选择包含动画的模型</p>
-    <div class="ui-note">当前仅提供界面配置，暂未接入动画播放逻辑</div>
+    <div class="ui-note">动画设置仅在当前编辑会话生效，暂未随场景保存</div>
   </div>
 </template>
 
@@ -55,31 +66,83 @@ import { useEditorStore } from '../stores/editorStore';
 
 const editorStore = useEditorStore();
 const { selectedObject } = storeToRefs(editorStore);
+const animationOptions = ref([]);
 const selectedAnimation = ref('');
 const playbackSpeed = ref(1);
 const animationEnabled = ref(false);
-
-// 只读取已有 animations 生成选项，不创建或控制 AnimationMixer。
-const animationClips = computed(() => {
-  let object = selectedObject.value;
-  while (object) {
-    if (Array.isArray(object.animations) && object.animations.length > 0) return object.animations;
-    object = object.parent;
-  }
-  return [];
-});
-
-const animationOptions = computed(() => animationClips.value.map((clip, index) => ({
-  value: String(index),
-  label: clip?.name?.trim() || `动画 ${index + 1}`
-})));
+const animationPlaying = ref(false);
 const hasAnimations = computed(() => animationOptions.value.length > 0);
 
-watch(selectedObject, () => {
-  selectedAnimation.value = animationOptions.value[0]?.value || '';
+const getSceneManager = () => window.editor?.sceneManager;
+const getSelectedBid = () => selectedObject.value?.userData?.bid || null;
+
+const resetPanel = () => {
+  animationOptions.value = [];
+  selectedAnimation.value = '';
   playbackSpeed.value = 1;
   animationEnabled.value = false;
-}, { immediate: true });
+  animationPlaying.value = false;
+};
+
+const syncFromSelection = () => {
+  const sceneManager = getSceneManager();
+  const bid = getSelectedBid();
+  if (!sceneManager || !bid) {
+    resetPanel();
+    return;
+  }
+
+  animationOptions.value = sceneManager.getAnimations(bid).map((clip) => ({
+    ...clip,
+    value: String(clip.index)
+  }));
+
+  const state = sceneManager.getAnimationState(bid);
+  selectedAnimation.value = state ? String(state.clipIndex) : (animationOptions.value[0]?.value || '');
+  playbackSpeed.value = state?.speed ?? 1;
+  animationEnabled.value = state?.enabled ?? false;
+  animationPlaying.value = state?.playing ?? false;
+};
+
+const onClipChange = () => {
+  const sceneManager = getSceneManager();
+  const bid = getSelectedBid();
+  const clip = animationOptions.value.find(item => item.value === selectedAnimation.value);
+  if (sceneManager && bid && clip) {
+    sceneManager.setAnimationClip(bid, { index: clip.index, name: clip.name });
+  }
+};
+
+const onSpeedInput = () => {
+  const sceneManager = getSceneManager();
+  const bid = getSelectedBid();
+  if (sceneManager && bid) sceneManager.setAnimationSpeed(bid, playbackSpeed.value);
+};
+
+const onEnabledChange = () => {
+  const sceneManager = getSceneManager();
+  const bid = getSelectedBid();
+  if (!sceneManager || !bid) return;
+
+  const updated = sceneManager.setAnimationEnabled(bid, animationEnabled.value);
+  if (!updated) {
+    syncFromSelection();
+    return;
+  }
+
+  if (!animationEnabled.value) animationPlaying.value = false;
+};
+
+const onPlayingChange = () => {
+  const sceneManager = getSceneManager();
+  const bid = getSelectedBid();
+  if (!sceneManager || !bid) return;
+
+  const updated = sceneManager.setAnimationPlaying(bid, animationPlaying.value);
+  if (!updated) syncFromSelection();
+};
+
+watch(selectedObject, syncFromSelection, { immediate: true });
 </script>
 
 <style scoped>
@@ -90,6 +153,10 @@ h3 { margin: 0 0 20px; padding-bottom: 10px; border-bottom: 1px solid #444; font
 h4 { margin: 0; color: #ddd; font-size: 13px; font-weight: 500; }
 .section-header p { margin: 3px 0 0; color: #777; font-size: 11px; line-height: 1.4; }
 .divider { height: 1px; margin: 12px 0; background: #383838; }
+.playback-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+.playback-copy { display: flex; flex-direction: column; gap: 3px; }
+.playback-copy label { color: #aaa; font-size: 12px; }
+.playback-copy span { color: #777; font-size: 11px; }
 .prop-row { display: flex; flex-direction: column; gap: 7px; margin-bottom: 18px; }
 .prop-row:last-of-type { margin-bottom: 0; }
 .prop-row > label, .label-row label { color: #aaa; font-size: 12px; }

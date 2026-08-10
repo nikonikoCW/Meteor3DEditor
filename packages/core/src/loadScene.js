@@ -231,6 +231,48 @@ function createMeteor3DInstance({ sceneManager, persistenceManager, resizeObserv
         /** Return the object's local visible flag, or null when not found. */
         isObjectVisible: (bid) => sceneManager.isObjectVisible(bid),
 
+        // ========== 模型动画 ==========
+        /**
+         * 获取该 BID 所属模型的动画片段列表。
+         * @param {string} bid - 模型根节点或内部节点的持久化 BID
+         * @returns {Array<{index: number, name: string, label: string, duration: number}>}
+         */
+        getAnimations: (bid) => sceneManager.getAnimations(bid),
+        /**
+         * 获取该 BID 所属模型的当前动画状态。
+         * @param {string} bid - 模型根节点或内部节点的持久化 BID
+         * @returns {Object|null}
+         */
+        getAnimationState: (bid) => sceneManager.getAnimationState(bid),
+        /**
+         * 选择动画片段。
+         * @param {string} bid - 模型根节点或内部节点的持久化 BID
+         * @param {{index?: number, name?: string}} selector - 动画片段名称或索引
+         * @returns {boolean} 是否成功切换
+         */
+        setAnimationClip: (bid, selector) => sceneManager.setAnimationClip(bid, selector),
+        /**
+         * 设置动画播放速度。
+         * @param {string} bid - 模型根节点或内部节点的持久化 BID
+         * @param {number} speed - 播放速度，范围为 0.1 至 3
+         * @returns {boolean} 是否成功设置
+         */
+        setAnimationSpeed: (bid, speed) => sceneManager.setAnimationSpeed(bid, speed),
+        /**
+         * 开启或关闭动画；关闭时恢复模型初始姿势。
+         * @param {string} bid - 模型根节点或内部节点的持久化 BID
+         * @param {boolean} enabled - 是否开启动画
+         * @returns {boolean} 是否成功设置
+         */
+        setAnimationEnabled: (bid, enabled) => sceneManager.setAnimationEnabled(bid, enabled),
+        /**
+         * 播放或暂停已开启的动画；暂停时保持当前姿势。
+         * @param {string} bid - 模型根节点或内部节点的持久化 BID
+         * @param {boolean} playing - 是否播放动画
+         * @returns {boolean} 是否成功设置
+         */
+        setAnimationPlaying: (bid, playing) => sceneManager.setAnimationPlaying(bid, playing),
+
         // ========== 描边效果 ==========
         /**
          * 启用对象描边

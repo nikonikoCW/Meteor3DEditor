@@ -390,6 +390,7 @@ export class PersistenceManager {
                 assetId: object.userData.assetId || null,
                 assetVersionId: object.userData.assetVersionId || null,
                 nodeBindings: this.serializeNodeBindings(object),
+                animation: this.serializeAnimationConfig(object),
                 visible: object.visible,
                 position: { x: object.position.x, y: object.position.y, z: object.position.z },
                 rotation: { x: object.rotation.x, y: object.rotation.y, z: object.rotation.z },
@@ -451,6 +452,47 @@ export class PersistenceManager {
                 }
             };
         }
+    }
+
+    /**
+     * 提取模型当前的动画配置，仅保存可跨会话恢复的纯数据。
+     * @param {THREE.Object3D} object - GLTF 模型根节点
+     * @returns {Object|null} 动画配置；模型没有动画时返回 null
+     */
+    serializeAnimationConfig(object) {
+        const runtimeState = this.sceneManager?.animationManager?.getAnimationState(object);
+        const state = runtimeState || object?.userData?.animationConfig;
+        if (!state || !Array.isArray(object?.animations) || object.animations.length === 0) return null;
+        const speed = Number(state.speed);
+
+        return {
+            enabled: state.enabled === true,
+            playing: state.enabled === true && state.playing === true,
+            clipIndex: Number.isInteger(state.clipIndex) && state.clipIndex >= 0 ? state.clipIndex : 0,
+            clipName: typeof state.clipName === 'string' ? state.clipName : '',
+            speed: Number.isFinite(speed) && speed >= 0.1 && speed <= 3 ? speed : 1,
+            loop: 'repeat'
+        };
+    }
+
+    /**
+     * 校验并规范化数据库中的动画配置，避免无效旧数据影响场景恢复。
+     * @param {Object|null|undefined} config - 数据库动画配置
+     * @returns {Object|null} 可交给 AnimationManager 的配置
+     */
+    normalizeAnimationConfig(config) {
+        if (!config || typeof config !== 'object') return null;
+
+        const enabled = config.enabled === true;
+        const speed = Number(config.speed);
+        return {
+            enabled,
+            playing: enabled && config.playing === true,
+            clipIndex: Number.isInteger(config.clipIndex) && config.clipIndex >= 0 ? config.clipIndex : 0,
+            clipName: typeof config.clipName === 'string' ? config.clipName : '',
+            speed: Number.isFinite(speed) && speed >= 0.1 && speed <= 3 ? speed : 1,
+            loop: 'repeat'
+        };
     }
 
     /**
@@ -549,6 +591,9 @@ export class PersistenceManager {
             const bindings = this.getBindingsForObject(data);
             this.restoreTreeBids(model, { ...data, nodeBindings: bindings });
             this.applyNodeBindings(model, bindings);
+            const animationConfig = this.normalizeAnimationConfig(data.animation);
+            if (animationConfig) model.userData.animationConfig = animationConfig;
+            else delete model.userData.animationConfig;
             model.name = data.name;
             if (data.visible !== undefined) model.visible = data.visible;
             model.position.set(data.position.x, data.position.y, data.position.z);
@@ -659,7 +704,9 @@ export class PersistenceManager {
      */
     async loadGLTFModel(url, options = {}) {
         if (this.modelCache.has(url)) {
-            const instance = SkeletonUtils.clone(this.modelCache.get(url));
+            const template = this.modelCache.get(url);
+            const instance = SkeletonUtils.clone(template);
+            instance.animations = template.animations?.slice() || [];
             if (options.assignBids !== false) this.assignNewTreeBids(instance, options);
             return instance;
         }
@@ -672,6 +719,9 @@ export class PersistenceManager {
                     gltf.scene.position.set(0, 0, 0);
                  
                     const model = gltf.scene;
+                    // GLTFLoader 将动画片段放在 gltf.animations 上，而不是 gltf.scene 上。
+                    // 模型进入缓存前保留动画；SkeletonUtils.clone 后还需显式复制到实例。
+                    model.animations = Array.isArray(gltf.animations) ? gltf.animations.slice() : [];
                     model.userData.modelType = 'GLTF';
                     model.userData.modelUrl = url;
                     // 缓存原始模型作为模板
@@ -679,6 +729,7 @@ export class PersistenceManager {
                     this.modelCache.set(url, model);
                     // 返回克隆的副本，确保每个实例独立且支持骨骼动画
                     const instance = SkeletonUtils.clone(model);
+                    instance.animations = model.animations.slice();
                     if (options.assignBids !== false) this.assignNewTreeBids(instance, options);
                     resolve(instance);
                 },

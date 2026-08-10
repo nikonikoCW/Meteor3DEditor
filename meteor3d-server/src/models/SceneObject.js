@@ -1,5 +1,42 @@
 const mongoose = require('mongoose');
 
+const AnimationConfigSchema = new mongoose.Schema({
+    enabled: {
+        type: Boolean,
+        default: false
+    },
+    playing: {
+        type: Boolean,
+        default: false
+    },
+    clipIndex: {
+        type: Number,
+        min: 0,
+        default: 0,
+        validate: {
+            validator: Number.isInteger,
+            message: 'clipIndex 必须是整数'
+        }
+    },
+    clipName: {
+        type: String,
+        default: ''
+    },
+    speed: {
+        type: Number,
+        min: 0.1,
+        max: 3,
+        default: 1
+    },
+    loop: {
+        type: String,
+        enum: ['repeat'],
+        default: 'repeat'
+    }
+}, {
+    _id: false
+});
+
 /**
  * 场景对象数据模型
  * 对应前端的 serializeObject 结构
@@ -16,6 +53,10 @@ const SceneObjectSchema = new mongoose.Schema({
     assetId: String,
     assetVersionId: String,
     nodeBindings: mongoose.Schema.Types.Mixed,
+    animation: {
+        type: AnimationConfigSchema,
+        default: undefined
+    },
     sceneId: {
         type: String,
         required: true,

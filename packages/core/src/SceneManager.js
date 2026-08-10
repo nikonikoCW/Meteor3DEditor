@@ -17,6 +17,7 @@ import { CameraNavigationManager } from './CameraNavigationManager.js';
 import { OrbitCameraControl } from './controls/OrbitCameraControl.js';
 import { GhostCameraControl } from './controls/GhostCameraControl.js';
 import { RaycastManager } from './RaycastManager.js';
+import { AnimationManager } from './AnimationManager.js';
 import { BidRegistry, generateBid } from './BidRegistry.js';
 
 /**
@@ -141,6 +142,9 @@ export class SceneManager {
 
         // 射线检测管理器
         this.raycastManager = new RaycastManager();
+        this.animationManager = new AnimationManager({
+            onStateChange: (data) => this.emit('animation-state-changed', data)
+        });
 
         // 事件系统
         this.events = {};
@@ -218,6 +222,7 @@ export class SceneManager {
 
         // 更新相机控制器
         this.controlManager.update(delta);
+        this.animationManager.update(delta);
 
         // 更新 GIS 瓦片地图
         if (this.tileMapManager) {
@@ -625,6 +630,7 @@ export class SceneManager {
         this.bidRegistry.registerTree(object);
         this.scene.add(object);
         if (!this.objects.includes(object)) this.objects.push(object);
+        this.animationManager.registerObject(object);
         this.markTriangleStatsDirty();
 
         // 自动构建 BVH 以加速射线检测
@@ -637,6 +643,8 @@ export class SceneManager {
      * @param {THREE.Object3D} object - 要移除的对象
      */
     removeObject(object) {
+        this.animationManager.unregisterObject(object);
+
         // 销毁 BVH
         this.raycastManager.disposeBVH(object);
 
@@ -712,6 +720,42 @@ export class SceneManager {
         }
 
         return object.visible;
+    }
+
+    /** 获取该 BID 所属模型可用的动画片段列表。 */
+    getAnimations(bid) {
+        const object = this.findObjectByBid(bid);
+        return object ? this.animationManager.getAnimations(object) : [];
+    }
+
+    /** 获取该 BID 所属模型当前的运行时动画状态。 */
+    getAnimationState(bid) {
+        const object = this.findObjectByBid(bid);
+        return object ? this.animationManager.getAnimationState(object) : null;
+    }
+
+    /** 通过名称、索引或包含二者之一的描述对象选择动画片段。 */
+    setAnimationClip(bid, selector) {
+        const object = this.findObjectByBid(bid);
+        return object ? this.animationManager.setAnimationClip(object, selector) : false;
+    }
+
+    /** 开启或关闭该 BID 所属模型的动画；关闭时恢复初始姿势。 */
+    setAnimationEnabled(bid, enabled) {
+        const object = this.findObjectByBid(bid);
+        return object ? this.animationManager.setAnimationEnabled(object, enabled) : false;
+    }
+
+    /** 播放或暂停该 BID 所属模型已开启的动画。 */
+    setAnimationPlaying(bid, playing) {
+        const object = this.findObjectByBid(bid);
+        return object ? this.animationManager.setAnimationPlaying(object, playing) : false;
+    }
+
+    /** 设置动画播放速度，支持范围为 0.1 倍至 3 倍。 */
+    setAnimationSpeed(bid, speed) {
+        const object = this.findObjectByBid(bid);
+        return object ? this.animationManager.setAnimationSpeed(object, speed) : false;
     }
 
     /**
@@ -809,6 +853,7 @@ export class SceneManager {
     clearScene({ disposeResources = true } = {}) {
         // 移除所有跟踪的对象
         this.objects.forEach(object => {
+            this.animationManager.unregisterObject(object);
             if (disposeResources) {
                 this.disposeObjectResources(object);
             } else {
@@ -1259,6 +1304,7 @@ export class SceneManager {
         this.setBaseMap(null, null, null, false);
 
         this.controlManager?.dispose();
+        this.animationManager?.dispose();
         this.statsManager?.disable();
         this.triangleStatsManager?.dispose();
         this.labelManager?.dispose();

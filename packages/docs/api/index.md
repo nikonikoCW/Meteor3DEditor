@@ -26,6 +26,19 @@ Meteor3D SDK 通过 `loadScene()` 返回场景实例。下表列出面向第三�
 | `hideObject(bid)` | 隐藏节点 |
 | `isObjectVisible(bid)` | 查询节点自身的显隐标记 |
 
+## 模型动画
+
+| API | 说明 |
+|-----|------|
+| `getAnimations(bid)` | 获取模型动画片段列表 |
+| `getAnimationState(bid)` | 获取模型当前动画状态 |
+| `setAnimationClip(bid, selector)` | 选择动画片段 |
+| `setAnimationSpeed(bid, speed)` | 设置动画播放速度 |
+| `setAnimationEnabled(bid, enabled)` | 开启或关闭动画，关闭时恢复初始姿势 |
+| `setAnimationPlaying(bid, playing)` | 播放或暂停已开启的动画 |
+
+完整语义参见[模型动画](/api/animations)。
+
 ## 相机导航
 
 | API | 说明 |
