@@ -26,7 +26,8 @@
             @click="activeRightTab = tab.id"
             :title="tab.title"
           >
-            <span class="icon iconfont" :class="tab.icon"></span>
+            <span v-if="tab.glyph" class="tab-glyph">{{ tab.glyph }}</span>
+            <span v-else class="icon iconfont" :class="tab.icon"></span>
           </div>
         </div>
         <div class="panel-content">
@@ -36,6 +37,7 @@
           <GisSettingsPanel v-show="activeRightTab === 'gis'" />
           <WeatherPanel v-show="activeRightTab === 'weather'" />
           <CameraSpeedPanel v-show="activeRightTab === 'camera-speed'" />
+          <AnimationPanel v-show="activeRightTab === 'animation'" />
         </div>
       </div>
     </div>
@@ -55,6 +57,7 @@ import SceneSettingsPanel from '../components/SceneSettingsPanel.vue';
 import GisSettingsPanel from '../components/GisSettingsPanel.vue';
 import WeatherPanel from '../components/WeatherPanel.vue';
 import CameraSpeedPanel from '../components/CameraSpeedPanel.vue';
+import AnimationPanel from '../components/AnimationPanel.vue';
 import { startOnboarding } from '../utils/onboarding';
 
 const route = useRoute();
@@ -90,6 +93,11 @@ const rightTabs = [
     id: 'camera-speed',
     title: '鼠标键盘',
     icon: 'me-jianpan'
+  },
+  {
+    id: 'animation',
+    title: '动画',
+    glyph: '▶'
   }
 ];
 
@@ -253,6 +261,13 @@ watch(
   align-items: center;
   justify-content: center;
   font-size: 18px;
+}
+
+.tab-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
 }
 
 .panel-content {
