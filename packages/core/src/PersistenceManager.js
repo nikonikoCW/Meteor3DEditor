@@ -149,7 +149,7 @@ export class PersistenceManager {
             0, 0, 0, 1
         );
 
-        // Project ENU into Meteor3D local GIS axes: east -> +X, up -> +Y, north -> -Z.
+        // 将 ENU 坐标投影到 Meteor3D 本地 GIS 坐标轴：东为 +X，上为 +Y，北为 -Z。
         const enuToThree = new THREE.Matrix4().set(
             1, 0, 0, 0,
             0, 0, 1, 0,
@@ -177,14 +177,30 @@ export class PersistenceManager {
         return true;
     }
 
+    /**
+     * 暂存场景级节点图，等待所有对象加载完成后统一恢复跨对象层级关系。
+     * @param {Array<Object>} nodeGraph - 持久化节点图记录。
+     * @returns {void}
+     */
     setPendingNodeGraph(nodeGraph) {
         this.pendingNodeGraph = Array.isArray(nodeGraph) ? nodeGraph : [];
     }
 
+    /**
+     * 暂存已从源模型中删除的节点记录。
+     * @param {Array<Object>} deletedSourceNodes - 已删除源节点记录。
+     * @returns {void}
+     */
     setPendingDeletedSourceNodes(deletedSourceNodes) {
         this.pendingDeletedSourceNodes = Array.isArray(deletedSourceNodes) ? deletedSourceNodes : [];
     }
 
+    /**
+     * 根据持久化删除记录，从新加载的 GLTF 实例中移除对应源节点。
+     * @param {THREE.Object3D} root - GLTF 模型根节点。
+     * @param {string} originObjectBid - 模型实例根 BID。
+     * @returns {void}
+     */
     removeDeletedSourceNodes(root, originObjectBid) {
         const deletedIds = new Set(this.pendingDeletedSourceNodes.filter((item) => item.originObjectBid === originObjectBid).map((item) => item.assetNodeId));
         const toRemove = [];
@@ -194,12 +210,21 @@ export class PersistenceManager {
         toRemove.forEach((node) => node.removeFromParent());
     }
 
+    /**
+     * 获取对象恢复时应使用的节点绑定，优先使用场景级节点图中的最新记录。
+     * @param {Object} data - 已序列化的对象数据。
+     * @returns {Array<Object>} 对象所属的节点绑定记录。
+     */
     getBindingsForObject(data) {
         const originObjectBid = data.bid || data.id;
         const globalBindings = this.pendingNodeGraph.filter((item) => item.originObjectBid === originObjectBid);
         return globalBindings.length > 0 ? globalBindings : (data.nodeBindings || []);
     }
 
+    /**
+     * 序列化当前场景内所有受管理对象的完整节点图。
+     * @returns {Array<Object>} 包含节点标识、父子关系、顺序和变换的记录列表。
+     */
     serializeSceneGraph() {
         const records = [];
         const visited = new Set();
@@ -226,6 +251,11 @@ export class PersistenceManager {
         return records;
     }
 
+    /**
+     * 对比缓存中的源模型模板与当前节点图，生成已删除源节点记录。
+     * @param {Array<Object>} nodeGraph - 当前场景节点图。
+     * @returns {Array<Object>} 已删除源节点记录列表。
+     */
     serializeDeletedSourceNodes(nodeGraph) {
         const deleted = [];
         for (const root of this.sceneManager.objects) {
@@ -242,6 +272,12 @@ export class PersistenceManager {
         return deleted;
     }
 
+    /**
+     * 恢复场景级节点图中的父子关系、节点属性和子节点顺序。
+     * 此方法在所有对象加载后调用，以支持跨模型重新挂接节点。
+     * @param {Array<Object>} [nodeGraph=this.pendingNodeGraph] - 待应用的节点图。
+     * @returns {void}
+     */
     applyGlobalNodeGraph(nodeGraph = this.pendingNodeGraph) {
         if (!Array.isArray(nodeGraph) || nodeGraph.length === 0) return;
         for (const record of nodeGraph) {
@@ -268,9 +304,10 @@ export class PersistenceManager {
     }
 
     /**
-     * Apply transform data previously produced by serializeObject.
-     * @param {THREE.Object3D} object
-     * @param {{position?: Object, rotation?: Object, scale?: Object}} transform
+     * 应用由 serializeObject 生成的对象变换数据。
+     * @param {THREE.Object3D} object - 待恢复的场景对象。
+     * @param {{position?: Object, rotation?: Object, scale?: Object}} transform - 持久化变换数据。
+     * @returns {void}
      */
     applySerializedTransform(object, transform) {
         if (!object || !transform) return;
@@ -286,6 +323,13 @@ export class PersistenceManager {
         }
     }
 
+    /**
+     * 为源模型节点建立稳定且唯一的资源节点 ID。
+     * 优先使用模型内嵌 ID，缺失或重复时回退到节点索引路径。
+     * @param {THREE.Object3D} root - 源模型根节点。
+     * @param {string} [url=''] - 源模型地址。
+     * @returns {void}
+     */
     normalizeAssetNodeIds(root, url = '') {
         const usedIds = new Set();
         const visit = (node, path) => {
@@ -299,6 +343,12 @@ export class PersistenceManager {
         root.userData.assetSourceUrl = url;
     }
 
+    /**
+     * 为新建模型实例的整棵节点树分配新的持久化 BID。
+     * @param {THREE.Object3D} root - 模型实例根节点。
+     * @param {Object} [asset={}] - 资源标识信息。
+     * @returns {string} 新生成的模型实例根 BID。
+     */
     assignNewTreeBids(root, asset = {}) {
         const originObjectBid = generateBid();
         root.traverse((node) => {
@@ -310,6 +360,12 @@ export class PersistenceManager {
         return originObjectBid;
     }
 
+    /**
+     * 根据稳定资源节点 ID 将已保存的 BID 恢复到新加载的模型节点树。
+     * @param {THREE.Object3D} root - 新加载的模型根节点。
+     * @param {Object} data - 已序列化对象及节点绑定数据。
+     * @returns {void}
+     */
     restoreTreeBids(root, data) {
         const bindings = Array.isArray(data.nodeBindings) ? data.nodeBindings : [];
         const byAssetNodeId = new Map(bindings.filter((item) => item.assetNodeId).map((item) => [item.assetNodeId, item]));
@@ -323,6 +379,11 @@ export class PersistenceManager {
         });
     }
 
+    /**
+     * 序列化单个模型实例内部的节点标识、层级、顺序和变换。
+     * @param {THREE.Object3D} root - 模型实例根节点。
+     * @returns {Array<Object>} 节点绑定记录列表。
+     */
     serializeNodeBindings(root) {
         const bindings = [];
         root.traverse((node) => {
@@ -342,6 +403,12 @@ export class PersistenceManager {
         return bindings;
     }
 
+    /**
+     * 将节点绑定记录应用到单个模型实例，恢复其内部层级和节点属性。
+     * @param {THREE.Object3D} root - 模型实例根节点。
+     * @param {Array<Object>} [bindings=[]] - 节点绑定记录。
+     * @returns {void}
+     */
     applyNodeBindings(root, bindings = []) {
         const byBid = new Map();
         root.traverse((node) => {
@@ -609,9 +676,8 @@ export class PersistenceManager {
             tileset.name = data.name || 'Tileset';
             if (data.visible !== undefined) tileset.visible = data.visible;
 
-            // Root metadata is loaded asynchronously and automatic placement
-            // can run after this method returns. Keep the persisted transform
-            // available so that callback can restore the user's final values.
+            // 根元数据异步加载，自动定位可能在本方法返回后才执行；
+            // 暂存持久化变换，以便回调最终恢复用户保存的变换值。
             const persistedTransform = {
                 position: data.position,
                 rotation: data.rotation,
@@ -700,6 +766,10 @@ export class PersistenceManager {
      * 加载 GLTF 模型
      * 支持缓存，避免重复加载
      * @param {string} url - 模型 URL
+     * @param {Object} [options] - 模型实例化选项。
+     * @param {boolean} [options.assignBids=true] - 是否为节点树分配新的 BID。
+     * @param {string} [options.assetId] - 资源 ID。
+     * @param {string} [options.assetVersionId] - 资源版本 ID。
      * @returns {Promise<THREE.Group>} 加载后的模型
      */
     async loadGLTFModel(url, options = {}) {
@@ -707,6 +777,9 @@ export class PersistenceManager {
             const template = this.modelCache.get(url);
             const instance = SkeletonUtils.clone(template);
             instance.animations = template.animations?.slice() || [];
+            // 在 deserializeObject 应用持久化节点变换之前捕获原始姿态，
+            // 防止旧场景保存的动画帧污染动画关闭后的恢复目标。
+            this.sceneManager?.animationManager?.captureOriginalPose(instance);
             if (options.assignBids !== false) this.assignNewTreeBids(instance, options);
             return instance;
         }
@@ -730,6 +803,7 @@ export class PersistenceManager {
                     // 返回克隆的副本，确保每个实例独立且支持骨骼动画
                     const instance = SkeletonUtils.clone(model);
                     instance.animations = model.animations.slice();
+                    this.sceneManager?.animationManager?.captureOriginalPose(instance);
                     if (options.assignBids !== false) this.assignNewTreeBids(instance, options);
                     resolve(instance);
                 },
@@ -811,8 +885,7 @@ export class PersistenceManager {
                     }
 
                     if (placed) {
-                        // Automatic placement must not overwrite a transform
-                        // restored from the scene database.
+                        // 自动定位不得覆盖已经从场景数据库恢复的对象变换。
                         const finalTransform = runtimeTransform
                             || wrapper.userData.pendingPersistedTransform;
                         if (finalTransform) {
@@ -826,7 +899,7 @@ export class PersistenceManager {
                     }
                 };
 
-                // Root metadata and model content may arrive in different events.
+                // 根元数据与模型内容可能通过不同事件到达，此处尝试完成一次定位。
                 tilesRenderer.addEventListener('load-tile-set', placeTileset);
                 tilesRenderer.addEventListener('load-model', placeTileset);
 
@@ -975,6 +1048,12 @@ export class PersistenceManager {
         }
     }
 
+    /**
+     * 根据稳定资源节点 ID、持久化 BID 或旧版节点路径查找模型节点。
+     * @param {THREE.Object3D} root - 模型根节点。
+     * @param {string} key - 持久化节点键。
+     * @returns {THREE.Object3D|null} 匹配节点，未找到时返回 null。
+     */
     findObjectByPersistentKey(root, key) {
         let found = null;
         root.traverse((node) => {
@@ -1306,7 +1385,10 @@ export class PersistenceManager {
         this.objectMap.clear();
     }
 
-    /** Stops pending work and releases loader caches owned by this manager. */
+    /**
+     * 停止待处理任务，并释放管理器持有的加载器、缓存模型和高斯泼溅资源。
+     * @returns {void}
+     */
     dispose() {
         if (this.disposed) return;
         this.disposed = true;
