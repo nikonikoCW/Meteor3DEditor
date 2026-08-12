@@ -97,7 +97,7 @@ const rightTabs = [
   {
     id: 'animation',
     title: '动画',
-    glyph: '▶'
+    icon: 'me-donghua'
   }
 ];
 
