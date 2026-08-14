@@ -86,7 +86,7 @@
         draggable="true"
         @dragstart="onDragStart($event, 'PreviewFire')"
       >
-        <span class="preview-icon">🏷</span>
+        <span class="preview-icon"><span class="iconfont me-huoyanjiare"></span></span>
         <span class="item-name">火焰</span>
       </div>
     </div>
