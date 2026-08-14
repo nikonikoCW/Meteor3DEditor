@@ -27,16 +27,16 @@
       <h1 class="title">
         <span class="title-gradient">Meteor3D</span>
       </h1>
-      <p class="subtitle">低代码 3D 场景可视化平台</p>
+      <p class="subtitle">AI 驱动的 3D 数字孪生低代码平台</p>
       <p class="description">
-        新一代在线 3D 编辑工具，支持模型导入、场景编辑、资产管理等功能<br>
-        让创意触手可及
+        拖拽搭建三维场景与可视化大屏，统一管理 3D 资产<br>
+        并通过 AI 控制场景、通过 SDK 嵌入业务系统
       </p>
       <div class="hero-actions">
-        <button class="btn-primary" @click="navigateTo('scene-editor')">
+        <a class="btn-primary" href="https://editor.meteor3d.cn">
           <span class="btn-text">开始创作</span>
           <span class="btn-arrow">→</span>
-        </button>
+        </a>
         <a href="https://github.com/nikonikoCW/Meteor3DEditor" target="_blank" class="btn-secondary">
           <svg class="github-icon" viewBox="0 0 24 24" width="18" height="18">
             <path fill="currentColor" d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
@@ -53,7 +53,7 @@
         产品矩阵
       </h2>
       <div class="products-grid">
-        <div class="product-card" @click="navigateTo('scene-editor')">
+        <a class="product-card" href="https://editor.meteor3d.cn">
           <div class="card-glow"></div>
           <div class="product-icon">🎨</div>
           <h3 class="product-title">3D 场景编辑器</h3>
@@ -61,9 +61,9 @@
             强大的 3D 场景编辑器，支持模型导入、变换操作、材质编辑等功能
           </p>
           <div class="product-action">进入编辑器 →</div>
-        </div>
+        </a>
 
-        <div class="product-card" @click="navigateTo('ai-scene')">
+        <a class="product-card" href="https://ai-scene.meteor3d.cn">
           <div class="card-glow"></div>
           <div class="product-icon">🤖</div>
           <h3 class="product-title">AI 空间场景</h3>
@@ -71,9 +71,9 @@
             AI 驱动的 3D 场景交互体验，自然语言控制天气、高亮、运镜等空间操作
           </p>
           <div class="product-action">进入 AI 场景 →</div>
-        </div>
+        </a>
 
-        <div class="product-card" @click="navigateTo('asset-manager')">
+        <a class="product-card" href="https://assets.meteor3d.cn">
           <div class="card-glow"></div>
           <div class="product-icon">📦</div>
           <h3 class="product-title">资产管理</h3>
@@ -81,9 +81,9 @@
             集中管理您的 3D 模型、贴图、HDRI 等资产，支持上传、下载和预览
           </p>
           <div class="product-action">管理资产 →</div>
-        </div>
+        </a>
 
-        <div class="product-card" @click="navigateTo('app-editor')">
+        <a class="product-card" href="https://appeditor.meteor3d.cn">
           <div class="card-glow"></div>
           <div class="product-icon">📊</div>
           <h3 class="product-title">大屏应用编辑器</h3>
@@ -91,9 +91,9 @@
             大屏可视化项目开发，拖拽式页面搭建，数据绑定与场景组件嵌入
           </p>
           <div class="product-action">开始开发 →</div>
-        </div>
+        </a>
 
-        <div class="product-card" @click="navigateTo('api-docs')">
+        <a class="product-card" href="https://api-docs.meteor3d.cn">
           <div class="card-glow"></div>
           <div class="product-icon">📚</div>
           <h3 class="product-title">API 文档</h3>
@@ -101,7 +101,7 @@
             Core SDK 使用文档，一行代码嵌入 3D 场景到任意网页
           </p>
           <div class="product-action">查看文档 →</div>
-        </div>
+        </a>
       </div>
     </section>
 
@@ -197,6 +197,14 @@
           <span class="divider">|</span>
           <a href="mailto:84675738@qq.com">联系我们</a>
         </div>
+        <nav class="footer-seo-links" aria-label="解决方案">
+          <RouterLink to="/solutions/digital-twin">数字孪生</RouterLink>
+          <RouterLink to="/solutions/3d-showroom">3D 数字展厅</RouterLink>
+          <RouterLink to="/solutions/digital-cultural-exhibition">数字文化展厅</RouterLink>
+          <RouterLink to="/solutions/smart-park">智慧园区</RouterLink>
+          <RouterLink to="/products/gaussian-splatting">高斯泼溅</RouterLink>
+          <RouterLink to="/products/low-code-3d">3D 低代码</RouterLink>
+        </nav>
         <div class="footer-partners">
           <span class="partner-label">云存储服务支持</span>
           <a href="https://www.upyun.com/?utm_source=lianmeng&utm_medium=referral" target="_blank">
@@ -212,36 +220,6 @@
 </template>
 
 <script setup>
-// 各子系统的端口配置
-const PORTS = {
-  'scene-editor': 5173,
-  'asset-manager': 5175,
-  'app-editor': 5174,
-  'ai-scene': 5176
-}
-
-const navigateTo = (app) => {
-  switch (app) {
-    case 'scene-editor':
-      window.location.href = `https://editor.meteor3d.cn`
-      break;
-    case 'asset-manager':
-      window.location.href = `https://assets.meteor3d.cn`
-      break;
-    case 'app-editor':
-      window.location.href = `https://appeditor.meteor3d.cn`
-      break;
-    case 'ai-scene':
-      window.location.href = `https://ai-scene.meteor3d.cn`
-      break;
-    case 'api-docs':
-      window.location.href = `https://api-docs.meteor3d.cn`
-      break;
-    default:
-      break;
-  }
-}
-
 // 生成随机粒子样式
 const getParticleStyle = (n) => {
   const size = Math.random() * 4 + 1
@@ -447,6 +425,7 @@ const getParticleStyle = (n) => {
   font-size: 18px;
   font-weight: 600;
   cursor: pointer;
+  text-decoration: none;
   transition: all 0.3s ease;
   box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
 }
@@ -524,6 +503,9 @@ const getParticleStyle = (n) => {
   cursor: pointer;
   transition: all 0.4s ease;
   overflow: hidden;
+  display: block;
+  color: inherit;
+  text-decoration: none;
 }
 
 .card-glow {
@@ -745,6 +727,25 @@ const getParticleStyle = (n) => {
 
 .footer-links .divider {
   color: var(--border-color);
+}
+
+.footer-seo-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  max-width: 760px;
+}
+
+.footer-seo-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.3s ease;
+}
+
+.footer-seo-links a:hover {
+  color: var(--primary);
 }
 
 .footer-copyright {
