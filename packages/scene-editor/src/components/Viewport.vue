@@ -206,13 +206,23 @@ const createVisualPreview = (type, event) => {
       }
     });
   }
+
+  if (type === 'PreviewFire') {
+    visualPreviewManager.createEffect('fire',{
+      position: {
+        x: dropPosition.x,
+        y: dropPosition.y + 0.05,
+        z: dropPosition.z
+      }
+    });
+  }
 };
 
 const onDrop = async (event) => {
   const type = event.dataTransfer.getData('type');
   if (!type) return;
 
-  if (type === 'PreviewShield' || type === 'PreviewScan' || type === 'PreviewLabel') {
+  if (type === 'PreviewShield' || type === 'PreviewScan' || type === 'PreviewLabel' || type === 'PreviewFire') {
     createVisualPreview(type, event);
     return;
   }

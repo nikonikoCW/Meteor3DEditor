@@ -80,6 +80,15 @@
         <span class="preview-icon">🏷</span>
         <span class="item-name">标签</span>
       </div>
+      
+      <div
+        class="item"
+        draggable="true"
+        @dragstart="onDragStart($event, 'PreviewFire')"
+      >
+        <span class="preview-icon">🏷</span>
+        <span class="item-name">火焰</span>
+      </div>
     </div>
 
     <!-- 模型部分 -->

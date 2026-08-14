@@ -1,5 +1,6 @@
 import { ShieldEffect } from './effects/ShieldEffect.js';
 import { ScanEffect } from './effects/ScanEffect.js';
+import { FireEffect } from './effects/FireEffect.js';
 
 /**
  * VFXManager - 特效系统管理器
@@ -7,15 +8,18 @@ import { ScanEffect } from './effects/ScanEffect.js';
  */
 export class VFXManager {
     /**
-     * @param {THREE.Scene} scene 
+     * @param {THREE.Scene} scene
+     * @param {THREE.Camera|null} camera
      */
-    constructor(scene) {
+    constructor(scene, camera = null) {
         this.scene = scene;
+        this.camera = camera;
         this.effects = new Map();
 
         // 注册可用特效
         this.effectTypes = {
             'shield': ShieldEffect,
+            'fire': FireEffect,
             'scan': ScanEffect
         };
     }
@@ -34,6 +38,7 @@ export class VFXManager {
         }
 
         const effect = new EffectClass(config);
+        effect.camera = this.camera;
 
         // 生成唯一ID
         const id = Math.random().toString(36).substr(2, 9);

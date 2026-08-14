@@ -135,7 +135,7 @@ export class SceneManager {
         this.rainManager = new RainManager(this.renderer, this.scene, this.camera);
 
         // 特效管理器
-        this.vfxManager = new VFXManager(this.scene);
+        this.vfxManager = new VFXManager(this.scene, this.camera);
 
         // 流动线管理器
         this.lineManager = new LineManager(this.scene);
@@ -263,7 +263,7 @@ export class SceneManager {
 
         // 更新通用特效
         if (this.vfxManager) {
-            this.vfxManager.update(time / 1000, time / 1000);
+            this.vfxManager.update(delta, time / 1000);
         }
 
         // 更新流动线
