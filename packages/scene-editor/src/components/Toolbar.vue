@@ -17,7 +17,7 @@
     <div class="group">
       <button @click="showBatchLoader = true" title="批量导入">📥 批量导入</button>
       <button v-if="!canSave" class="unlock-btn" @click="openUnlockModal" title="权限解锁">🔒 权限解锁</button>
-      <button v-if="canSave" @click="save" class="save-btn">💾 保存</button>
+      <button v-if="canSave" type="button" @click="save(false)" class="save-btn">💾 保存</button>
     </div>
     
     <BatchLoaderDialog v-model:visible="showBatchLoader" />

@@ -11,7 +11,14 @@
       </div>
       <div class="prop-row">
         <label>BID</label>
-        <input type="text" :value="selectedObject.userData?.bid || ''" disabled>
+        <input
+          class="bid-value"
+          type="text"
+          :value="selectedObject.userData?.bid || ''"
+          readonly
+          title="点击复制 BID"
+          @click="copyBid"
+        >
       </div>
       <div class="prop-row">
         <label>类型</label>
@@ -108,6 +115,7 @@ import { useEditorStore } from '../stores/editorStore';
 import { storeToRefs } from 'pinia';
 import { TransformCommand } from '../core/CommandFactory';
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import { message } from '../utils/message';
 
 const editorStore = useEditorStore();
 const { selectedObject } = storeToRefs(editorStore);
@@ -118,6 +126,18 @@ const forceUpdateKey = ref(0);
 // Local reactive ref for object name (markRaw 对象属性无法被 Vue 追踪，需要本地 ref 中转)
 const localName = ref('');
 const localVisible = ref(true);
+
+const copyBid = async () => {
+  const bid = selectedObject.value?.userData?.bid;
+  if (!bid) return;
+
+  try {
+    await navigator.clipboard.writeText(String(bid));
+    message.success('复制成功');
+  } catch (error) {
+    message.error('复制失败');
+  }
+};
 
 // Sync local name when selected object changes
 watch(selectedObject, (obj) => {
@@ -314,6 +334,10 @@ input {
 input:focus {
   border-color: #0066cc;
   outline: none;
+}
+
+.bid-value {
+  cursor: copy;
 }
 
 input[type="color"] {
