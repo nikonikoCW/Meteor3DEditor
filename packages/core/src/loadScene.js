@@ -121,6 +121,9 @@ function createMeteor3DInstance({ sceneManager, persistenceManager, resizeObserv
         off: (event, callback) => sceneManager.off(event, callback),
         /** Find a persistent scene node by BID. */
         getObjectByBid: (bid) => sceneManager.findObjectByBid(bid),
+        /** Move an object to a local position and rotation, optionally with animation. */
+        moveTo: (bid, position, rotation, duration = 0) =>
+            sceneManager.moveTo(bid, position, rotation, duration),
 
         // ========== 性能监控 ==========
         /** 启用 FPS 性能监视器 */

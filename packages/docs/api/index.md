@@ -21,6 +21,7 @@ Meteor3D SDK 通过 `loadScene()` 返回场景实例。下表列出面向第三�
 | API | 说明 |
 |-----|------|
 | `getObjectByBid(bid)` | 根据持久化 BID 查询节点 |
+| `moveTo(bid, position, rotation, duration?)` | 移动并旋转节点，可设置动画时间 |
 | `setObjectVisible(bid, visible)` | 设置节点显隐 |
 | `showObject(bid)` | 显示节点 |
 | `hideObject(bid)` | 隐藏节点 |

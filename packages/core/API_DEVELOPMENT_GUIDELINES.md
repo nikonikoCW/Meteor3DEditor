@@ -396,7 +396,7 @@ createLabel, getLabels, clearLabels
 ### 对象、描边与高亮
 
 ```text
-setObjectVisible, showObject, hideObject, isObjectVisible
+moveTo, setObjectVisible, showObject, hideObject, isObjectVisible
 enableOutline, disableOutline, getOutlinedObjects
 enableHighlight, disableHighlight, getHighlightedObjects
 ```

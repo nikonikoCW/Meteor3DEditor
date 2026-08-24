@@ -19,6 +19,7 @@ import { GhostCameraControl } from './controls/GhostCameraControl.js';
 import { RaycastManager } from './RaycastManager.js';
 import { AnimationManager } from './AnimationManager.js';
 import { BidRegistry, generateBid } from './BidRegistry.js';
+import { ObjectTransformManager } from './ObjectTransformManager.js';
 
 /**
  * 场景管理器
@@ -96,6 +97,7 @@ export class SceneManager {
 
         this.objects = []; // 跟踪所有可交互的对象
         this.bidRegistry = new BidRegistry();
+        this.objectTransformManager = new ObjectTransformManager(this, this.tweenGroup);
         this.environmentUrl = null; // 当前环境贴图 URL
         this.geoSystem = null;      // Layer 1: 坐标系统
         this.tileMapManager = null; // Layer 2: 瓦片地图
@@ -683,6 +685,9 @@ export class SceneManager {
      * @param {THREE.Object3D} object - 要移除的对象
      */
     removeObject(object) {
+        object.traverse((child) => {
+            this.objectTransformManager.stop(child.userData?.bid);
+        });
         this.animationManager.unregisterObject(object);
 
         // 销毁 BVH
@@ -719,6 +724,18 @@ export class SceneManager {
     /** Finds a scene node by BID, with runtime UUID fallback for legacy callers. */
     findObjectById(id) {
         return this.findObjectByBid(id) || this.findObjectByUUID(id);
+    }
+
+    /**
+     * 将场景节点移动并旋转到目标局部变换。
+     * @param {string} bid - 场景节点的持久化 BID
+     * @param {{x: number, y: number, z: number}} position - 目标局部位置
+     * @param {{x: number, y: number, z: number}} rotation - 目标局部欧拉角（弧度）
+     * @param {number} [duration=0] - 动画时长（毫秒），0 表示立即完成
+     * @returns {boolean} 是否找到并成功启动移动
+     */
+    moveTo(bid, position, rotation, duration = 0) {
+        return this.objectTransformManager.moveTo(bid, position, rotation, duration);
     }
 
     /**
@@ -891,6 +908,7 @@ export class SceneManager {
      * 移除所有可交互对象
      */
     clearScene({ disposeResources = true } = {}) {
+        this.objectTransformManager.stopAll();
         // 移除所有跟踪的对象
         this.objects.forEach(object => {
             this.animationManager.unregisterObject(object);
@@ -1345,6 +1363,7 @@ export class SceneManager {
 
         this.controlManager?.dispose();
         this.animationManager?.dispose();
+        this.objectTransformManager?.dispose();
         this.statsManager?.disable();
         this.triangleStatsManager?.dispose();
         this.labelManager?.dispose();
