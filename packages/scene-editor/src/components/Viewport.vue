@@ -373,8 +373,12 @@ onMounted(async () => {
   };
 
   unsubscribeEditorStore = editorStore.$subscribe((mutation, state) => {
+    sceneManager.disableOutline();
+
     if (state.selectedObject) {
       transformManager.attach(state.selectedObject);
+      const outlineId = state.selectedObject.userData?.bid || state.selectedObject.uuid;
+      sceneManager.enableOutline(outlineId);
     } else {
       transformManager.detach();
     }

@@ -50,8 +50,8 @@ export class OutlineManager {
 
         // 默认描边样式
         this.outlinePass.edgeStrength = 3;
-        this.outlinePass.edgeGlow = 0.5;
-        this.outlinePass.edgeThickness = 1;
+        this.outlinePass.edgeGlow = 0;
+        this.outlinePass.edgeThickness = 0.1;
         this.outlinePass.visibleEdgeColor.set(0x00ff00);
         this.outlinePass.hiddenEdgeColor.set(0x00ff00);
 

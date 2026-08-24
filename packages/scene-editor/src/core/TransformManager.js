@@ -74,9 +74,9 @@ export class TransformManager {
             }
         });
 
-        // 使用 getHelper() 将控制器添加到场景中
+        // TransformControls 单独在覆盖层渲染，避免参与 OutlinePass 后处理。
         this.helper = this.controls.getHelper();
-        sceneManager.scene.add(this.helper);
+        sceneManager.addOverlayObject(this.helper);
     }
 
     /**
@@ -125,7 +125,7 @@ export class TransformManager {
 
     dispose() {
         this.controls.detach();
-        this.helper?.removeFromParent();
+        this.sceneManager?.removeOverlayObject(this.helper);
         this.controls.dispose();
         this.helper = null;
         this.sceneManager = null;

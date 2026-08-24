@@ -31,6 +31,9 @@ export class SceneManager {
         this.animationFrameId = null;
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x000000); // 深灰色背景，便于观察
+        // UI 辅助物使用独立场景，在主场景及后处理完成后单独渲染。
+        // 这样 TransformControls 等辅助物不会进入 OutlinePass 的遮罩和深度计算。
+        this.overlayScene = new THREE.Scene();
 
         // 初始化 Tween Group
         this.tweenGroup = new Group();
@@ -246,6 +249,7 @@ export class SceneManager {
         if (!hasOutline) {
             this.renderer.render(this.scene, this.camera);
         }
+        this._renderOverlayScene();
 
         if (this.labelManager) {
             this.labelManager.update();
@@ -272,6 +276,20 @@ export class SceneManager {
         }
 
         this.statsManager.end();
+    }
+
+    /**
+     * 在主场景之上渲染编辑器辅助物，不参与主场景后处理。
+     * @private
+     */
+    _renderOverlayScene() {
+        if (!this.overlayScene || this.overlayScene.children.length === 0) return;
+
+        const autoClear = this.renderer.autoClear;
+        this.renderer.autoClear = false;
+        this.renderer.clearDepth();
+        this.renderer.render(this.overlayScene, this.camera);
+        this.renderer.autoClear = autoClear;
     }
 
     // ==================== 相机控制 API ====================
@@ -635,6 +653,28 @@ export class SceneManager {
 
         // 自动构建 BVH 以加速射线检测
         this.raycastManager.buildBVH(object);
+        return true;
+    }
+
+    /**
+     * 添加只需覆盖显示、且不应参与主场景后处理的辅助对象。
+     * @param {THREE.Object3D} object - 覆盖层对象
+     * @returns {boolean} 是否成功
+     */
+    addOverlayObject(object) {
+        if (this.disposed || !object?.isObject3D) return false;
+        this.overlayScene.add(object);
+        return true;
+    }
+
+    /**
+     * 从覆盖层移除辅助对象。
+     * @param {THREE.Object3D} object - 覆盖层对象
+     * @returns {boolean} 是否成功
+     */
+    removeOverlayObject(object) {
+        if (!object || object.parent !== this.overlayScene) return false;
+        this.overlayScene.remove(object);
         return true;
     }
 
@@ -1323,6 +1363,8 @@ export class SceneManager {
         this.scene.environment = null;
         this.scene.background = null;
         this.scene.clear();
+        this.overlayScene?.clear();
+        this.overlayScene = null;
 
         this.renderer?.renderLists?.dispose();
         this.renderer?.dispose();
