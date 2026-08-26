@@ -62,8 +62,44 @@ export class OrbitCameraControl extends BaseCameraControl {
      */
     update(delta) {
         if (this.enabled) {
-            this.orbitControls.update();
+            this.orbitControls.update(delta);
         }
+    }
+
+    /**
+     * 开启或关闭围绕当前 OrbitControls target 的自动旋转。
+     *
+     * @param {boolean} enabled - 是否开启自动旋转
+     * @param {number} [speed] - OrbitControls 自动旋转速度，负数表示反向
+     * @returns {boolean}
+     */
+    setAutoRotate(enabled, speed) {
+        if (typeof enabled !== 'boolean') {
+            throw new TypeError('Auto rotate enabled must be a boolean');
+        }
+
+        if (speed !== undefined) {
+            if (!Number.isFinite(speed)) {
+                throw new TypeError('Auto rotate speed must be a finite number');
+            }
+            this.orbitControls.autoRotateSpeed = speed;
+        }
+
+        this.orbitControls.autoRotate = enabled;
+        this.orbitControls.update(0);
+        return true;
+    }
+
+    /**
+     * 获取自动旋转状态。
+     * @returns {{enabled:boolean,speed:number}}
+     */
+    getAutoRotate() {
+        const { autoRotate, autoRotateSpeed } = this.orbitControls;
+        return {
+            enabled: autoRotate,
+            speed: autoRotateSpeed
+        };
     }
 
     /**

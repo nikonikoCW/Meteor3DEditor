@@ -377,6 +377,7 @@ toggleTriangleStats, getTriangleStats, isTriangleStatsEnabled
 ```text
 fitCameraToScene, focusObject, resize
 getView, setView, setControlMode, getControlMode
+setAutoRotate, getAutoRotate
 ```
 
 ### 射线与 GIS

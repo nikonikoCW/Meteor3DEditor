@@ -81,6 +81,19 @@ packages/core/
 1. **加载**: `PersistenceManager.loadScene(id)` -> `DBManager.getSceneData` -> `SceneManager.clearScene` -> `deserializeObject` -> `SceneManager.addObject`。
 2. **保存**: `PersistenceManager.saveScene()` -> `SceneManager.objects` -> `serializeObject` -> `DBManager.saveScene`。
 
+### 相机围绕目标旋转
+
+`loadScene()` 返回的实例提供自动环绕 API：
+
+```javascript
+instance.setAutoRotate(true, 2);
+
+const state = instance.getAutoRotate();
+instance.setAutoRotate(false);
+```
+
+相机始终围绕当前 `OrbitControls.target` 旋转。开启自动旋转会切换到 `orbit` 控制模式；`speed` 使用 OrbitControls 语义，负数表示反向旋转。
+
 ## 开发者提示
 - 修改核心逻辑时，请确保不破坏 `scene-editor` 的现有功能。
 - 所有 Three.js 相关的底层操作应优先在 `SceneManager` 中封装，而不是在 UI 组件中直接操作。

@@ -174,6 +174,18 @@ function createMeteor3DInstance({ sceneManager, persistenceManager, resizeObserv
         setControlMode: (mode, options) => sceneManager.setControlMode(mode, options),
         /** 获取当前相机控制模式 */
         getControlMode: () => sceneManager.getControlMode(),
+        /**
+         * 开启或关闭相机围绕当前 OrbitControls target 自动旋转；开启时自动切换到 orbit 模式。
+         * @param {boolean} enabled - 是否开启
+         * @param {number} [speed] - 旋转速度，负数表示反向
+         * @returns {boolean}
+         * @example
+         * instance.setAutoRotate(true, 2);
+         * instance.setAutoRotate(false);
+         */
+        setAutoRotate: (enabled, speed) => sceneManager.setAutoRotate(enabled, speed),
+        /** 获取自动旋转状态 */
+        getAutoRotate: () => sceneManager.getAutoRotate(),
 
         // ========== 射线检测 API ==========
         /**

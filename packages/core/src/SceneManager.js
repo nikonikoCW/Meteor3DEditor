@@ -69,6 +69,7 @@ export class SceneManager {
         // 注册轨道控制模式
         const orbitControl = new OrbitCameraControl(this.camera, this.renderer.domElement);
         this.controlManager.register('orbit', orbitControl);
+        this.orbitControl = orbitControl;
 
         // 注册幽灵控制模式
         const ghostControl = new GhostCameraControl(this.camera, this.renderer.domElement);
@@ -322,6 +323,29 @@ export class SceneManager {
      */
     getControlMode() {
         return this.controlManager.getMode();
+    }
+
+    /**
+     * 开启或关闭相机围绕当前 OrbitControls target 的自动旋转。
+     * 开启时会自动切换到 orbit 控制模式。
+     *
+     * @param {boolean} enabled - 是否开启自动旋转
+     * @param {number} [speed] - 旋转速度，默认沿用当前值（OrbitControls 默认 2）
+     * @returns {boolean}
+     */
+    setAutoRotate(enabled, speed) {
+        if (enabled && this.getControlMode() !== 'orbit') {
+            this.setControlMode('orbit');
+        }
+        return this.orbitControl.setAutoRotate(enabled, speed);
+    }
+
+    /**
+     * 获取相机自动旋转状态。
+     * @returns {{enabled:boolean,speed:number}}
+     */
+    getAutoRotate() {
+        return this.orbitControl.getAutoRotate();
     }
 
     // ==================== 射线检测 API ====================
