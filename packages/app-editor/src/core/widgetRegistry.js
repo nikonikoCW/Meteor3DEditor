@@ -646,6 +646,30 @@ const cameraControlConfig = {
     ]
 };
 
+// 中心旋转组件配置 (3D 逻辑组件)
+const centerRotateConfig = {
+    label: '中心旋转',
+    icon: '🔄',
+    category: '3d',
+    defaultSize: { width: 150, height: 80 },
+    minSize: { width: 80, height: 40 },
+    props: [
+        {
+            name: 'speed',
+            label: '旋转速度',
+            type: 'number',
+            defaultValue: 2.0,
+            min: 0.5,
+            max: 15,
+            step: 0.5
+        }
+    ],
+    actions: [
+        { name: 'enable', label: '开始旋转' },
+        { name: 'disable', label: '停止旋转' }
+    ]
+};
+
 // 统一注册
 export function initRegistry() {
     // 场景组件
@@ -671,4 +695,5 @@ export function initRegistry() {
     registerWidget('Shield', shieldConfig, () => import('../components/widgets/ShieldWidget.vue'));
     registerWidget('Scan', scanConfig, () => import('../components/widgets/ScanWidget.vue'));
     registerWidget('CameraControl', cameraControlConfig, () => import('../components/widgets/CameraControlWidget.vue'));
+    registerWidget('CenterRotate', centerRotateConfig, () => import('../components/widgets/CenterRotateWidget.vue'));
 }

@@ -77,7 +77,7 @@ src/
 │   │   ├── PropertyPanel.vue  # 属性面板
 │   │   ├── DataPanel.vue      # 数据面板
 │   │   └── InteractionPanel.vue # 交互面板 (enable/disable/toggle)
-│   └── widgets/               # 组件库 (共 12 个组件)
+│   └── widgets/               # 组件库 (共 19 个组件)
 │       ├── SceneWidget.vue    # 场景组件 (provide Core 实例)
 │       ├── StatsWidget.vue    # 性能监视器 (3D 逻辑组件)
 │       ├── ButtonWidget.vue   # 按钮 (2D)
@@ -89,7 +89,8 @@ src/
 │       ├── LabelWidget.vue    # 3D 标签 (3D 逻辑组件)
 │       ├── TourWidget.vue     # 漫游路径 (3D 逻辑组件)
 │       ├── HighlightWidget.vue # 模型高亮 (3D 逻辑组件)
-│       └── OutlineWidget.vue  # 模型描边 (3D 逻辑组件)
+│       ├── OutlineWidget.vue  # 模型描边 (3D 逻辑组件)
+│       └── CenterRotateWidget.vue # 中心旋转 (3D 逻辑组件)
 └── views/
     ├── AppEditorView.vue      # 编辑器主视图
     ├── AppListView.vue        # 应用列表视图
