@@ -4,6 +4,7 @@
       <button class="back-btn" @click="onBack" title="返回列表">←</button>
       <img src="/meteor-min.svg" alt="Logo" class="logo" />
       <h1>{{ appName }}</h1>
+      <span v-if="isFeatured" class="featured-badge">精品</span>
       <span v-if="hasUnsavedChanges" class="unsaved-indicator">●</span>
       <button 
         class="canvas-size-btn" 
@@ -30,7 +31,16 @@
         <span class="preview-icon">👁</span>
         预览
       </button>
+      <button
+        v-if="!canSave"
+        class="unlock-btn"
+        @click="openUnlockModal"
+        title="权限解锁"
+      >
+        🔒 权限解锁
+      </button>
       <button 
+        v-else
         class="save-btn" 
         :disabled="!isEditMode || isSaving" 
         @click="onSave"
@@ -48,18 +58,82 @@
     :canvas="canvas"
     @apply="onCanvasApply"
   />
+
+  <div v-if="showUnlockModal" class="modal-overlay" @click.self="closeUnlockModal">
+    <div class="unlock-modal">
+      <h3>权限解锁</h3>
+      <p>此应用为精品案例，请输入密码验证以解锁保存及自动保存权限。</p>
+      <form @submit.prevent="handleUnlockSubmit">
+        <label for="app-unlock-password">解锁密码</label>
+        <input
+          id="app-unlock-password"
+          ref="unlockPasswordInput"
+          v-model="unlockPassword"
+          type="password"
+          placeholder="请输入密码"
+          autocomplete="off"
+          @input="unlockPasswordError = ''"
+        />
+        <span v-if="unlockPasswordError" class="password-error">{{ unlockPasswordError }}</span>
+        <div class="modal-actions">
+          <button type="button" class="cancel-btn" @click="closeUnlockModal">取消</button>
+          <button type="submit" class="confirm-btn">确认解锁</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, nextTick } from 'vue';
 import { useAppStore } from '../../stores/appStore';
 import { storeToRefs } from 'pinia';
 import CanvasSettingsModal from './CanvasSettingsModal.vue';
+import { message } from '../../utils/message';
 
 const appStore = useAppStore();
-const { isEditMode, appName, appId, canvas, hasUnsavedChanges, isSaving } = storeToRefs(appStore);
+const {
+  isEditMode,
+  appName,
+  appId,
+  canvas,
+  hasUnsavedChanges,
+  isSaving,
+  isFeatured,
+  isUnlocked,
+  canSave
+} = storeToRefs(appStore);
 
 const showCanvasSettings = ref(false);
+const showUnlockModal = ref(false);
+const unlockPassword = ref('');
+const unlockPasswordError = ref('');
+const unlockPasswordInput = ref(null);
+
+const openUnlockModal = () => {
+  showUnlockModal.value = true;
+  unlockPassword.value = '';
+  unlockPasswordError.value = '';
+  nextTick(() => unlockPasswordInput.value?.focus());
+};
+
+const closeUnlockModal = () => {
+  showUnlockModal.value = false;
+  unlockPassword.value = '';
+  unlockPasswordError.value = '';
+};
+
+const handleUnlockSubmit = () => {
+  if (unlockPassword.value !== '123456') {
+    unlockPasswordError.value = '密码错误';
+    unlockPasswordInput.value?.focus();
+    return;
+  }
+
+  isUnlocked.value = true;
+  closeUnlockModal();
+  message.success('权限解锁成功！已开启保存及自动保存权限。');
+};
 
 const onSave = async () => {
   try {
@@ -172,6 +246,15 @@ const onCanvasApply = (newCanvas) => {
   margin-left: -8px;
 }
 
+.featured-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e6a23c;
+  color: #1a1a1a;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .header-right {
   display: flex;
   align-items: center;
@@ -260,6 +343,21 @@ input:checked + .slider:before {
   cursor: not-allowed;
 }
 
+.unlock-btn {
+  padding: 6px 14px;
+  background: #e6a23c;
+  border: none;
+  border-radius: 4px;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.unlock-btn:hover {
+  background: #cf9236;
+}
+
 .save-icon, .loading-icon, .preview-icon {
   font-size: 14px;
 }
@@ -288,5 +386,87 @@ input:checked + .slider:before {
 .preview-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.unlock-modal {
+  width: 400px;
+  padding: 24px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  background: #252525;
+  color: #eee;
+}
+
+.unlock-modal h3 {
+  margin: 0 0 12px;
+}
+
+.unlock-modal p {
+  margin: 0 0 20px;
+  color: #aaa;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.unlock-modal label {
+  display: block;
+  margin-bottom: 8px;
+  color: #bbb;
+  font-size: 13px;
+}
+
+.unlock-modal input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  outline: none;
+  background: #181818;
+  color: white;
+}
+
+.unlock-modal input:focus {
+  border-color: #e6a23c;
+}
+
+.password-error {
+  display: block;
+  margin-top: 8px;
+  color: #ff6b6b;
+  font-size: 13px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-actions button {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: #3a3a3a;
+  color: #ddd;
+}
+
+.confirm-btn {
+  background: #e6a23c;
+  color: #1a1a1a;
 }
 </style>

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, shallowRef, markRaw } from 'vue';
+import { ref, shallowRef, markRaw, computed } from 'vue';
 import * as appService from '../services/appService';
 
 export const useAppStore = defineStore('app', () => {
@@ -16,6 +16,9 @@ export const useAppStore = defineStore('app', () => {
     const selectedWidget = ref(null);
     const currentSceneId = ref(null);
     const isEditMode = ref(false);
+    const isFeatured = ref(false);
+    const isUnlocked = ref(false);
+    const canSave = computed(() => !isFeatured.value || isUnlocked.value);
 
     // 场景状态
     const isSceneReady = ref(false);
@@ -82,7 +85,7 @@ export const useAppStore = defineStore('app', () => {
 
     // 保存应用到后端
     async function saveApp() {
-        if (isSaving.value) return;
+        if (isSaving.value || !canSave.value) return false;
 
         isSaving.value = true;
         try {
@@ -119,6 +122,8 @@ export const useAppStore = defineStore('app', () => {
 
             appId.value = app.appId;
             appName.value = app.name;
+            isFeatured.value = app.isFeatured === true;
+            isUnlocked.value = false;
             canvas.value = app.canvas || { width: 1920, height: 1080, background: '#1a1a1a' };
 
             // 确保每个 widget 都有 enabled 属性
@@ -150,6 +155,8 @@ export const useAppStore = defineStore('app', () => {
     function newApp() {
         appId.value = null;
         appName.value = '未命名应用';
+        isFeatured.value = false;
+        isUnlocked.value = false;
         canvas.value = { width: 1920, height: 1080, background: '#1a1a1a' };
         widgets.value = [];
         selectedWidget.value = null;
@@ -206,6 +213,9 @@ export const useAppStore = defineStore('app', () => {
         selectedWidget,
         currentSceneId,
         isEditMode,
+        isFeatured,
+        isUnlocked,
+        canSave,
         isSceneReady,
         sceneInstance,
         isSaving,

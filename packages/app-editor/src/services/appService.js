@@ -10,8 +10,9 @@ import { API_BASE_URL } from '../config';
  * @param {number} page - 页码，默认 1
  * @param {number} pageSize - 每页数量，默认 10
  */
-export async function getAppList(page = 1, pageSize = 10) {
-    const response = await fetch(`${API_BASE_URL}/app/list?page=${page}&pageSize=${pageSize}`);
+export async function getAppList(page = 1, pageSize = 10, category = 'normal') {
+    const params = new URLSearchParams({ page, pageSize, category });
+    const response = await fetch(`${API_BASE_URL}/app/list?${params}`);
     const data = await response.json();
     if (!data.success) {
         throw new Error(data.error || '获取应用列表失败');
@@ -20,6 +21,26 @@ export async function getAppList(page = 1, pageSize = 10) {
         apps: data.apps,
         pagination: data.pagination
     };
+}
+
+/**
+ * 设置或取消应用的精品案例状态
+ * @param {string} appId
+ * @param {boolean} isFeatured
+ */
+export async function updateAppFeaturedStatus(appId, isFeatured) {
+    const response = await fetch(`${API_BASE_URL}/app/${appId}/featured`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ isFeatured })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+        throw new Error(data.error || '更新精品案例状态失败');
+    }
+    return data.app;
 }
 
 /**

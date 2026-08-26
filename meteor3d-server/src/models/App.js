@@ -20,6 +20,10 @@ const AppSchema = new mongoose.Schema({
         default: ''
     },
     thumbnail: String,
+    isFeatured: {
+        type: Boolean,
+        default: false
+    },
     // 画布配置
     canvas: {
         width: {

@@ -5,6 +5,9 @@ const appController = require('../controllers/appController');
 // 获取应用列表
 router.get('/list', appController.getAppList);
 
+// 设置或取消精品案例
+router.patch('/:id/featured', appController.updateFeaturedStatus);
+
 // 获取应用详情
 router.get('/:id', appController.getApp);
 

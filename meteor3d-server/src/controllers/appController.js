@@ -9,15 +9,17 @@ exports.getAppList = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const pageSize = parseInt(req.query.pageSize) || 10;
         const skip = (page - 1) * pageSize;
+        const filter = req.query.category === 'featured' ? { isFeatured: true } : {};
 
         // 获取总数
-        const total = await App.countDocuments();
+        const total = await App.countDocuments(filter);
 
-        const apps = await App.find({}, {
+        const apps = await App.find(filter, {
             appId: 1,
             name: 1,
             description: 1,
             thumbnail: 1,
+            isFeatured: 1,
             lastModified: 1,
             'canvas.width': 1,
             'canvas.height': 1
@@ -40,6 +42,48 @@ exports.getAppList = async (req, res) => {
         res.status(500).json({
             success: false,
             error: '获取应用列表失败'
+        });
+    }
+};
+
+/**
+ * 设置或取消应用的精品案例状态
+ */
+exports.updateFeaturedStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { isFeatured } = req.body || {};
+
+        if (typeof isFeatured !== 'boolean') {
+            return res.status(400).json({
+                success: false,
+                error: 'isFeatured 必须是布尔值'
+            });
+        }
+
+        const app = await App.findOneAndUpdate(
+            { appId: id },
+            { isFeatured },
+            { new: true }
+        );
+
+        if (!app) {
+            return res.status(404).json({
+                success: false,
+                error: '应用不存在'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: isFeatured ? '已设为精品案例' : '已取消精品案例',
+            app
+        });
+    } catch (error) {
+        console.error('更新应用精品案例状态失败:', error.message);
+        res.status(500).json({
+            success: false,
+            error: '更新应用精品案例状态失败: ' + error.message
         });
     }
 };

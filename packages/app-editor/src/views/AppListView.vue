@@ -10,20 +10,55 @@
       </button>
     </header>
 
+    <div class="app-tabs">
+      <button
+        class="app-tab"
+        :class="{ active: activeCategory === 'normal' }"
+        @click="switchCategory('normal')"
+      >
+        普通应用
+      </button>
+      <button
+        class="app-tab"
+        :class="{ active: activeCategory === 'featured' }"
+        @click="switchCategory('featured')"
+      >
+        精品案例
+      </button>
+    </div>
+
     <main class="page-content">
       <div v-if="loading" class="loading">加载中...</div>
       
       <div v-else-if="apps.length === 0 && pagination.total === 0" class="empty-state">
         <div class="empty-icon">📱</div>
-        <p>暂无应用</p>
-        <button class="create-btn" @click="onCreateApp">创建第一个应用</button>
+        <p>{{ activeCategory === 'featured' ? '暂无精品案例' : '暂无应用' }}</p>
+        <button v-if="activeCategory === 'normal'" class="create-btn" @click="onCreateApp">创建第一个应用</button>
       </div>
 
       <div v-else class="app-grid">
-        <div v-for="app in apps" :key="app.appId" class="app-card">
+        <div
+          v-for="app in apps"
+          :key="app.appId"
+          class="app-card"
+          :class="{ 'is-featured': app.isFeatured }"
+          @mouseenter="startFeaturedHover(app)"
+          @mouseleave="cancelFeaturedHover(app.appId)"
+        >
           <div class="app-thumbnail">
             <img v-if="app.thumbnail" :src="app.thumbnail" alt="" />
             <div v-else class="placeholder-thumbnail">📱</div>
+            <span v-if="app.isFeatured" class="featured-badge">精品</span>
+            <button
+              v-if="featuredButtonAppId === app.appId"
+              class="feature-app-btn"
+              :disabled="promotingAppId === app.appId"
+              title="设为精品案例"
+              @click.stop="openFeaturedPasswordModal(app)"
+            >
+              <span>★</span>
+              {{ promotingAppId === app.appId ? '设置中' : '设为精品' }}
+            </button>
           </div>
           <div class="app-info">
             <h3 class="app-name">{{ app.name }}</h3>
@@ -40,6 +75,32 @@
         </div>
       </div>
     </main>
+
+    <div v-if="showFeaturedPasswordModal" class="modal-overlay" @click.self="closeFeaturedPasswordModal">
+      <div class="password-modal">
+        <h3>设置精品案例</h3>
+        <p>请输入密码后，将“{{ pendingFeaturedApp?.name }}”设为精品案例。</p>
+        <form @submit.prevent="confirmFeaturedPassword">
+          <label for="featured-app-password">密码</label>
+          <input
+            id="featured-app-password"
+            ref="featuredPasswordInput"
+            v-model="featuredPassword"
+            type="password"
+            placeholder="请输入密码"
+            autocomplete="off"
+            @input="featuredPasswordError = ''"
+          />
+          <span v-if="featuredPasswordError" class="password-error">{{ featuredPasswordError }}</span>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" @click="closeFeaturedPasswordModal">取消</button>
+            <button type="submit" class="confirm-btn" :disabled="promotingAppId !== null">
+              {{ promotingAppId ? '设置中' : '确认' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- 分页组件（在 main 外部，固定底部） -->
     <div class="pagination" v-if="pagination.total > 0">
@@ -85,12 +146,21 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import * as appService from '../services/appService';
 import { message } from '../utils/message';
 
 const apps = ref([]);
 const loading = ref(true);
+const activeCategory = ref('normal');
+const featuredButtonAppId = ref(null);
+const promotingAppId = ref(null);
+const showFeaturedPasswordModal = ref(false);
+const pendingFeaturedApp = ref(null);
+const featuredPassword = ref('');
+const featuredPasswordError = ref('');
+const featuredPasswordInput = ref(null);
+const featuredHoverTimers = new Map();
 
 // 分页状态
 const pagination = ref({
@@ -121,15 +191,92 @@ const visiblePages = computed(() => {
 });
 
 const loadApps = async (page = pagination.value.page) => {
+  clearFeaturedHoverTimers();
   loading.value = true;
   try {
-    const result = await appService.getAppList(page, pagination.value.pageSize);
+    const result = await appService.getAppList(page, pagination.value.pageSize, activeCategory.value);
     apps.value = result.apps;
     pagination.value = result.pagination;
   } catch (error) {
     console.error('加载应用列表失败:', error);
   } finally {
     loading.value = false;
+  }
+};
+
+const switchCategory = (category) => {
+  if (activeCategory.value === category) return;
+  activeCategory.value = category;
+  loadApps(1);
+};
+
+const clearFeaturedHoverTimers = () => {
+  featuredHoverTimers.forEach(timer => clearTimeout(timer));
+  featuredHoverTimers.clear();
+  featuredButtonAppId.value = null;
+};
+
+const startFeaturedHover = (app) => {
+  if (activeCategory.value !== 'normal' || app.isFeatured) return;
+
+  cancelFeaturedHover(app.appId);
+  const timer = setTimeout(() => {
+    featuredButtonAppId.value = app.appId;
+    featuredHoverTimers.delete(app.appId);
+  }, 10000);
+  featuredHoverTimers.set(app.appId, timer);
+};
+
+const cancelFeaturedHover = (appId) => {
+  const timer = featuredHoverTimers.get(appId);
+  if (timer) {
+    clearTimeout(timer);
+    featuredHoverTimers.delete(appId);
+  }
+  if (featuredButtonAppId.value === appId) {
+    featuredButtonAppId.value = null;
+  }
+};
+
+const openFeaturedPasswordModal = (app) => {
+  pendingFeaturedApp.value = app;
+  featuredPassword.value = '';
+  featuredPasswordError.value = '';
+  showFeaturedPasswordModal.value = true;
+  nextTick(() => featuredPasswordInput.value?.focus());
+};
+
+const closeFeaturedPasswordModal = () => {
+  if (promotingAppId.value) return;
+  showFeaturedPasswordModal.value = false;
+  pendingFeaturedApp.value = null;
+  featuredPassword.value = '';
+  featuredPasswordError.value = '';
+};
+
+const confirmFeaturedPassword = async () => {
+  if (featuredPassword.value !== '123456') {
+    featuredPasswordError.value = '密码错误';
+    featuredPasswordInput.value?.focus();
+    return;
+  }
+
+  const app = pendingFeaturedApp.value;
+  if (!app || promotingAppId.value) return;
+
+  promotingAppId.value = app.appId;
+  try {
+    const updatedApp = await appService.updateAppFeaturedStatus(app.appId, true);
+    Object.assign(app, updatedApp);
+    featuredButtonAppId.value = null;
+    showFeaturedPasswordModal.value = false;
+    pendingFeaturedApp.value = null;
+    featuredPassword.value = '';
+    message.success(`“${app.name}”已设为精品案例`);
+  } catch (error) {
+    message.error('设置精品案例失败: ' + error.message);
+  } finally {
+    promotingAppId.value = null;
   }
 };
 
@@ -199,6 +346,10 @@ const formatDate = (dateStr) => {
 onMounted(() => {
   loadApps(1);
 });
+
+onUnmounted(() => {
+  clearFeaturedHoverTimers();
+});
 </script>
 
 <style scoped>
@@ -235,6 +386,28 @@ onMounted(() => {
   margin: 0;
   font-size: 18px;
   font-weight: 500;
+}
+
+.app-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 24px 0;
+  background: #121212;
+}
+
+.app-tab {
+  padding: 8px 18px;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  background: #1e1e1e;
+  color: #888;
+  cursor: pointer;
+}
+
+.app-tab.active {
+  border-color: #42b983;
+  background: rgba(66, 185, 131, 0.12);
+  color: #42b983;
 }
 
 .create-btn {
@@ -304,12 +477,55 @@ onMounted(() => {
   transform: translateY(-2px);
 }
 
+.app-card.is-featured {
+  border-color: rgba(230, 162, 60, 0.65);
+}
+
 .app-thumbnail {
+  position: relative;
   height: 160px;
   background: #252525;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.featured-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #e6a23c;
+  color: #1a1a1a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.feature-app-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  transform: translate(-50%, -50%);
+  border: none;
+  border-radius: 6px;
+  background: #e6a23c;
+  color: #1a1a1a;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.feature-app-btn:hover:not(:disabled) {
+  background: #cf9236;
+}
+
+.feature-app-btn:disabled {
+  cursor: wait;
+  opacity: 0.75;
 }
 
 .app-thumbnail img {
@@ -383,6 +599,91 @@ onMounted(() => {
 
 .delete-btn:hover {
   color: #ff6b6b;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.password-modal {
+  width: 400px;
+  padding: 24px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  background: #252525;
+}
+
+.password-modal h3 {
+  margin: 0 0 12px;
+}
+
+.password-modal p {
+  margin: 0 0 20px;
+  color: #aaa;
+  line-height: 1.5;
+}
+
+.password-modal label {
+  display: block;
+  margin-bottom: 8px;
+  color: #bbb;
+  font-size: 13px;
+}
+
+.password-modal input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  outline: none;
+  background: #181818;
+  color: white;
+}
+
+.password-modal input:focus {
+  border-color: #e6a23c;
+}
+
+.password-error {
+  display: block;
+  margin-top: 8px;
+  color: #ff6b6b;
+  font-size: 13px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-actions button {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: #3a3a3a;
+  color: #ddd;
+}
+
+.confirm-btn {
+  background: #e6a23c;
+  color: #1a1a1a;
+}
+
+.confirm-btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 /* 分页样式 */

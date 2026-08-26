@@ -34,14 +34,15 @@ const {
   widgets,
   isLoading,
   isSaving,
-  hasUnsavedChanges
+  hasUnsavedChanges,
+  canSave
 } = storeToRefs(appStore);
 
 const AUTO_SAVE_INTERVAL_MS = 10000;
 let autoSaveTimer = null;
 
 const autoSave = async () => {
-  if (!appId.value || isLoading.value || isSaving.value || !hasUnsavedChanges.value) return;
+  if (!appId.value || !canSave.value || isLoading.value || isSaving.value || !hasUnsavedChanges.value) return;
 
   try {
     await appStore.saveApp();
