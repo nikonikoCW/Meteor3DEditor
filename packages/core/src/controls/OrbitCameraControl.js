@@ -23,6 +23,17 @@ export class OrbitCameraControl extends BaseCameraControl {
         // 从其他控制模式切回 Orbit 时，用于保持当前相机位置和朝向。
         // 初次启用保持 null，让 OrbitControls 使用默认 target。
         this.resumeTargetDistance = null;
+
+        // 页面恢复后的第一帧不补算后台经过的时间，仅作用于 OrbitControls。
+        this.resetDeltaOnNextUpdate = false;
+        this._onVisibilityChange = () => {
+            if (!document.hidden) {
+                this.resetDeltaOnNextUpdate = true;
+            }
+        };
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', this._onVisibilityChange);
+        }
     }
 
     /**
@@ -65,9 +76,16 @@ export class OrbitCameraControl extends BaseCameraControl {
      */
     update(delta) {
         if (this.enabled) {
-            const safeDelta = Number.isFinite(delta)
-                ? Math.min(Math.max(delta, 0), MAX_UPDATE_DELTA_SECONDS)
-                : undefined;
+            // 后台标签页不推进 OrbitControls；恢复后的第一帧从零开始。
+            if (typeof document !== 'undefined' && document.hidden) return;
+
+            const shouldResetDelta = this.resetDeltaOnNextUpdate === true;
+            this.resetDeltaOnNextUpdate = false;
+            const safeDelta = shouldResetDelta
+                ? 0
+                : (Number.isFinite(delta)
+                    ? Math.min(Math.max(delta, 0), MAX_UPDATE_DELTA_SECONDS)
+                    : undefined);
             this.orbitControls.update(safeDelta);
         }
     }
@@ -119,6 +137,9 @@ export class OrbitCameraControl extends BaseCameraControl {
      * 销毁
      */
     dispose() {
+        if (typeof document !== 'undefined') {
+            document.removeEventListener('visibilitychange', this._onVisibilityChange);
+        }
         super.dispose();
         this.orbitControls.dispose();
     }

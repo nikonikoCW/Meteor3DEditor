@@ -67,3 +67,13 @@ test('update forwards normal delta and clamps a long suspended frame', () => {
     control.update(0.032);
     assert.deepEqual(updateCalls, [0.016, 0.1]);
 });
+
+test('update discards elapsed time on the first frame after visibility resumes', () => {
+    const { control, updateCalls } = createHarness();
+    control.resetDeltaOnNextUpdate = true;
+
+    control.update(120);
+    control.update(0.016);
+
+    assert.deepEqual(updateCalls, [0, 0.016]);
+});
