@@ -1,6 +1,9 @@
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { BaseCameraControl } from './BaseCameraControl.js';
 
+// 防止标签页恢复、系统休眠等情况产生超大帧间隔，导致自动旋转一次性追帧。
+const MAX_UPDATE_DELTA_SECONDS = 0.1;
+
 /**
  * 轨道相机控制器
  * 封装 Three.js OrbitControls
@@ -62,7 +65,10 @@ export class OrbitCameraControl extends BaseCameraControl {
      */
     update(delta) {
         if (this.enabled) {
-            this.orbitControls.update(delta);
+            const safeDelta = Number.isFinite(delta)
+                ? Math.min(Math.max(delta, 0), MAX_UPDATE_DELTA_SECONDS)
+                : undefined;
+            this.orbitControls.update(safeDelta);
         }
     }
 

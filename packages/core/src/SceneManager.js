@@ -157,7 +157,12 @@ export class SceneManager {
         this.isReady = false;
 
         // 帧时间追踪（用于 delta 计算）
-        this.lastTime = 0;
+        this.lastTime = null;
+        this._onVisibilityChange = () => {
+            // 后台标签页的 RAF 会暂停或降频；恢复后从新的一帧重新计时。
+            this.lastTime = null;
+        };
+        document.addEventListener('visibilitychange', this._onVisibilityChange);
 
         // 点击事件监听
         this._onCanvasClick = this._onCanvasClick.bind(this);
@@ -220,7 +225,9 @@ export class SceneManager {
         this.animationFrameId = requestAnimationFrame(this.animate);
 
         // 计算帧间隔
-        const delta = (time - this.lastTime) / 1000;
+        const delta = this.lastTime === null
+            ? 0
+            : Math.max(0, (time - this.lastTime) / 1000);
         this.lastTime = time;
 
         this.tweenGroup.update(time);
@@ -1351,6 +1358,7 @@ export class SceneManager {
             this.animationFrameId = null;
         }
         this.renderer?.setAnimationLoop?.(null);
+        document.removeEventListener('visibilitychange', this._onVisibilityChange);
         this.canvas?.removeEventListener('click', this._onCanvasClick);
 
         this.clearScene({ disposeResources: true });

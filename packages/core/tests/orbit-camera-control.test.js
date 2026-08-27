@@ -57,12 +57,13 @@ test('setAutoRotate rejects invalid input before changing state', () => {
     });
 });
 
-test('update forwards frame delta to OrbitControls', () => {
+test('update forwards normal delta and clamps a long suspended frame', () => {
     const { control, updateCalls } = createHarness();
     control.update(0.016);
-    assert.deepEqual(updateCalls, [0.016]);
+    control.update(3600);
+    assert.deepEqual(updateCalls, [0.016, 0.1]);
 
     control.enabled = false;
     control.update(0.032);
-    assert.deepEqual(updateCalls, [0.016]);
+    assert.deepEqual(updateCalls, [0.016, 0.1]);
 });
