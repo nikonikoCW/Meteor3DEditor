@@ -8,7 +8,7 @@
       fontWeight: data.fontWeight || 'normal'
     }"
   >
-    {{ data.content || '文本内容' }}
+    <span class="text-content">{{ data.content || '文本内容' }}</span>
   </div>
 </template>
 
@@ -30,5 +30,10 @@ defineProps({
   padding: 8px;
   word-break: break-word;
   overflow: hidden;
+  box-sizing: border-box;
+}
+
+.text-content {
+  width: 100%;
 }
 </style>

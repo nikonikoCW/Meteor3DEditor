@@ -222,6 +222,15 @@ const textConfig = {
     props: [
         { name: 'content', label: '文本内容', type: 'text', defaultValue: '文本内容' },
         { name: 'fontSize', label: '字号', type: 'number', defaultValue: 16 },
+        {
+            name: 'fontWeight',
+            label: '字重',
+            type: 'number',
+            defaultValue: 400,
+            min: 100,
+            max: 900,
+            step: 100
+        },
         { name: 'color', label: '颜色', type: 'color', defaultValue: '#ffffff' },
         {
             name: 'textAlign',
