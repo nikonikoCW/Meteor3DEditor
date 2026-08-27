@@ -71,11 +71,16 @@ const getOption = () => {
     return getErrorOption('代码执行成功但未返回 option，请确保设置了 option 变量');
   }
   
-  return result.option;
+  return {
+    ...result.option,
+    // 组件属性优先于代码中的 backgroundColor，保证属性面板始终能够控制背景。
+    backgroundColor: props.data.backgroundColor || 'rgba(0, 0, 0, 0)'
+  };
 };
 
 // 错误显示 option
 const getErrorOption = (message) => ({
+  backgroundColor: props.data.backgroundColor || 'rgba(0, 0, 0, 0)',
   title: {
     text: '⚠️ ' + message,
     textStyle: { color: '#ff6b6b', fontSize: 12 },
@@ -109,12 +114,15 @@ onBeforeUnmount(() => {
   chart?.dispose();
 });
 
-watch(() => props.data.code, () => {
-  if (chart) {
-    chart.clear();
-    chart.setOption(getOption());
+watch(
+  () => [props.data.code, props.data.backgroundColor],
+  () => {
+    if (chart) {
+      chart.clear();
+      chart.setOption(getOption());
+    }
   }
-}, { deep: true });
+);
 </script>
 
 <style scoped>

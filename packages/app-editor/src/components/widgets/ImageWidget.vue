@@ -1,5 +1,8 @@
 <template>
-  <div class="image-widget">
+  <div
+    class="image-widget"
+    :style="{ borderRadius: `${data.borderRadius || 0}px` }"
+  >
     <img 
       v-if="data.src" 
       :src="data.src" 

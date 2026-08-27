@@ -128,6 +128,7 @@ const chartConfig = {
     defaultSize: { width: 400, height: 300 },
     minSize: { width: 150, height: 100 },
     props: [
+        { name: 'backgroundColor', label: '背景色', type: 'color-alpha', defaultValue: 'rgba(0, 0, 0, 0)' },
         { name: 'zIndex', label: '层级', type: 'number', defaultValue: 1 }
     ],
     dataConfig: [
@@ -206,6 +207,7 @@ const imageConfig = {
             ],
             defaultValue: 'cover'
         },
+        { name: 'borderRadius', label: '圆角', type: 'number', defaultValue: 0, min: 0 },
         { name: 'zIndex', label: '层级', type: 'number', defaultValue: 1 }
     ]
 };
