@@ -92,9 +92,9 @@
           <select
             :value="selectedWidget.data[prop.name]"
             @change="selectScene(prop, $event.target.value)"
-            :disabled="disabled || prop.loading"
+            :disabled="disabled"
           >
-            <option value="">选择当前页场景</option>
+            <option value="">{{ prop.loading ? '场景列表加载中...' : '选择当前页场景' }}</option>
             <option v-for="opt in prop.options" :key="opt.value" :value="opt.value">
               {{ opt.label }}（{{ opt.value }}）
             </option>
@@ -261,7 +261,6 @@ const onDefaultEnabledChange = () => {
 };
 
 const widgetProps = ref([]);
-let optionsLoadToken = 0;
 
 const getOriginalProp = (prop) => {
   if (!selectedWidget.value) return null;
@@ -273,13 +272,14 @@ const loadPagedOptions = async (prop, page = 1) => {
   const originalProp = getOriginalProp(prop);
   if (!originalProp?.fetchOptions) return;
 
-  const token = ++optionsLoadToken;
+  const token = (prop.loadToken || 0) + 1;
+  prop.loadToken = token;
   prop.loading = true;
   prop.error = '';
 
   try {
     const result = await originalProp.fetchOptions(page, prop.pageSize || 10);
-    if (token !== optionsLoadToken) return;
+    if (token !== prop.loadToken) return;
 
     prop.options = result.options || [];
     prop.pagination = result.pagination || {
@@ -289,11 +289,11 @@ const loadPagedOptions = async (prop, page = 1) => {
       totalPages: 1
     };
   } catch (error) {
-    if (token !== optionsLoadToken) return;
+    if (token !== prop.loadToken) return;
     prop.options = [];
     prop.error = error.message || '加载场景列表失败';
   } finally {
-    if (token === optionsLoadToken) {
+    if (token === prop.loadToken) {
       prop.loading = false;
     }
   }
@@ -315,7 +315,6 @@ const selectScene = (prop, sceneId) => {
 };
 
 watch(selectedWidget, async (newWidget) => {
-  optionsLoadToken++;
   if (!newWidget) {
     widgetProps.value = [];
     return;
@@ -347,7 +346,9 @@ watch(selectedWidget, async (newWidget) => {
     }
     
     widgetProps.value = props;
-    const sceneProp = props.find(prop => prop.type === 'scene-select');
+    // 必须从 ref 中取得 Vue 包装后的响应式对象。
+    // 如果继续修改 props 中的原始对象，异步请求完成后不会触发界面更新。
+    const sceneProp = widgetProps.value.find(prop => prop.type === 'scene-select');
     if (sceneProp) {
       await loadPagedOptions(sceneProp, 1);
     }
