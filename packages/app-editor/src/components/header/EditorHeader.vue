@@ -3,7 +3,38 @@
     <div class="header-left">
       <button class="back-btn" @click="onBack" title="返回列表">←</button>
       <img src="/meteor-min.svg" alt="Logo" class="logo" />
-      <h1>{{ appName }}</h1>
+      <div class="app-name-editor">
+        <input
+          v-if="isEditingName"
+          ref="appNameInput"
+          v-model="nameDraft"
+          class="app-name-input"
+          type="text"
+          maxlength="100"
+          aria-label="应用名称"
+          @keyup.enter="commitNameEdit"
+          @keyup.esc.prevent="cancelNameEdit"
+          @blur="commitNameEdit"
+        />
+        <h1
+          v-else
+          :title="canEditName ? '双击修改应用名称' : appName"
+          @dblclick="startNameEdit"
+        >
+          {{ appName }}
+        </h1>
+        <button
+          v-if="!isEditingName"
+          type="button"
+          class="edit-name-btn"
+          title="修改应用名称"
+          aria-label="修改应用名称"
+          :disabled="!canEditName"
+          @click="startNameEdit"
+        >
+          ✎
+        </button>
+      </div>
       <span v-if="isFeatured" class="featured-badge">精品</span>
       <span v-if="hasUnsavedChanges" class="unsaved-indicator">●</span>
       <button 
@@ -85,7 +116,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, computed } from 'vue';
 import { useAppStore } from '../../stores/appStore';
 import { storeToRefs } from 'pinia';
 import CanvasSettingsModal from './CanvasSettingsModal.vue';
@@ -109,6 +140,42 @@ const showUnlockModal = ref(false);
 const unlockPassword = ref('');
 const unlockPasswordError = ref('');
 const unlockPasswordInput = ref(null);
+const isEditingName = ref(false);
+const nameDraft = ref('');
+const appNameInput = ref(null);
+const canEditName = computed(() => isEditMode.value && canSave.value);
+
+const startNameEdit = async () => {
+  if (!canEditName.value) return;
+  nameDraft.value = appName.value;
+  isEditingName.value = true;
+  await nextTick();
+  appNameInput.value?.focus();
+  appNameInput.value?.select();
+};
+
+const commitNameEdit = () => {
+  if (!isEditingName.value) return;
+
+  const nextName = nameDraft.value.trim();
+  if (!nextName) {
+    nameDraft.value = appName.value;
+    isEditingName.value = false;
+    message.warning('应用名称不能为空');
+    return;
+  }
+
+  if (nextName !== appName.value) {
+    appName.value = nextName;
+    hasUnsavedChanges.value = true;
+  }
+  isEditingName.value = false;
+};
+
+const cancelNameEdit = () => {
+  nameDraft.value = appName.value;
+  isEditingName.value = false;
+};
 
 const openUnlockModal = () => {
   showUnlockModal.value = true;
@@ -233,11 +300,55 @@ const onCanvasApply = (newCanvas) => {
   height: 28px;
 }
 
-.header-left h1 {
+.app-name-editor {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.app-name-editor h1 {
   margin: 0;
+  max-width: 260px;
+  overflow: hidden;
   font-size: 16px;
   font-weight: 500;
   color: #e0e0e0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-name-input {
+  width: 220px;
+  padding: 4px 7px;
+  color: #e0e0e0;
+  background: #151515;
+  border: 1px solid #42b983;
+  border-radius: 4px;
+  outline: none;
+  font-size: 14px;
+}
+
+.edit-name-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: #777;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.edit-name-btn:hover:not(:disabled) {
+  color: #42b983;
+  background: #2a2a2a;
+}
+
+.edit-name-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .unsaved-indicator {

@@ -67,9 +67,65 @@
       <h4>组件配置</h4>
       <div v-for="prop in widgetProps" :key="prop.name" class="field" :class="{ 'checkbox-field': prop.type === 'switch' }">
         <label>{{ prop.label }}</label>
+
+        <!-- Scene selector: supports direct ID input and paginated browsing -->
+        <div v-if="prop.type === 'scene-select'" class="scene-selector">
+          <div class="scene-id-row">
+            <input
+              type="text"
+              :value="prop.inputValue"
+              @input="prop.inputValue = $event.target.value"
+              @keyup.enter="applySceneId(prop)"
+              :disabled="disabled"
+              placeholder="输入场景 ID"
+            >
+            <button
+              type="button"
+              class="scene-apply-btn"
+              @click="applySceneId(prop)"
+              :disabled="disabled"
+            >
+              应用
+            </button>
+          </div>
+
+          <select
+            :value="selectedWidget.data[prop.name]"
+            @change="selectScene(prop, $event.target.value)"
+            :disabled="disabled || prop.loading"
+          >
+            <option value="">选择当前页场景</option>
+            <option v-for="opt in prop.options" :key="opt.value" :value="opt.value">
+              {{ opt.label }}（{{ opt.value }}）
+            </option>
+          </select>
+
+          <div v-if="prop.error" class="scene-selector-error">{{ prop.error }}</div>
+          <div class="scene-pagination">
+            <button
+              type="button"
+              @click="loadPagedOptions(prop, prop.pagination.page - 1)"
+              :disabled="disabled || prop.loading || prop.pagination.page <= 1"
+            >
+              上一页
+            </button>
+            <span v-if="prop.loading">加载中...</span>
+            <span v-else>
+              {{ prop.pagination.page }} / {{ Math.max(prop.pagination.totalPages, 1) }}
+              · 共 {{ prop.pagination.total }} 个
+            </span>
+            <button
+              type="button"
+              @click="loadPagedOptions(prop, prop.pagination.page + 1)"
+              :disabled="disabled || prop.loading || prop.pagination.page >= prop.pagination.totalPages"
+            >
+              下一页
+            </button>
+          </div>
+        </div>
         
         <!-- Switch (开关) -->
-        <label v-if="prop.type === 'switch'" class="switch">
+        <label v-else-if="prop.type === 'switch'" class="switch">
           <input 
             type="checkbox" 
             v-model="selectedWidget.data[prop.name]"
@@ -205,8 +261,61 @@ const onDefaultEnabledChange = () => {
 };
 
 const widgetProps = ref([]);
+let optionsLoadToken = 0;
+
+const getOriginalProp = (prop) => {
+  if (!selectedWidget.value) return null;
+  const def = getWidgetDefinition(selectedWidget.value.type);
+  return def?.config.props?.find(item => item.name === prop.name) || null;
+};
+
+const loadPagedOptions = async (prop, page = 1) => {
+  const originalProp = getOriginalProp(prop);
+  if (!originalProp?.fetchOptions) return;
+
+  const token = ++optionsLoadToken;
+  prop.loading = true;
+  prop.error = '';
+
+  try {
+    const result = await originalProp.fetchOptions(page, prop.pageSize || 10);
+    if (token !== optionsLoadToken) return;
+
+    prop.options = result.options || [];
+    prop.pagination = result.pagination || {
+      page,
+      pageSize: prop.pageSize || 10,
+      total: prop.options.length,
+      totalPages: 1
+    };
+  } catch (error) {
+    if (token !== optionsLoadToken) return;
+    prop.options = [];
+    prop.error = error.message || '加载场景列表失败';
+  } finally {
+    if (token === optionsLoadToken) {
+      prop.loading = false;
+    }
+  }
+};
+
+const applySceneId = (prop) => {
+  if (!selectedWidget.value) return;
+  const sceneId = String(prop.inputValue || '').trim();
+  prop.inputValue = sceneId;
+  selectedWidget.value.data[prop.name] = sceneId;
+  hasUnsavedChanges.value = true;
+};
+
+const selectScene = (prop, sceneId) => {
+  prop.inputValue = sceneId;
+  if (!selectedWidget.value) return;
+  selectedWidget.value.data[prop.name] = sceneId;
+  hasUnsavedChanges.value = true;
+};
 
 watch(selectedWidget, async (newWidget) => {
+  optionsLoadToken++;
   if (!newWidget) {
     widgetProps.value = [];
     return;
@@ -218,7 +327,17 @@ watch(selectedWidget, async (newWidget) => {
     
     for (const prop of props) {
       const originalProp = def.config.props.find(p => p.name === prop.name);
-      if (originalProp && originalProp.fetchOptions) {
+      if (prop.type === 'scene-select') {
+        prop.inputValue = newWidget.data[prop.name] || '';
+        prop.loading = false;
+        prop.error = '';
+        prop.pagination = {
+          page: 1,
+          pageSize: prop.pageSize || 10,
+          total: 0,
+          totalPages: 0
+        };
+      } else if (originalProp && originalProp.fetchOptions) {
         prop.options = await originalProp.fetchOptions();
       }
       
@@ -228,6 +347,10 @@ watch(selectedWidget, async (newWidget) => {
     }
     
     widgetProps.value = props;
+    const sceneProp = props.find(prop => prop.type === 'scene-select');
+    if (sceneProp) {
+      await loadPagedOptions(sceneProp, 1);
+    }
   } else {
     widgetProps.value = [];
   }
@@ -354,6 +477,60 @@ input:focus, select:focus {
 input:disabled, select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.scene-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scene-id-row {
+  display: flex;
+  gap: 6px;
+}
+
+.scene-id-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.scene-apply-btn,
+.scene-pagination button {
+  flex: none;
+  padding: 6px 9px;
+  color: #fff;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.scene-apply-btn:hover:not(:disabled),
+.scene-pagination button:hover:not(:disabled) {
+  background: #3d3d3d;
+  border-color: #42b983;
+}
+
+.scene-apply-btn:disabled,
+.scene-pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.scene-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  color: #777;
+  font-size: 10px;
+}
+
+.scene-selector-error {
+  color: #ff7777;
+  font-size: 11px;
 }
 
 .rotation-input {

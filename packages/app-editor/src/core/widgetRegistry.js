@@ -100,20 +100,25 @@ const sceneConfig = {
         {
             name: 'sceneId',
             label: '选择场景',
-            type: 'select',
+            type: 'scene-select',
+            pageSize: 10,
             options: [],
-            async fetchOptions() {
-                try {
-                    const response = await fetch(`${API_BASE_URL}/scene/list`);
-                    const data = await response.json();
-                    if (data.success) {
-                        return data.scenes.map(s => ({ label: s.name, value: s.sceneId }));
-                    }
-                    return [];
-                } catch (e) {
-                    console.error('Failed to load scenes', e);
-                    return [];
+            async fetchOptions(page = 1, pageSize = 10) {
+                const params = new URLSearchParams({ page, pageSize });
+                const response = await fetch(`${API_BASE_URL}/scene/list?${params}`);
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || '加载场景列表失败');
                 }
+
+                return {
+                    options: data.scenes.map(scene => ({
+                        label: scene.name,
+                        value: scene.sceneId
+                    })),
+                    pagination: data.pagination
+                };
             }
         },
         { name: 'zIndex', label: '层级', type: 'number', defaultValue: 1 }
