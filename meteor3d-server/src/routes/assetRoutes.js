@@ -25,6 +25,9 @@ router.get('/:id', assetController.getAsset);
 // DELETE /api/assets/:id - 删除资产
 router.delete('/:id', assetController.deleteAsset);
 
+// PATCH /api/assets/:id/registered-url - 修改 3D Tiles / 高斯泼溅绑定 URL
+router.patch('/:id/registered-url', assetController.updateRegisteredAssetUrl);
+
 // GET /api/assets/:id/download - 下载资产
 router.get('/:id/download', assetController.downloadAsset);
 

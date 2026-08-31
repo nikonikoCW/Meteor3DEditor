@@ -763,3 +763,75 @@ exports.registerGaussianSplat = async (req, res) => {
     }
 };
 
+/**
+ * 修改外部注册资产的绑定 URL。
+ * 仅允许 3D Tiles 和高斯泼溅资产。
+ */
+exports.updateRegisteredAssetUrl = async (req, res) => {
+    try {
+        const asset = await Asset.findById(req.params.id);
+
+        if (!asset) {
+            return res.status(404).json({
+                success: false,
+                message: '资产不存在'
+            });
+        }
+
+        const urlFieldByType = {
+            tileset: 'tilesetUrl',
+            'gaussian-splat': 'gaussianSplatUrl'
+        };
+        const urlField = urlFieldByType[asset.type];
+
+        if (!urlField) {
+            return res.status(400).json({
+                success: false,
+                message: '仅支持修改 3D Tiles 和高斯泼溅资产的绑定 URL'
+            });
+        }
+
+        const registeredUrl = typeof req.body?.url === 'string' ? req.body.url.trim() : '';
+        if (!registeredUrl) {
+            return res.status(400).json({
+                success: false,
+                message: '绑定 URL 不能为空'
+            });
+        }
+
+        let parsedUrl;
+        try {
+            parsedUrl = new URL(registeredUrl);
+        } catch {
+            return res.status(400).json({
+                success: false,
+                message: '请输入有效的 URL'
+            });
+        }
+
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+            return res.status(400).json({
+                success: false,
+                message: 'URL 必须以 http:// 或 https:// 开头'
+            });
+        }
+
+        asset[urlField] = registeredUrl;
+        await asset.save();
+
+        console.log(`[RegisteredAsset] URL 已更新: ${asset.name} -> ${registeredUrl}`);
+        return res.status(200).json({
+            success: true,
+            message: '绑定 URL 更新成功',
+            asset
+        });
+    } catch (error) {
+        console.error('修改绑定 URL 失败:', error);
+        return res.status(500).json({
+            success: false,
+            message: '修改绑定 URL 失败',
+            error: error.message
+        });
+    }
+};
+

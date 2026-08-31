@@ -113,6 +113,14 @@
             🔄
           </button>
           <button
+            v-if="isRegisteredUrlAsset(asset)"
+            class="action-btn edit-url-btn"
+            @click.stop="handleEditRegisteredUrl(asset)"
+            title="修改绑定 URL"
+          >
+            ✏️
+          </button>
+          <button
             class="action-btn delete-btn"
             @click.stop="handleDelete(asset)"
             title="删除"
@@ -277,6 +285,44 @@
         </div>
       </div>
     </div>
+    <!-- 外部注册资产 URL 修改弹窗 -->
+    <div v-if="showUrlEditDialog" class="dialog-overlay" @click.self="closeUrlEditDialog">
+      <div class="dialog url-edit-dialog">
+        <h3>修改{{ urlEditTypeLabel }}绑定 URL</h3>
+        <p class="url-edit-warning">修改后资产库将使用新地址，请输入密码确认。</p>
+        <div class="delete-file-name" :title="urlEditTargetAsset?.originalName">
+          {{ urlEditTargetAsset?.originalName }}
+        </div>
+        <div class="form-group">
+          <label>{{ urlEditInputLabel }}</label>
+          <input
+            type="text"
+            v-model="urlEditValue"
+            :placeholder="urlEditPlaceholder"
+            autocomplete="off"
+            @input="urlEditError = ''"
+          />
+        </div>
+        <div class="form-group">
+          <label>验证密码</label>
+          <input
+            type="password"
+            v-model="urlEditPassword"
+            placeholder="请输入验证密码"
+            autocomplete="off"
+            @input="urlEditError = ''"
+            @keyup.enter="confirmRegisteredUrlUpdate"
+          />
+          <p v-if="urlEditError" class="delete-error">{{ urlEditError }}</p>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn-cancel" @click="closeUrlEditDialog" :disabled="urlEditSubmitting">取消</button>
+          <button class="btn-primary" @click="confirmRegisteredUrlUpdate" :disabled="urlEditSubmitting || !urlEditValue.trim()">
+            {{ urlEditSubmitting ? '保存中...' : '确认修改' }}
+          </button>
+        </div>
+      </div>
+    </div>
     <!-- 删除确认弹窗 -->
     <div v-if="showDeleteDialog" class="dialog-overlay" @click.self="closeDeleteDialog">
       <div class="dialog delete-dialog">
@@ -373,7 +419,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
-import { uploadAsset, uploadCadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset, uploadThumbnail, getAssetsWithoutThumbnail, registerTileset, registerGaussianSplat, uploadAssetToCloud } from '../services/assetService';
+import { uploadAsset, uploadCadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset, uploadThumbnail, getAssetsWithoutThumbnail, registerTileset, registerGaussianSplat, updateRegisteredAssetUrl, uploadAssetToCloud } from '../services/assetService';
 import { ASSET_BASE_URL } from '../config';
 import { ThumbnailGenerator } from '../utils/ThumbnailGenerator';
 import { message } from '../utils/message';
@@ -390,12 +436,18 @@ const showAssetDialog = ref(false);
 const selectedAsset = ref(null);
 const cloudSlideValue = ref(0);
 const cloudSlideConfirmed = ref(false);
-const DELETE_CONFIRM_PASSWORD = '123456';
+const ASSET_CONFIRM_PASSWORD = '123456';
 const showDeleteDialog = ref(false);
 const deleteTargetAsset = ref(null);
 const deletePassword = ref('');
 const deletePasswordError = ref('');
 const deleteSubmitting = ref(false);
+const showUrlEditDialog = ref(false);
+const urlEditTargetAsset = ref(null);
+const urlEditValue = ref('');
+const urlEditPassword = ref('');
+const urlEditError = ref('');
+const urlEditSubmitting = ref(false);
 const showCadUploadDialog = ref(false);
 const cadFileInput = ref(null);
 const cadUploadFile = ref(null);
@@ -454,6 +506,62 @@ const filteredAssets = computed(() => {
   }
   return assets.value.filter(asset => asset.type === currentFilter.value);
 });
+
+const isRegisteredUrlAsset = (asset) => ['tileset', 'gaussian-splat'].includes(asset?.type);
+const urlEditTypeLabel = computed(() => urlEditTargetAsset.value?.type === 'tileset' ? ' 3D Tiles ' : '高斯泼溅');
+const urlEditInputLabel = computed(() => urlEditTargetAsset.value?.type === 'tileset' ? 'tileset.json URL' : '高斯泼溅 URL');
+const urlEditPlaceholder = computed(() => urlEditTargetAsset.value?.type === 'tileset'
+  ? 'https://example.com/3dtiles/tileset.json'
+  : 'https://example.com/splats/scene.splat');
+
+const getRegisteredAssetUrl = (asset) => asset?.type === 'tileset'
+  ? asset.tilesetUrl || ''
+  : asset?.gaussianSplatUrl || '';
+
+const handleEditRegisteredUrl = (asset) => {
+  if (!isRegisteredUrlAsset(asset)) return;
+  urlEditTargetAsset.value = asset;
+  urlEditValue.value = getRegisteredAssetUrl(asset);
+  urlEditPassword.value = '';
+  urlEditError.value = '';
+  showUrlEditDialog.value = true;
+};
+
+const closeUrlEditDialog = () => {
+  if (urlEditSubmitting.value) return;
+  showUrlEditDialog.value = false;
+  urlEditTargetAsset.value = null;
+  urlEditValue.value = '';
+  urlEditPassword.value = '';
+  urlEditError.value = '';
+};
+
+const confirmRegisteredUrlUpdate = async () => {
+  const asset = urlEditTargetAsset.value;
+  const nextUrl = urlEditValue.value.trim();
+  if (!asset?._id || !nextUrl || urlEditSubmitting.value) return;
+
+  if (urlEditPassword.value !== ASSET_CONFIRM_PASSWORD) {
+    urlEditError.value = '密码错误，请重新输入';
+    return;
+  }
+
+  urlEditSubmitting.value = true;
+  try {
+    const result = await updateRegisteredAssetUrl(asset._id, nextUrl);
+    assets.value = assets.value.map(item => item._id === result.asset._id ? result.asset : item);
+    message.success('绑定 URL 修改成功');
+    showUrlEditDialog.value = false;
+    urlEditTargetAsset.value = null;
+    urlEditValue.value = '';
+    urlEditPassword.value = '';
+    urlEditError.value = '';
+  } catch (error) {
+    urlEditError.value = error.message || '修改绑定 URL 失败';
+  } finally {
+    urlEditSubmitting.value = false;
+  }
+};
 
 const closeCadUploadDialog = () => {
   if (cadUploading.value) return;
@@ -772,7 +880,7 @@ const closeDeleteDialog = () => {
 const confirmDeleteAsset = async () => {
   if (!deleteTargetAsset.value?._id || deleteSubmitting.value) return;
 
-  if (deletePassword.value !== DELETE_CONFIRM_PASSWORD) {
+  if (deletePassword.value !== ASSET_CONFIRM_PASSWORD) {
     deletePasswordError.value = '密码错误，请重新输入';
     return;
   }
@@ -1467,6 +1575,14 @@ onUnmounted(() => {
   min-height: 300px;
 }
 
+.edit-url-btn {
+  background: #5b4a8a;
+}
+
+.edit-url-btn:hover {
+  background: #735eaa;
+}
+
 .asset-upload-drop-zone {
   min-height: 190px;
   border: 1px dashed #4f75a1;
@@ -1846,6 +1962,17 @@ onUnmounted(() => {
 }
 
 .delete-warning {
+  margin: 0 0 14px;
+  color: #f6ad55;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.url-edit-dialog {
+  width: 480px;
+}
+
+.url-edit-warning {
   margin: 0 0 14px;
   color: #f6ad55;
   font-size: 13px;

@@ -346,3 +346,30 @@ export async function registerGaussianSplat({ name, gaussianSplatUrl }) {
         throw error;
     }
 }
+
+/**
+ * 修改 3D Tiles 或高斯泼溅资产绑定的外部 URL。
+ * @param {string} id - 资产 ID
+ * @param {string} url - 新的外部 URL
+ * @returns {Promise<Object>}
+ */
+export async function updateRegisteredAssetUrl(id, url) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/assets/${id}/registered-url`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ url })
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || '修改绑定 URL 失败');
+        }
+        return data;
+    } catch (error) {
+        console.error('修改绑定 URL 失败:', error);
+        throw error;
+    }
+}
