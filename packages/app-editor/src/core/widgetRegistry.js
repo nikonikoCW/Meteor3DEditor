@@ -662,6 +662,18 @@ const cameraControlConfig = {
     ]
 };
 
+// AI 大脑组件配置 (2D 组件)
+const aiBrainConfig = {
+    label: 'AI 大脑',
+    icon: '🧠',
+    category: '2d',
+    defaultSize: { width: 72, height: 72 },
+    minSize: { width: 72, height: 72 },
+    props: [
+        { name: 'zIndex', label: '层级', type: 'number', defaultValue: 10 }
+    ]
+};
+
 // 中心旋转组件配置 (3D 逻辑组件)
 const centerRotateConfig = {
     label: '中心旋转',
@@ -698,6 +710,7 @@ export function initRegistry() {
     registerWidget('Text', textConfig, () => import('../components/widgets/TextWidget.vue'));
     registerWidget('Clock', clockConfig, () => import('../components/widgets/ClockWidget.vue'));
     registerWidget('Panel', panelConfig, () => import('../components/widgets/PanelWidget.vue'));
+    registerWidget('AIBrain', aiBrainConfig, () => import('../components/widgets/AIBrainWidget.vue'));
 
     // 3D 组件
     registerWidget('Label3D', labelConfig, () => import('../components/widgets/LabelWidget.vue'));
