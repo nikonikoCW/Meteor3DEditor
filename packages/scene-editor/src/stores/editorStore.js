@@ -18,6 +18,10 @@ export const useEditorStore = defineStore('editor', () => {
     // 精品案例场景解锁状态
     const isUnlocked = ref(false);
 
+    // 用户明确接受资源缺失后，允许编辑器保存当前已加载的场景快照。
+    // 该状态属于编辑器交互策略，不改变 Core 的 isReady 语义。
+    const allowPartialSave = ref(false);
+
     // 版本号：markRaw 对象的深层属性变化无法被 Vue 追踪，
     // 通过递增此值来通知依赖组件（如 SceneTree）强制刷新。
     const treeVersion = ref(0);
@@ -26,6 +30,14 @@ export const useEditorStore = defineStore('editor', () => {
         sceneMetadata.value = { ...sceneMetadata.value, ...metadata };
         // 每次设置场景元数据时重置解锁状态
         isUnlocked.value = false;
+    }
+
+    function allowPartialSceneSave() {
+        allowPartialSave.value = true;
+    }
+
+    function resetPartialSavePermission() {
+        allowPartialSave.value = false;
     }
 
     function selectObject(object) {
@@ -63,8 +75,11 @@ export const useEditorStore = defineStore('editor', () => {
         ignoreInvisibleOnPick,
         sceneMetadata,
         isUnlocked,
+        allowPartialSave,
         treeVersion,
         setSceneMetadata,
+        allowPartialSceneSave,
+        resetPartialSavePermission,
         selectObject,
         clearSelection,
         addObject,

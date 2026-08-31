@@ -1305,6 +1305,7 @@ export class PersistenceManager {
         emitProgress({
             phase: 'complete',
             status: result.complete ? 'ready' : 'degraded',
+            failedCount: failedObjects.length + failedResources.length,
             result
         });
 
@@ -1320,12 +1321,16 @@ export class PersistenceManager {
 
         return result;
     }
+
     /**
      * 保存整个场景
      * 保存所有对象和场景元数据
+     * @param {Object} [options] - 保存选项
+     * @param {boolean} [options.allowIncomplete=false] - 是否显式允许保存未完整恢复的当前场景快照
      */
-    async saveScene() {
-        if (!this.sceneManager?.isReady) {
+    async saveScene(options = {}) {
+        const allowIncomplete = options.allowIncomplete === true;
+        if (!this.sceneManager?.isReady && !allowIncomplete) {
             throw new Error('场景尚未完整加载，拒绝保存不完整的场景数据');
         }
         if (!this.dbManager) {

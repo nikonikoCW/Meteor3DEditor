@@ -69,6 +69,7 @@ const unlockPasswordInput = ref(null);
 const isFeatured = computed(() => editorStore.sceneMetadata?.isFeatured || false);
 const isUnlocked = computed(() => editorStore.isUnlocked);
 const canSave = computed(() => !isFeatured.value || isUnlocked.value);
+const allowPartialSave = computed(() => editorStore.allowPartialSave);
 
 const openUnlockModal = () => {
   showUnlockModal.value = true;
@@ -132,7 +133,7 @@ const save = async (isAutoSave = false) => {
   const sceneManager = window.editor?.sceneManager;
   const persistenceManager = window.editor?.persistenceManager;
 
-  if (!sceneManager?.isReady) {
+  if (!sceneManager?.isReady && !allowPartialSave.value) {
     if (!isAutoSave) {
       message.warning('场景尚未完整加载，当前不能保存');
     }
@@ -143,7 +144,9 @@ const save = async (isAutoSave = false) => {
 
   isSaving.value = true;
   try {
-    await persistenceManager.saveScene();
+    await persistenceManager.saveScene({
+      allowIncomplete: allowPartialSave.value
+    });
     if (!isAutoSave) {
       message.success('场景已保存！');
     }
@@ -161,7 +164,8 @@ let autoSaveTimer = null;
 
 onMounted(() => {
   autoSaveTimer = setInterval(() => {
-    if (!canSave.value || !window.editor?.sceneManager?.isReady) return;
+    const sceneManager = window.editor?.sceneManager;
+    if (!canSave.value || (!sceneManager?.isReady && !allowPartialSave.value)) return;
     void save(true);
   }, 10000);
 });

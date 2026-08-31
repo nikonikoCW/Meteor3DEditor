@@ -20,7 +20,8 @@
         </div>
         <p v-if="loadingState.currentName && loadingState.status === 'loading'" class="loading-current-object">正在加载：{{ loadingState.currentName }}</p>
         <p v-if="loadingState.message" class="loading-message">{{ loadingState.message }}</p>
-        <button v-if="loadingState.status === 'degraded' || loadingState.status === 'error'" class="loading-dismiss-btn" type="button" @click="loadingState.visible = false">查看已加载内容</button>
+        <button v-if="loadingState.status === 'degraded'" class="loading-dismiss-btn" type="button" @click="acceptAndViewLoadedContent">确认并查看已加载内容</button>
+        <button v-else-if="loadingState.status === 'error'" class="loading-dismiss-btn" type="button" @click="loadingState.visible = false">关闭</button>
       </div>
     </div>
   </div>
@@ -94,6 +95,12 @@ const handleLoadProgress = (progress) => {
   loadingTitle.value = '正在加载场景';
   loadingState.value.status = 'loading';
   loadingState.value.message = progress.totalCount > 0 ? '' : '场景中没有对象';
+};
+
+const acceptAndViewLoadedContent = () => {
+  if (loadingState.value.status !== 'degraded') return;
+  editorStore.allowPartialSceneSave();
+  loadingState.value.visible = false;
 };
 
 // Expose managers to parent/global if needed, or use a composable/provide-inject
@@ -313,6 +320,7 @@ const onDrop = async (event) => {
 };
 
 onMounted(async () => {
+  editorStore.resetPartialSavePermission();
   sceneManager = new SceneManager(canvas.value);
   visualPreviewManager = new VisualPreviewManager(sceneManager, emitVisualPreviewCount);
   window.addEventListener('clear-visual-previews', clearVisualPreviews);
