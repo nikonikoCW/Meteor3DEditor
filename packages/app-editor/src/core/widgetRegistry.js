@@ -670,6 +670,23 @@ const aiBrainConfig = {
     defaultSize: { width: 72, height: 72 },
     minSize: { width: 72, height: 72 },
     props: [
+        {
+            name: 'model',
+            label: '模型',
+            type: 'select',
+            options: [
+                { label: 'GLM-4.7-Flash（免费）', value: 'glm-4.7-flash' },
+                { label: 'GLM-4.7', value: 'glm-4.7' }
+            ],
+            defaultValue: 'glm-4.7-flash'
+        },
+        {
+            name: 'apiToken',
+            label: 'API Token',
+            type: 'password',
+            defaultValue: '',
+            placeholder: '留空则使用服务器环境变量'
+        },
         { name: 'zIndex', label: '层级', type: 'number', defaultValue: 10 }
     ]
 };

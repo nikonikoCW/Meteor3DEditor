@@ -23,14 +23,14 @@ function parseSseBlock(block) {
     return { ...data, type: eventType || data.type };
 }
 
-export async function streamChat({ sessionId, message, sceneData, signal, onEvent }) {
+export async function streamChat({ sessionId, message, sceneData, model, apiToken, signal, onEvent }) {
     const response = await fetch(CHAT_STREAM_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             Accept: 'text/event-stream'
         },
-        body: JSON.stringify({ sessionId, message, sceneData }),
+        body: JSON.stringify({ sessionId, message, sceneData, model, apiToken }),
         signal
     });
 

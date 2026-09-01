@@ -204,9 +204,10 @@
         <!-- Text/Number -->
         <input 
           v-else 
-          :type="prop.type === 'number' ? 'number' : 'text'"
+          :type="prop.type === 'number' ? 'number' : prop.type === 'password' ? 'password' : 'text'"
           v-model="selectedWidget.data[prop.name]"
           :disabled="disabled"
+          :placeholder="prop.placeholder"
           :min="prop.min"
           :max="prop.max"
           :step="prop.step"

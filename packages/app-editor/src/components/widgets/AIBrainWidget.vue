@@ -1,5 +1,9 @@
 <template>
-  <div ref="anchorRef" class="ai-brain-widget" :class="{ 'is-open': isOpen }">
+  <div
+    ref="anchorRef"
+    class="ai-brain-widget"
+    :class="{ 'is-open': isOpen, 'is-editing': appStore.isEditMode }"
+  >
     <Teleport to="body">
       <Transition name="chat-panel">
         <section
@@ -197,6 +201,8 @@ const sendMessage = async (rawMessage) => {
       sessionId: getSessionId(),
       message: content,
       sceneData: buildSceneSnapshot(appStore.sceneInstance),
+      model: props.data.model || 'glm-4.7-flash',
+      apiToken: props.data.apiToken || '',
       signal: abortController.signal,
       onEvent(event) {
         if (event.type === 'run.started' && event.messageId) {
@@ -312,6 +318,7 @@ const startTrackingPanel = async () => {
 };
 
 const toggleChat = () => {
+  if (appStore.isEditMode) return;
   isOpen.value = !isOpen.value;
   if (isOpen.value) {
     startTrackingPanel();
@@ -319,6 +326,15 @@ const toggleChat = () => {
     stopTrackingPanel();
   }
 };
+
+watch(
+  () => appStore.isEditMode,
+  (editing) => {
+    if (!editing || !isOpen.value) return;
+    isOpen.value = false;
+    stopTrackingPanel();
+  }
+);
 
 const scrollToLatestMessage = async () => {
   await nextTick();
@@ -652,6 +668,10 @@ onBeforeUnmount(() => {
   cursor: pointer;
   pointer-events: auto;
   transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.ai-brain-widget.is-editing .floating-trigger {
+  pointer-events: none;
 }
 
 .floating-trigger:hover {

@@ -8,8 +8,9 @@ function getPositiveInteger(value, fallback) {
     return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-function getClient() {
-    const apiKey = (process.env.GLM_API_KEY || process.env.ZHIPU_API_KEY || '').trim();
+function getClient(apiToken) {
+    const requestApiKey = String(apiToken || '').trim();
+    const apiKey = requestApiKey || (process.env.GLM_API_KEY || process.env.ZHIPU_API_KEY || '').trim();
     if (!apiKey) {
         const error = new Error('未配置 GLM_API_KEY 或 ZHIPU_API_KEY');
         error.code = 'AI_PROVIDER_UNAVAILABLE';
@@ -17,20 +18,20 @@ function getClient() {
         throw error;
     }
 
-    if (!client) {
-        client = new OpenAI({
-            apiKey,
-            baseURL: process.env.GLM_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4/'
-        });
-    }
+    const options = {
+        apiKey,
+        baseURL: process.env.GLM_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4/'
+    };
+    if (requestApiKey) return new OpenAI(options);
+    if (!client) client = new OpenAI(options);
     return client;
 }
 
-async function* streamCompletion({ messages, tools, toolChoice = 'auto', signal }) {
+async function* streamCompletion({ messages, tools, toolChoice = 'auto', model, apiToken, signal }) {
     let stream;
     try {
-        stream = await getClient().chat.completions.create({
-            model: process.env.GLM_MODEL || 'glm-4.7-flash',
+        stream = await getClient(apiToken).chat.completions.create({
+            model: model || process.env.GLM_MODEL || 'glm-4.7-flash',
             messages,
             tools,
             tool_choice: toolChoice,
@@ -44,7 +45,7 @@ async function* streamCompletion({ messages, tools, toolChoice = 'auto', signal 
         if (error.status === 401 || error.code === '1000') {
             error.code = 'GLM_AUTH_FAILED';
             error.statusCode = 401;
-            error.userMessage = 'GLM API Key 无效或已失效，请更新 meteor3d-server/.env 后重启服务';
+            error.userMessage = 'GLM API Token 无效或已失效，请检查 AI 大脑属性或服务器环境变量';
         }
         throw error;
     }

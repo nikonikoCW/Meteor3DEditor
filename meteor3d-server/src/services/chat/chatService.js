@@ -82,7 +82,7 @@ function parseToolArguments(toolCall) {
     }
 }
 
-async function* streamChat({ sessionId, message, sceneData, signal }) {
+async function* streamChat({ sessionId, message, sceneData, model, apiToken, signal }) {
     const runId = randomUUID();
     const assistantMessageId = randomUUID();
 
@@ -108,6 +108,8 @@ async function* streamChat({ sessionId, message, sceneData, signal }) {
             for await (const event of glmClient.streamCompletion({
                 messages: currentMessages,
                 tools,
+                model,
+                apiToken,
                 signal
             })) {
                 if (event.type === 'text.delta') {

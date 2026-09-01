@@ -29,6 +29,8 @@ function getRequestMessage(body = {}) {
 exports.handleChatStream = async (req, res) => {
     const message = getRequestMessage(req.body);
     const sessionId = String(req.body?.sessionId || '').trim() || randomUUID();
+    const model = String(req.body?.model || '').trim();
+    const apiToken = String(req.body?.apiToken || '').trim();
 
     if (!message) {
         return res.status(400).json({
@@ -42,6 +44,13 @@ exports.handleChatStream = async (req, res) => {
             success: false,
             code: 'MESSAGE_TOO_LONG',
             message: `message 不能超过 ${MAX_MESSAGE_LENGTH} 个字符`
+        });
+    }
+    if (model.length > 100 || apiToken.length > 1000) {
+        return res.status(400).json({
+            success: false,
+            code: 'INVALID_MODEL_CONFIG',
+            message: '模型配置无效'
         });
     }
 
@@ -66,6 +75,8 @@ exports.handleChatStream = async (req, res) => {
             sessionId,
             message,
             sceneData: req.body?.sceneData,
+            model,
+            apiToken,
             signal: abortController.signal
         })) {
             writer.write(event);
