@@ -72,7 +72,7 @@ onMounted(() => {
 });
 
 // 恢复视角动作
-const restore = () => {
+function restore() {
   const instance = getCoreInstance();
   if (instance && props.data.viewData) {
     try {
@@ -98,7 +98,7 @@ const restore = () => {
       console.error('[CameraWidget] Invalid view data:', e);
     }
   }
-};
+}
 
 // 暴露方法给交互系统 (虽然主要通过 enabled 触发，但保留方法以备不时之需)
 defineExpose({
