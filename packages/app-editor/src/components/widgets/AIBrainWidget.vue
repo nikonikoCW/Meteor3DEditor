@@ -28,7 +28,7 @@
           </button>
         </header>
 
-        <div class="chat-content">
+        <div v-if="messages.length === 0" class="chat-content welcome-content">
           <div class="welcome-mark" aria-hidden="true">
             <svg viewBox="0 0 32 32">
               <path d="M13.2 6.3A5 5 0 0 0 5.5 10.5c0 .7.1 1.3.4 1.9A5.5 5.5 0 0 0 7.5 23c.7 2.6 3.1 4.5 5.9 4.5 1 0 1.9-.2 2.6-.7.8.5 1.7.7 2.7.7 2.8 0 5.2-1.9 5.9-4.5a5.5 5.5 0 0 0 1.6-10.6c.2-.6.3-1.2.3-1.9a5 5 0 0 0-7.7-4.2A5.1 5.1 0 0 0 16 5.5c-1 0-2 .3-2.8.8Z" />
@@ -37,16 +37,48 @@
           </div>
           <h3>你好，我是 AI 大脑</h3>
           <p>有什么可以帮助你的吗？</p>
-          <div class="message-bubble">可以向我询问场景中的任何问题</div>
+          <div class="message-bubble">可以向我询问任何问题</div>
+        </div>
+
+        <div v-else ref="messagesRef" class="chat-content message-list">
+          <div
+            v-for="message in messages"
+            :key="message.id"
+            class="chat-message"
+            :class="message.role"
+          >
+            <div class="chat-message-bubble">
+              {{ message.content || (message.status === 'streaming' ? '正在思考…' : '') }}
+            </div>
+            <span v-if="message.status === 'failed'" class="message-state">发送失败</span>
+            <span v-else-if="message.status === 'cancelled'" class="message-state">已停止</span>
+          </div>
         </div>
 
         <footer class="chat-composer">
+          <div v-if="error" class="chat-error">{{ error }}</div>
           <div class="input-shell">
-            <input type="text" placeholder="输入你的问题..." aria-label="输入你的问题" @click.stop />
-            <button type="button" aria-label="发送消息" @click.stop>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
+            <input
+              v-model="input"
+              type="text"
+              placeholder="输入你的问题..."
+              aria-label="输入你的问题"
+              :disabled="isStreaming"
+              @click.stop
+              @keyup.enter="submitMessage"
+            />
+            <button
+              type="button"
+              :aria-label="isStreaming ? '停止生成' : '发送消息'"
+              :disabled="!isStreaming && !input.trim()"
+              @click.stop="isStreaming ? stopGeneration() : submitMessage()"
+            >
+              <svg v-if="!isStreaming" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="m21 3-7.5 18-3.2-7.3L3 10.5 21 3Z" />
                 <path d="m10.3 13.7 4.1-4.1" />
+              </svg>
+              <svg v-else viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="7" y="7" width="10" height="10" rx="1" />
               </svg>
             </button>
           </div>
@@ -75,6 +107,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useAppStore } from '../../stores/appStore';
+import { useAiChat } from '../../composables/useAiChat';
 
 const props = defineProps({
   data: {
@@ -95,9 +128,16 @@ const VIEWPORT_MARGIN = 12;
 
 const appStore = useAppStore();
 const anchorRef = ref(null);
+const messagesRef = ref(null);
 const isOpen = ref(false);
 const panelStyle = ref({});
+const input = ref('');
 let trackingFrame = 0;
+
+const { messages, isStreaming, error, sendMessage, stopGeneration } = useAiChat({
+  getAppId: () => appStore.appId,
+  widgetId: props.widgetId
+});
 
 const ownWidget = computed(() => (
   appStore.widgets.find(widget => widget.id === props.widgetId) || null
@@ -185,7 +225,28 @@ const toggleChat = () => {
   }
 };
 
-onBeforeUnmount(stopTrackingPanel);
+const scrollToLatestMessage = async () => {
+  await nextTick();
+  if (messagesRef.value) {
+    messagesRef.value.scrollTop = messagesRef.value.scrollHeight;
+  }
+};
+
+const submitMessage = async () => {
+  const message = input.value.trim();
+  if (!message || isStreaming.value) return;
+  input.value = '';
+  scrollToLatestMessage();
+  await sendMessage(message);
+  scrollToLatestMessage();
+};
+
+watch(messages, scrollToLatestMessage, { deep: true });
+
+onBeforeUnmount(() => {
+  stopTrackingPanel();
+  stopGeneration();
+});
 </script>
 
 <style scoped>
@@ -317,6 +378,58 @@ onBeforeUnmount(stopTrackingPanel);
   text-align: center;
 }
 
+.welcome-content {
+  overflow: hidden;
+}
+
+.message-list {
+  display: block;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+.chat-message.user {
+  align-items: flex-end;
+}
+
+.chat-message.assistant {
+  align-items: flex-start;
+}
+
+.chat-message-bubble {
+  max-width: 86%;
+  padding: 10px 12px;
+  border-radius: 13px;
+  color: #c7d2e8;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat-message.user .chat-message-bubble {
+  color: #eef2ff;
+  background: linear-gradient(145deg, rgba(82, 104, 236, 0.82), rgba(109, 85, 217, 0.82));
+  border-radius: 13px 4px 13px 13px;
+}
+
+.chat-message.assistant .chat-message-bubble {
+  border-radius: 4px 13px 13px 13px;
+}
+
+.message-state {
+  margin-top: 4px;
+  color: #77849d;
+  font-size: 9px;
+}
+
 .welcome-mark {
   width: 64px;
   height: 64px;
@@ -357,6 +470,12 @@ onBeforeUnmount(stopTrackingPanel);
 .chat-composer {
   padding: 12px 14px 13px;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.chat-error {
+  margin-bottom: 8px;
+  color: #ff9caa;
+  font-size: 11px;
 }
 
 .input-shell {
@@ -407,6 +526,11 @@ onBeforeUnmount(stopTrackingPanel);
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.input-shell button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .chat-composer > span {

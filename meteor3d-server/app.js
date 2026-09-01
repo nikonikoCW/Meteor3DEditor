@@ -1,8 +1,8 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const path = require('path');
 const connectDB = require('./src/config/db');
 const sceneRoutes = require('./src/routes/sceneRoutes');
 const assetRoutes = require('./src/routes/assetRoutes');
