@@ -70,6 +70,17 @@ let unsubscribeEditorStore = null;
 let isUnmounted = false;
 let loadingHideTimer = null;
 
+const OUTLINE_EXCLUDED_MODEL_TYPES = new Set(['Tileset', 'GaussianSplat']);
+
+const supportsSelectionOutline = (object) => {
+  let current = object;
+  while (current) {
+    if (OUTLINE_EXCLUDED_MODEL_TYPES.has(current.userData?.modelType)) return false;
+    current = current.parent;
+  }
+  return true;
+};
+
 const handleLoadProgress = (progress) => {
   if (isUnmounted) return;
 
@@ -385,8 +396,10 @@ onMounted(async () => {
 
     if (state.selectedObject) {
       transformManager.attach(state.selectedObject);
-      const outlineId = state.selectedObject.userData?.bid || state.selectedObject.uuid;
-      sceneManager.enableOutline(outlineId);
+      if (supportsSelectionOutline(state.selectedObject)) {
+        const outlineId = state.selectedObject.userData?.bid || state.selectedObject.uuid;
+        sceneManager.enableOutline(outlineId);
+      }
     } else {
       transformManager.detach();
     }
