@@ -105,9 +105,10 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useAppStore } from '../../stores/appStore';
-import { useAiChat } from '../../composables/useAiChat';
+import { reportToolResult, streamChat } from '../../services/aiChatService';
+import { buildSceneSnapshot, executeSceneTool } from '../../utils/sceneAiTools';
 
 const props = defineProps({
   data: {
@@ -132,12 +133,106 @@ const messagesRef = ref(null);
 const isOpen = ref(false);
 const panelStyle = ref({});
 const input = ref('');
+const messages = ref([]);
+const isStreaming = ref(false);
+const error = ref('');
+const conversationId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 let trackingFrame = 0;
+let abortController = null;
 
-const { messages, isStreaming, error, sendMessage, stopGeneration } = useAiChat({
-  getAppId: () => appStore.appId,
-  widgetId: props.widgetId
-});
+const createId = () => (
+  globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`
+);
+
+const getSessionId = () => [
+  appStore.appId || 'draft',
+  props.widgetId || 'ai-brain',
+  conversationId
+].join(':');
+
+const executeAndReportTool = async (event) => {
+  try {
+    const result = await executeSceneTool(appStore.sceneInstance, event.functionName, event.args);
+    await reportToolResult({
+      runId: event.runId,
+      toolCallId: event.toolCallId,
+      success: true,
+      result
+    });
+  } catch (toolError) {
+    await reportToolResult({
+      runId: event.runId,
+      toolCallId: event.toolCallId,
+      success: false,
+      error: toolError.message || '场景工具执行失败'
+    });
+  }
+};
+
+const sendMessage = async (rawMessage) => {
+  const content = String(rawMessage || '').trim();
+  if (!content || isStreaming.value) return false;
+
+  error.value = '';
+  isStreaming.value = true;
+  abortController = new AbortController();
+
+  messages.value.push({
+    id: createId(),
+    role: 'user',
+    content,
+    status: 'completed'
+  });
+  const assistantMessage = reactive({
+    id: createId(),
+    role: 'assistant',
+    content: '',
+    status: 'streaming'
+  });
+  messages.value.push(assistantMessage);
+
+  let streamFailure = null;
+  try {
+    await streamChat({
+      sessionId: getSessionId(),
+      message: content,
+      sceneData: buildSceneSnapshot(appStore.sceneInstance),
+      signal: abortController.signal,
+      onEvent(event) {
+        if (event.type === 'run.started' && event.messageId) {
+          assistantMessage.id = event.messageId;
+        } else if (event.type === 'assistant.delta') {
+          assistantMessage.content += event.delta || '';
+        } else if (event.type === 'assistant.completed') {
+          assistantMessage.status = 'completed';
+        } else if (event.type === 'run.failed') {
+          streamFailure = new Error(event.message || 'AI 服务暂时不可用');
+        } else if (event.type === 'tool.started' && event.executionTarget === 'client') {
+          executeAndReportTool(event).catch((toolError) => {
+            console.error('[AI Brain] 工具结果回传失败:', toolError);
+          });
+        }
+      }
+    });
+
+    if (streamFailure) throw streamFailure;
+    assistantMessage.status = 'completed';
+    return true;
+  } catch (requestError) {
+    if (requestError.name === 'AbortError') {
+      assistantMessage.status = 'cancelled';
+    } else {
+      assistantMessage.status = 'failed';
+      error.value = requestError.message || 'AI 请求失败';
+    }
+    return false;
+  } finally {
+    isStreaming.value = false;
+    abortController = null;
+  }
+};
+
+const stopGeneration = () => abortController?.abort();
 
 const ownWidget = computed(() => (
   appStore.widgets.find(widget => widget.id === props.widgetId) || null

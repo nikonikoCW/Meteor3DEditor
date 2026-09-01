@@ -1,9 +1,24 @@
 const { randomUUID } = require('crypto');
 const chatService = require('../services/chat/chatService');
-const sessionStore = require('../services/chat/sessionStore');
-const { createSseWriter } = require('../services/chat/sseWriter');
 
 const MAX_MESSAGE_LENGTH = 8000;
+
+function createSseWriter(res) {
+    let sequence = 0;
+    return {
+        write(event) {
+            if (res.writableEnded || res.destroyed) return;
+            sequence += 1;
+            const data = { ...event, sequence, timestamp: new Date().toISOString() };
+            res.write(`id: ${event.runId || randomUUID()}:${sequence}\n`);
+            res.write(`event: ${event.type}\n`);
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+        },
+        ping() {
+            if (!res.writableEnded && !res.destroyed) res.write(': ping\n\n');
+        }
+    };
+}
 
 function getRequestMessage(body = {}) {
     if (typeof body.message === 'string') return body.message.trim();
@@ -50,6 +65,7 @@ exports.handleChatStream = async (req, res) => {
         for await (const event of chatService.streamChat({
             sessionId,
             message,
+            sceneData: req.body?.sceneData,
             signal: abortController.signal
         })) {
             writer.write(event);
@@ -87,6 +103,24 @@ exports.handleChat = (req, res) => {
 
 exports.clearSession = (req, res) => {
     const sessionId = String(req.params.sessionId || '').trim();
-    if (sessionId) sessionStore.delete(sessionId);
+    if (sessionId) chatService.clearSession(sessionId);
+    res.json({ success: true });
+};
+
+exports.handleToolResult = (req, res) => {
+    const accepted = chatService.resolveToolResult({
+        runId: req.body?.runId,
+        toolCallId: req.params.toolCallId,
+        success: req.body?.success,
+        result: req.body?.result,
+        error: req.body?.error
+    });
+
+    if (!accepted) {
+        return res.status(404).json({
+            success: false,
+            message: '工具调用不存在、已超时或已完成'
+        });
+    }
     res.json({ success: true });
 };

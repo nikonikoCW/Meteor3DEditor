@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '../config';
 
 const CHAT_STREAM_URL = `${API_BASE_URL}/chat/stream`;
+const TOOL_RESULT_URL = `${API_BASE_URL}/chat/tools`;
 
 function parseSseBlock(block) {
     let eventType = 'message';
@@ -22,14 +23,14 @@ function parseSseBlock(block) {
     return { ...data, type: eventType || data.type };
 }
 
-export async function streamChat({ sessionId, message, signal, onEvent }) {
+export async function streamChat({ sessionId, message, sceneData, signal, onEvent }) {
     const response = await fetch(CHAT_STREAM_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             Accept: 'text/event-stream'
         },
-        body: JSON.stringify({ sessionId, message }),
+        body: JSON.stringify({ sessionId, message, sceneData }),
         signal
     });
 
@@ -64,4 +65,16 @@ export async function streamChat({ sessionId, message, signal, onEvent }) {
 
     buffer += decoder.decode();
     if (buffer.trim()) dispatch(buffer);
+}
+
+export async function reportToolResult({ runId, toolCallId, success, result, error }) {
+    const response = await fetch(`${TOOL_RESULT_URL}/${encodeURIComponent(toolCallId)}/result`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ runId, success, result, error })
+    });
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || '工具执行结果回传失败');
+    }
 }
