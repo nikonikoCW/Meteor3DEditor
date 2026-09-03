@@ -97,7 +97,8 @@ export class InputManager {
 
         let intersects = this.sceneManager.raycastObjects(this.mouse, {
             recursive: true,
-            includeTileMap: false
+            includeTileMap: false,
+            firstHitOnly: true
         });
 
         if (this.editorStore.ignoreInvisibleOnPick) {

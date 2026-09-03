@@ -85,13 +85,20 @@ export class RaycastManager {
      * @param {THREE.Object3D[]} objects - 要检测的对象数组
      * @param {Object} options - 选项
      * @param {boolean} options.recursive - 是否递归检测子对象，默认 true
+     * @param {boolean} options.firstHitOnly - 每个 BVH Mesh 只返回最近交点，默认 false
      * @returns {THREE.Intersection[]} 交点数组
      */
     raycast(screenPosition, camera, objects, options = {}) {
-        const { recursive = true } = options;
+        const { recursive = true, firstHitOnly = false } = options;
 
         this.raycaster.setFromCamera(screenPosition, camera);
-        return this.raycaster.intersectObjects(objects, recursive);
+        const previousFirstHitOnly = this.raycaster.firstHitOnly;
+        this.raycaster.firstHitOnly = firstHitOnly;
+        try {
+            return this.raycaster.intersectObjects(objects, recursive);
+        } finally {
+            this.raycaster.firstHitOnly = previousFirstHitOnly;
+        }
     }
 
     /**
@@ -102,10 +109,16 @@ export class RaycastManager {
      * @returns {THREE.Intersection[]}
      */
     raycastWithRay(ray, objects, options = {}) {
-        const { recursive = true } = options;
+        const { recursive = true, firstHitOnly = false } = options;
 
         this.raycaster.ray.copy(ray);
-        return this.raycaster.intersectObjects(objects, recursive);
+        const previousFirstHitOnly = this.raycaster.firstHitOnly;
+        this.raycaster.firstHitOnly = firstHitOnly;
+        try {
+            return this.raycaster.intersectObjects(objects, recursive);
+        } finally {
+            this.raycaster.firstHitOnly = previousFirstHitOnly;
+        }
     }
 
     /**

@@ -64,7 +64,7 @@ export class TriangleStatsManager {
         // 重新计算
         let total = 0;
         this.scene.traverse((object) => {
-            if (object.isMesh && object.geometry) {
+            if (object.isMesh && object.geometry && !object.userData.excludeFromTriangleStats) {
                 const geometry = object.geometry;
                 if (geometry.index) {
                     // 索引几何体：三角形数 = 索引数量 / 3
@@ -90,7 +90,7 @@ export class TriangleStatsManager {
     _countObjects() {
         let count = 0;
         this.scene.traverse((object) => {
-            if (object.isMesh) {
+            if (object.isMesh && !object.userData.excludeFromTriangleStats) {
                 count++;
             }
         });

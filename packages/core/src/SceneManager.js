@@ -372,7 +372,8 @@ export class SceneManager {
         const intersects = this.raycastManager.raycast(
             screenPosition,
             this.camera,
-            raycastTargets
+            raycastTargets,
+            { firstHitOnly: true }
         );
 
         // 构建事件数据

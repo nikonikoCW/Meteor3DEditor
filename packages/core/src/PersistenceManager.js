@@ -5,6 +5,7 @@ import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { TilesRenderer } from '3d-tiles-renderer';
 import { message } from './utils/message.js';
 import { generateBid } from './BidRegistry.js';
+import { createGaussianSplatCollider } from './GaussianSplatCollider.js';
 
 /**
  * 持久化管理器
@@ -230,6 +231,7 @@ export class PersistenceManager {
         const visited = new Set();
         for (const trackedRoot of this.sceneManager.objects) {
             trackedRoot.traverse((node) => {
+                if (node.userData.isInternalHelper) return;
                 if (visited.has(node)) return;
                 visited.add(node);
                 if (!node.userData.bid) node.userData.bid = generateBid();
@@ -959,7 +961,11 @@ export class PersistenceManager {
                 throw new Error('Gaussian splat load cancelled');
             }
 
-            splat = new SplatMesh({ url });
+            splat = new SplatMesh({
+                url,
+                // Spark 原生拾取会逐个扫描全部 splat；点击改由 BVH 代理负责。
+                raycastable: false
+            });
             this.pendingSplatMeshes.add(splat);
             await splat.initialized;
 
@@ -978,9 +984,13 @@ export class PersistenceManager {
             wrapper.userData.splatMesh = splat;
             const box = splat.getBoundingBox(false);
             if (!box.isEmpty()) {
+                const collider = createGaussianSplatCollider(splat, box);
                 const center = box.getCenter(new THREE.Vector3());
                 splat.position.sub(center);
                 wrapper.userData.pivotOffset = center.toArray();
+                collider.userData.selectionRoot = wrapper;
+                splat.add(collider);
+                wrapper.userData.splatCollider = collider;
             }
 
             splat.userData.selectionRoot = wrapper;

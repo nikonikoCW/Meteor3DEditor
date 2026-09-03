@@ -40,7 +40,7 @@
     <!-- 递归渲染子节点 -->
     <template v-if="expanded && hasChildren">
       <TreeNode 
-        v-for="child in node.children" 
+        v-for="child in visibleChildren"
         :key="child.userData.bid"
         :node="child"
         :level="level + 1"
@@ -81,8 +81,12 @@ const emit = defineEmits(['select', 'delete', 'reparent']);
 const expanded = ref(false); // collapsed by default
 const treeItem = ref(null);
 
+const visibleChildren = computed(() => {
+  return (props.node.children || []).filter(child => !child.userData?.isInternalHelper);
+});
+
 const hasChildren = computed(() => {
-  return props.node.children && props.node.children.length > 0;
+  return visibleChildren.value.length > 0;
 });
 
 const containsBid = (nodes, bid) => {
@@ -98,7 +102,7 @@ const containsBid = (nodes, bid) => {
 const selectedBid = computed(() => props.selectedObject?.userData?.bid || null);
 const isSelected = computed(() => selectedBid.value === props.node.userData?.bid);
 const containsSelectedObject = computed(() => {
-  return !!selectedBid.value && hasChildren.value && containsBid(props.node.children, selectedBid.value);
+  return !!selectedBid.value && hasChildren.value && containsBid(visibleChildren.value, selectedBid.value);
 });
 
 watch(
