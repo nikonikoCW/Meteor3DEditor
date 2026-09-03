@@ -89,6 +89,7 @@ export function createGaussianSplatCollider(splatMesh, boundingBox, options = {}
     collider.userData.isGaussianSplatCollider = true;
     collider.userData.isInternalHelper = true;
     collider.userData.excludeFromTriangleStats = true;
+    collider.userData.excludeFromCameraFit = true;
     collider.userData.voxelCount = occupied.size;
     collider.userData.colliderPartCount = colliderPartCount;
     collider.userData.voxelSize = voxelSize;

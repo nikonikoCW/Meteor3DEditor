@@ -158,6 +158,7 @@ new SplatMesh({
 - 代理在高斯加载完成时创建，每个 Gaussian Splat 实例对应一个代理。
 - 代理挂在 SplatMesh 下，跟随模型变换，无需每次移动或缩放后重建。
 - SceneManager 添加对象时会为代理自动建立 BVH。
+- 代理属于内部交互数据，不参与 `fitCameraToScene` 的包围盒计算，避免大型代理改变原场景的自动取景结果或造成远裁剪黑屏。
 - 删除高斯对象时，现有资源释放流程会同时释放代理 geometry、material 和 boundsTree。
 - 代理是纯运行时对象，不显示在场景树中，也不写入场景节点图。
 
@@ -189,6 +190,7 @@ build passed
 7. 平移、旋转、缩放 Gaussian Splat 后重新点击，确认代理与显示模型同步。
 8. 保存并重新打开场景，确认没有 `GaussianSplatBVHCollider` 出现在场景树中。
 9. 删除 Gaussian Splat，确认场景、统计及内存表现正常。
+10. 使用 `packages/core/example.html` 和 UMD 构建产物加载大型高斯场景，确认自动取景后模型不会被远裁剪面裁掉。
 
 ## 9. 后续可选优化
 

@@ -999,7 +999,25 @@ export class SceneManager {
      * 聚焦相机到所有场景物体。
      */
     fitCameraToScene() {
-        return this.cameraNavigationManager.fitObjects(this.objects);
+        // 拾取代理属于运行时交互数据，不应改变场景原有的自动取景范围。
+        // Box3.expandByObject 不识别 visible 或自定义标记，因此在同步计算期间
+        // 暂时屏蔽这类 helper 的 geometry，计算完成后立即恢复。
+        const excludedGeometries = [];
+        this.objects.forEach((root) => {
+            root.traverse((object) => {
+                if (!object.userData?.excludeFromCameraFit || !object.geometry) return;
+                excludedGeometries.push({ object, geometry: object.geometry });
+                object.geometry = undefined;
+            });
+        });
+
+        try {
+            return this.cameraNavigationManager.fitObjects(this.objects);
+        } finally {
+            excludedGeometries.forEach(({ object, geometry }) => {
+                object.geometry = geometry;
+            });
+        }
     }
 
     /**
