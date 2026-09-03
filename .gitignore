@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Backend Uploads
+meteor3d-server/uploads/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Environment Variables
+
+
+#web 包
+dist/
+
+#测试文件
+testFile/
+
+gitRule.txt
+
+# VitePress
+**/.vitepress/cache/
+**/.vitepress/dist/
+
+test/
