@@ -6,9 +6,10 @@
       </button>
     </div>
     <div class="group">
-      <button @click="setMode('translate')">移动</button>
-      <button @click="setMode('rotate')">旋转</button>
-      <button @click="setMode('scale')">缩放</button>
+      <button :class="{ active: transformMode === 'select' }" @click="setMode('select')">选择</button>
+      <button :class="{ active: transformMode === 'translate' }" @click="setMode('translate')">移动</button>
+      <button :class="{ active: transformMode === 'rotate' }" @click="setMode('rotate')">旋转</button>
+      <button :class="{ active: transformMode === 'scale' }" @click="setMode('scale')">缩放</button>
     </div>
     <div class="group">
       <button @click="undo">撤销</button>
@@ -60,6 +61,7 @@ import BatchLoaderDialog from './BatchLoaderDialog.vue';
 const editorStore = useEditorStore();
 const showBatchLoader = ref(false);
 const cameraMode = ref('orbit');
+const transformMode = ref('select');
 
 const showUnlockModal = ref(false);
 const unlockPassword = ref('');
@@ -108,9 +110,14 @@ const toggleCameraMode = () => {
 };
 
 const setMode = (mode) => {
-  if (window.editor && window.editor.transformManager) {
-    window.editor.transformManager.setMode(mode);
+  const transformManager = window.editor?.transformManager;
+  if (transformManager?.setMode(mode)) {
+    transformMode.value = transformManager.getMode();
   }
+};
+
+const onTransformModeChanged = (event) => {
+  transformMode.value = event.detail?.mode || 'select';
 };
 
 const undo = () => {
@@ -163,6 +170,9 @@ const save = async (isAutoSave = false) => {
 let autoSaveTimer = null;
 
 onMounted(() => {
+  window.addEventListener('transform-mode-changed', onTransformModeChanged);
+  transformMode.value = window.editor?.transformManager?.getMode() || 'select';
+
   autoSaveTimer = setInterval(() => {
     const sceneManager = window.editor?.sceneManager;
     if (!canSave.value || (!sceneManager?.isReady && !allowPartialSave.value)) return;
@@ -171,6 +181,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  window.removeEventListener('transform-mode-changed', onTransformModeChanged);
   if (autoSaveTimer) {
     clearInterval(autoSaveTimer);
   }
@@ -200,6 +211,10 @@ button {
 
 button:hover {
   background: #666;
+}
+
+button.active {
+  background: #0066cc;
 }
 
 .save-btn {

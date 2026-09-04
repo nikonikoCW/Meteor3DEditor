@@ -13,6 +13,9 @@ export class TransformManager {
         this.historyManager = historyManager;
         this.persistenceManager = persistenceManager;
         this.controls = new TransformControls(sceneManager.camera, sceneManager.renderer.domElement);
+        // 编辑器默认只做拾取/选择，不显示或启用变换控件。
+        this.mode = 'select';
+        this.selectedObject = null;
 
         // 拖拽时禁用轨道控制器，避免冲突
         this.controls.addEventListener('dragging-changed', (event) => {
@@ -84,11 +87,18 @@ export class TransformManager {
      * @param {THREE.Object3D} object - 要变换的对象
      */
     attach(object) {
+        this.selectedObject = object;
+
+        if (this.mode === 'select') {
+            this.controls.detach();
+            return;
+        }
+
         this.controls.attach(object);
 
         // 高斯泼溅不支持缩放工具，选中时若当前为缩放模式则切回移动
-        if (object?.userData?.modelType === 'GaussianSplat' && this.controls.mode === 'scale') {
-            this.controls.setMode('translate');
+        if (object?.userData?.modelType === 'GaussianSplat' && this.mode === 'scale') {
+            this.updateMode('translate');
         }
     }
 
@@ -96,21 +106,48 @@ export class TransformManager {
      * 分离控制器
      */
     detach() {
+        this.selectedObject = null;
         this.controls.detach();
     }
 
     /**
      * 设置变换模式
-     * @param {string} mode - 'translate', 'rotate', 或 'scale'
+     * @param {string} mode - 'select', 'translate', 'rotate', 或 'scale'
      */
     setMode(mode) {
-        const object = this.controls.object;
-        if (mode === 'scale' && object?.userData?.modelType === 'GaussianSplat') {
-            message.warning('高斯泼溅模型不支持缩放工具，仅支持等比缩放，请到属性面板缩放修改大小');
-            return;
+        if (!['select', 'translate', 'rotate', 'scale'].includes(mode)) {
+            return false;
         }
 
-        this.controls.setMode(mode);
+        const object = this.selectedObject;
+        if (mode === 'scale' && object?.userData?.modelType === 'GaussianSplat') {
+            message.warning('高斯泼溅模型不支持缩放工具，仅支持等比缩放，请到属性面板缩放修改大小');
+            return false;
+        }
+
+        this.updateMode(mode);
+        return true;
+    }
+
+    updateMode(mode) {
+        this.mode = mode;
+
+        if (mode === 'select') {
+            this.controls.detach();
+        } else {
+            this.controls.setMode(mode);
+            if (this.selectedObject) {
+                this.controls.attach(this.selectedObject);
+            }
+        }
+
+        window.dispatchEvent(new CustomEvent('transform-mode-changed', {
+            detail: { mode }
+        }));
+    }
+
+    getMode() {
+        return this.mode;
     }
 
     /**
@@ -128,6 +165,7 @@ export class TransformManager {
         this.sceneManager?.removeOverlayObject(this.helper);
         this.controls.dispose();
         this.helper = null;
+        this.selectedObject = null;
         this.sceneManager = null;
         this.historyManager = null;
         this.persistenceManager = null;
