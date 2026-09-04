@@ -6,10 +6,10 @@
       </button>
     </div>
     <div class="group">
-      <button :class="{ active: transformMode === 'select' }" @click="setMode('select')">选择</button>
-      <button :class="{ active: transformMode === 'translate' }" @click="setMode('translate')">移动</button>
-      <button :class="{ active: transformMode === 'rotate' }" @click="setMode('rotate')">旋转</button>
-      <button :class="{ active: transformMode === 'scale' }" @click="setMode('scale')">缩放</button>
+      <button :class="{ active: transformMode === 'translate' }" title="移动；再次点击或按 Esc 返回选择" @click="toggleTransformMode('translate')">移动</button>
+      <button :class="{ active: transformMode === 'rotate' }" title="旋转；再次点击或按 Esc 返回选择" @click="toggleTransformMode('rotate')">旋转</button>
+      <button :class="{ active: transformMode === 'scale' }" title="缩放；再次点击或按 Esc 返回选择" @click="toggleTransformMode('scale')">缩放</button>
+      <span class="mode-status">当前：{{ transformModeLabel }}</span>
     </div>
     <div class="group">
       <button @click="undo">撤销</button>
@@ -72,6 +72,12 @@ const isFeatured = computed(() => editorStore.sceneMetadata?.isFeatured || false
 const isUnlocked = computed(() => editorStore.isUnlocked);
 const canSave = computed(() => !isFeatured.value || isUnlocked.value);
 const allowPartialSave = computed(() => editorStore.allowPartialSave);
+const transformModeLabel = computed(() => ({
+  select: '选择',
+  translate: '移动',
+  rotate: '旋转',
+  scale: '缩放'
+})[transformMode.value] || '选择');
 
 const openUnlockModal = () => {
   showUnlockModal.value = true;
@@ -113,6 +119,16 @@ const setMode = (mode) => {
   const transformManager = window.editor?.transformManager;
   if (transformManager?.setMode(mode)) {
     transformMode.value = transformManager.getMode();
+  }
+};
+
+const toggleTransformMode = (mode) => {
+  setMode(transformMode.value === mode ? 'select' : mode);
+};
+
+const onKeyDown = (event) => {
+  if (event.key === 'Escape' && transformMode.value !== 'select') {
+    setMode('select');
   }
 };
 
@@ -171,6 +187,7 @@ let autoSaveTimer = null;
 
 onMounted(() => {
   window.addEventListener('transform-mode-changed', onTransformModeChanged);
+  window.addEventListener('keydown', onKeyDown);
   transformMode.value = window.editor?.transformManager?.getMode() || 'select';
 
   autoSaveTimer = setInterval(() => {
@@ -182,6 +199,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('transform-mode-changed', onTransformModeChanged);
+  window.removeEventListener('keydown', onKeyDown);
   if (autoSaveTimer) {
     clearInterval(autoSaveTimer);
   }
@@ -198,6 +216,7 @@ onUnmounted(() => {
 
 .group {
   display: flex;
+  align-items: center;
   gap: 5px;
 }
 
@@ -215,6 +234,13 @@ button:hover {
 
 button.active {
   background: #0066cc;
+}
+
+.mode-status {
+  margin-left: 4px;
+  color: #aaa;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .save-btn {
