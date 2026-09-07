@@ -12,6 +12,9 @@
         <span class="brand-text">Meteor3D</span>
       </div>
       <div class="nav-links">
+        <button class="language-switch" type="button" :aria-label="locale === 'en' ? '切换到简体中文' : 'Switch to English'" @click="toggleLocale">
+          {{ locale === 'en' ? '简体中文' : 'English' }}
+        </button>
         <a href="https://github.com/nikonikoCW/Meteor3DEditor" target="_blank" class="github-btn">
           <svg class="github-icon" viewBox="0 0 24 24" width="20" height="20">
             <path fill="currentColor" d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
@@ -27,14 +30,14 @@
       <h1 class="title">
         <span class="title-gradient">Meteor3D</span>
       </h1>
-      <p class="subtitle">AI 驱动的 3D 数字孪生低代码平台</p>
+      <p class="subtitle">{{ t("AI 驱动的 3D 数字孪生低代码平台") }}</p>
       <p class="description">
-        拖拽搭建三维场景与可视化大屏，统一管理 3D 资产<br>
-        并通过 AI 控制场景、通过 SDK 嵌入业务系统
+        {{ t("拖拽搭建三维场景与可视化大屏，统一管理 3D 资产") }}<br>
+        {{ t("并通过 AI 控制场景、通过 SDK 嵌入业务系统") }}
       </p>
       <div class="hero-actions">
         <a class="btn-primary" href="https://editor.meteor3d.cn">
-          <span class="btn-text">开始创作</span>
+          <span class="btn-text">{{ t("开始创作") }}</span>
           <span class="btn-arrow">→</span>
         </a>
         <a href="https://github.com/nikonikoCW/Meteor3DEditor" target="_blank" class="btn-secondary">
@@ -50,57 +53,57 @@
     <section class="products-section">
       <h2 class="section-title">
         <span class="section-icon">🚀</span>
-        产品矩阵
+        {{ t("产品矩阵") }}
       </h2>
       <div class="products-grid">
         <a class="product-card" href="https://editor.meteor3d.cn">
           <div class="card-glow"></div>
           <div class="product-icon">🎨</div>
-          <h3 class="product-title">3D 场景编辑器</h3>
+          <h3 class="product-title">{{ t("3D 场景编辑器") }}</h3>
           <p class="product-desc">
-            强大的 3D 场景编辑器，支持模型导入、变换操作、材质编辑等功能
+            {{ t("强大的 3D 场景编辑器，支持模型导入、变换操作、材质编辑等功能") }}
           </p>
-          <div class="product-action">进入编辑器 →</div>
+          <div class="product-action">{{ t("进入编辑器 →") }}</div>
         </a>
 
         <a class="product-card" href="https://ai-scene.meteor3d.cn">
           <div class="card-glow"></div>
           <div class="product-icon">🤖</div>
-          <h3 class="product-title">AI 空间场景</h3>
+          <h3 class="product-title">{{ t("AI 空间场景") }}</h3>
           <p class="product-desc">
-            AI 驱动的 3D 场景交互体验，自然语言控制天气、高亮、运镜等空间操作
+            {{ t("AI 驱动的 3D 场景交互体验，自然语言控制天气、高亮、运镜等空间操作") }}
           </p>
-          <div class="product-action">进入 AI 场景 →</div>
+          <div class="product-action">{{ t("进入 AI 场景 →") }}</div>
         </a>
 
         <a class="product-card" href="https://assets.meteor3d.cn">
           <div class="card-glow"></div>
           <div class="product-icon">📦</div>
-          <h3 class="product-title">资产管理</h3>
+          <h3 class="product-title">{{ t("资产管理") }}</h3>
           <p class="product-desc">
-            集中管理您的 3D 模型、贴图、HDRI 等资产，支持上传、下载和预览
+            {{ t("集中管理您的 3D 模型、贴图、HDRI 等资产，支持上传、下载和预览") }}
           </p>
-          <div class="product-action">管理资产 →</div>
+          <div class="product-action">{{ t("管理资产 →") }}</div>
         </a>
 
         <a class="product-card" href="https://appeditor.meteor3d.cn">
           <div class="card-glow"></div>
           <div class="product-icon">📊</div>
-          <h3 class="product-title">大屏应用编辑器</h3>
+          <h3 class="product-title">{{ t("大屏应用编辑器") }}</h3>
           <p class="product-desc">
-            大屏可视化项目开发，拖拽式页面搭建，数据绑定与场景组件嵌入
+            {{ t("大屏可视化项目开发，拖拽式页面搭建，数据绑定与场景组件嵌入") }}
           </p>
-          <div class="product-action">开始开发 →</div>
+          <div class="product-action">{{ t("开始开发 →") }}</div>
         </a>
 
         <a class="product-card" href="https://api-docs.meteor3d.cn">
           <div class="card-glow"></div>
           <div class="product-icon">📚</div>
-          <h3 class="product-title">API 文档</h3>
+          <h3 class="product-title">{{ t("API 文档") }}</h3>
           <p class="product-desc">
-            Core SDK 使用文档，一行代码嵌入 3D 场景到任意网页
+            {{ t("Core SDK 使用文档，一行代码嵌入 3D 场景到任意网页") }}
           </p>
-          <div class="product-action">查看文档 →</div>
+          <div class="product-action">{{ t("查看文档 →") }}</div>
         </a>
       </div>
     </section>
@@ -109,55 +112,55 @@
     <section class="features-section">
       <h2 class="section-title">
         <span class="section-icon">✨</span>
-        功能亮点
+        {{ t("功能亮点") }}
       </h2>
       <div class="features-grid">
         <div class="feature-item">
           <div class="feature-icon-wrapper">
             <span class="feature-icon">⚡</span>
           </div>
-          <h4 class="feature-title">高性能渲染</h4>
-          <p class="feature-desc">基于 Three.js 的 WebGL 渲染引擎，流畅处理复杂场景</p>
+          <h4 class="feature-title">{{ t("高性能渲染") }}</h4>
+          <p class="feature-desc">{{ t("基于 Three.js 的 WebGL 渲染引擎，流畅处理复杂场景") }}</p>
         </div>
 
         <div class="feature-item">
           <div class="feature-icon-wrapper">
             <span class="feature-icon">🌍</span>
           </div>
-          <h4 class="feature-title">GIS 坐标支持</h4>
-          <p class="feature-desc">支持经纬度与世界坐标互转，轻松构建地理信息可视化</p>
+          <h4 class="feature-title">{{ t("GIS 坐标支持") }}</h4>
+          <p class="feature-desc">{{ t("支持经纬度与世界坐标互转，轻松构建地理信息可视化") }}</p>
         </div>
 
         <div class="feature-item">
           <div class="feature-icon-wrapper">
             <span class="feature-icon">📁</span>
           </div>
-          <h4 class="feature-title">多格式支持</h4>
-          <p class="feature-desc">支持 GLTF/GLB、FBX 等主流 3D 格式，Draco 压缩优化</p>
+          <h4 class="feature-title">{{ t("多格式支持") }}</h4>
+          <p class="feature-desc">{{ t("支持 GLTF/GLB、FBX 等主流 3D 格式，Draco 压缩优化") }}</p>
         </div>
 
         <div class="feature-item">
           <div class="feature-icon-wrapper">
             <span class="feature-icon">☁️</span>
           </div>
-          <h4 class="feature-title">云端存储</h4>
-          <p class="feature-desc">场景与资产云端同步，随时随地继续创作</p>
+          <h4 class="feature-title">{{ t("云端存储") }}</h4>
+          <p class="feature-desc">{{ t("场景与资产云端同步，随时随地继续创作") }}</p>
         </div>
 
         <div class="feature-item">
           <div class="feature-icon-wrapper">
             <span class="feature-icon">🔌</span>
           </div>
-          <h4 class="feature-title">SDK 集成</h4>
-          <p class="feature-desc">Core SDK 独立打包，一行代码嵌入第三方应用</p>
+          <h4 class="feature-title">{{ t("SDK 集成") }}</h4>
+          <p class="feature-desc">{{ t("Core SDK 独立打包，一行代码嵌入第三方应用") }}</p>
         </div>
 
         <div class="feature-item">
           <div class="feature-icon-wrapper">
             <span class="feature-icon">🎯</span>
           </div>
-          <h4 class="feature-title">可视化操作</h4>
-          <p class="feature-desc">拖拽式场景搭建，属性面板实时编辑，所见即所得</p>
+          <h4 class="feature-title">{{ t("可视化操作") }}</h4>
+          <p class="feature-desc">{{ t("拖拽式场景搭建，属性面板实时编辑，所见即所得") }}</p>
         </div>
       </div>
     </section>
@@ -167,9 +170,9 @@
       <div class="contact-card">
         <h2 class="contact-title">
           <span class="section-icon">📧</span>
-          联系我们
+          {{ t("联系我们") }}
         </h2>
-        <p class="contact-desc">如有任何问题或合作意向，欢迎联系</p>
+        <p class="contact-desc">{{ t("如有任何问题或合作意向，欢迎联系") }}</p>
         <div class="contact-methods">
           <a href="mailto:84675738@qq.com" class="contact-method">
             <span class="contact-icon">✉️</span>
@@ -179,7 +182,7 @@
             <span class="contact-icon">
               <svg t="1784856669536" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1751" width="32" height="32"><path d="M1024 619.52c0-143.36-138.24-256-307.2-256s-307.2 112.64-307.2 256 138.24 256 307.2 256c30.72 0 61.44-5.12 92.16-10.24l97.28 51.2-25.6-76.8c87.04-51.2 143.36-128 143.36-220.16z m-414.72-40.96c-30.72 0-51.2-20.48-51.2-51.2s20.48-51.2 51.2-51.2 51.2 20.48 51.2 51.2c0 25.6-25.6 51.2-51.2 51.2z m209.92 0c-30.72 0-51.2-20.48-51.2-51.2s20.48-51.2 51.2-51.2 51.2 20.48 51.2 51.2c0 25.6-25.6 51.2-51.2 51.2z" fill="#4CBF00" p-id="1752"></path><path d="M358.4 609.28c0-158.72 153.6-286.72 348.16-286.72h15.36c-40.96-133.12-179.2-235.52-353.28-235.52-204.8 0-368.64 138.24-368.64 307.2 0 107.52 66.56 204.8 168.96 256l-30.72 92.16L256 686.08c35.84 10.24 71.68 15.36 112.64 15.36h10.24c-15.36-30.72-20.48-61.44-20.48-92.16z m138.24-414.72c35.84 0 66.56 30.72 66.56 66.56s-30.72 66.56-66.56 66.56C460.8 322.56 430.08 291.84 430.08 256S460.8 194.56 496.64 194.56zM245.76 322.56c-35.84 0-61.44-30.72-61.44-66.56s30.72-66.56 66.56-66.56 61.44 30.72 61.44 66.56-30.72 66.56-66.56 66.56z" fill="#4CBF00" p-id="1753"></path></svg>
             </span>
-            微信：niccww
+            {{ t("微信：niccww") }}
           </div>
         </div>
       </div>
@@ -195,24 +198,24 @@
         <div class="footer-links">
           <a href="https://github.com/nikonikoCW/Meteor3DEditor" target="_blank">GitHub</a>
           <span class="divider">|</span>
-          <a href="mailto:84675738@qq.com">联系我们</a>
+          <a href="mailto:84675738@qq.com">{{ t("联系我们") }}</a>
         </div>
-        <nav class="footer-seo-links" aria-label="解决方案">
-          <RouterLink to="/solutions/digital-twin">数字孪生</RouterLink>
-          <RouterLink to="/solutions/3d-showroom">3D 数字展厅</RouterLink>
-          <RouterLink to="/solutions/digital-cultural-exhibition">数字文化展厅</RouterLink>
-          <RouterLink to="/solutions/smart-park">智慧园区</RouterLink>
-          <RouterLink to="/products/gaussian-splatting">高斯泼溅</RouterLink>
-          <RouterLink to="/products/low-code-3d">3D 低代码</RouterLink>
+        <nav class="footer-seo-links" :aria-label="t('解决方案')">
+          <RouterLink to="/solutions/digital-twin">{{ t("数字孪生") }}</RouterLink>
+          <RouterLink to="/solutions/3d-showroom">{{ t("3D 数字展厅") }}</RouterLink>
+          <RouterLink to="/solutions/digital-cultural-exhibition">{{ t("数字文化展厅") }}</RouterLink>
+          <RouterLink to="/solutions/smart-park">{{ t("智慧园区") }}</RouterLink>
+          <RouterLink to="/products/gaussian-splatting">{{ t("高斯泼溅") }}</RouterLink>
+          <RouterLink to="/products/low-code-3d">{{ t("3D 低代码") }}</RouterLink>
         </nav>
         <div class="footer-partners">
-          <span class="partner-label">云存储服务支持</span>
+          <span class="partner-label">{{ t("云存储服务支持") }}</span>
           <a href="https://www.upyun.com/?utm_source=lianmeng&utm_medium=referral" target="_blank">
-            <img src="/又拍云_logo3.png" alt="又拍云" class="partner-logo" />
+            <img src="/又拍云_logo3.png" :alt="t('又拍云')" class="partner-logo" />
           </a>
         </div>
         <div class="footer-copyright">
-          © 2025 Meteor3DEditor. 保留所有权利。
+          {{ t("© 2025 Meteor3DEditor. 保留所有权利。") }}
         </div>
       </div>
     </footer>
@@ -220,6 +223,84 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
+
+const messages = {
+  'AI 驱动的 3D 数字孪生低代码平台': 'AI-powered low-code platform for 3D digital twins',
+  '拖拽搭建三维场景与可视化大屏，统一管理 3D 资产': 'Build 3D scenes and dashboards with drag and drop, and manage your 3D assets',
+  '并通过 AI 控制场景、通过 SDK 嵌入业务系统': 'Control scenes with AI and embed them in your applications with the SDK',
+  '开始创作': 'Start creating',
+  '产品矩阵': 'Products',
+  '3D 场景编辑器': '3D Scene Editor',
+  '强大的 3D 场景编辑器，支持模型导入、变换操作、材质编辑等功能': 'A powerful 3D editor with model import, transforms, material editing, and more',
+  '进入编辑器 →': 'Open editor →',
+  'AI 空间场景': 'AI Scenes',
+  'AI 驱动的 3D 场景交互体验，自然语言控制天气、高亮、运镜等空间操作': 'Interact with 3D scenes using natural language to control weather, highlights, and cameras',
+  '进入 AI 场景 →': 'Open AI Scenes →',
+  '资产管理': 'Asset Manager',
+  '集中管理您的 3D 模型、贴图、HDRI 等资产，支持上传、下载和预览': 'Manage 3D models, textures, and HDRIs with upload, download, and preview support',
+  '管理资产 →': 'Manage assets →',
+  '大屏应用编辑器': 'Dashboard Editor',
+  '大屏可视化项目开发，拖拽式页面搭建，数据绑定与场景组件嵌入': 'Build visual dashboards with drag-and-drop layouts, data binding, and embedded 3D scenes',
+  '开始开发 →': 'Start building →',
+  'API 文档': 'API Documentation',
+  'Core SDK 使用文档，一行代码嵌入 3D 场景到任意网页': 'Core SDK documentation for embedding 3D scenes in any web page',
+  '查看文档 →': 'Read documentation →',
+  '功能亮点': 'Features',
+  '高性能渲染': 'High-performance rendering',
+  '基于 Three.js 的 WebGL 渲染引擎，流畅处理复杂场景': 'A Three.js WebGL engine that renders complex scenes smoothly',
+  'GIS 坐标支持': 'GIS coordinates',
+  '支持经纬度与世界坐标互转，轻松构建地理信息可视化': 'Convert between geographic and world coordinates for geospatial visualization',
+  '多格式支持': 'Multiple formats',
+  '支持 GLTF/GLB、FBX 等主流 3D 格式，Draco 压缩优化': 'Support for GLTF/GLB, FBX, and other popular formats with Draco compression',
+  '云端存储': 'Cloud storage',
+  '场景与资产云端同步，随时随地继续创作': 'Sync scenes and assets to the cloud and keep creating anywhere',
+  'SDK 集成': 'SDK integration',
+  'Core SDK 独立打包，一行代码嵌入第三方应用': 'Embed scenes in third-party applications with the standalone Core SDK',
+  '可视化操作': 'Visual editing',
+  '拖拽式场景搭建，属性面板实时编辑，所见即所得': 'Build scenes with drag and drop and edit properties with instant visual feedback',
+  '联系我们': 'Contact us',
+  '如有任何问题或合作意向，欢迎联系': 'Get in touch with questions or partnership inquiries',
+  '微信：niccww': 'WeChat: niccww',
+  '解决方案': 'Solutions',
+  '数字孪生': 'Digital twins',
+  '3D 数字展厅': '3D showrooms',
+  '数字文化展厅': 'Cultural exhibitions',
+  '智慧园区': 'Smart parks',
+  '高斯泼溅': 'Gaussian splatting',
+  '3D 低代码': 'Low-code 3D',
+  '云存储服务支持': 'Cloud storage by',
+  '又拍云': 'UPYUN',
+  '© 2025 Meteor3DEditor. 保留所有权利。': '© 2025 Meteor3DEditor. All rights reserved.'
+}
+
+const getInitialLocale = () => {
+  try {
+    const saved = localStorage.getItem('meteor3d.dashboard.locale')
+    if (saved === 'zh-CN' || saved === 'en') return saved
+  } catch {}
+  return navigator.language?.toLowerCase().startsWith('en') ? 'en' : 'zh-CN'
+}
+
+const locale = ref(getInitialLocale())
+const t = (message) => locale.value === 'en' ? messages[message] || message : message
+const saveLocale = () => {
+  document.documentElement.lang = locale.value
+  document.title = locale.value === 'en'
+    ? 'Meteor3D - AI-powered low-code platform for 3D digital twins'
+    : 'Meteor3D - AI驱动的3D数字孪生低代码平台'
+  try {
+    localStorage.setItem('meteor3d.dashboard.locale', locale.value)
+  } catch {}
+}
+
+const toggleLocale = () => {
+  locale.value = locale.value === 'en' ? 'zh-CN' : 'en'
+  saveLocale()
+}
+
+saveLocale()
+
 // 生成随机粒子样式
 const getParticleStyle = (n) => {
   const size = Math.random() * 4 + 1
@@ -727,6 +808,26 @@ const getParticleStyle = (n) => {
 
 .footer-links .divider {
   color: var(--border-color);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.language-switch {
+  padding: 10px 12px;
+  color: var(--text-primary);
+  background: #14141e;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.language-switch:hover {
+  border-color: var(--primary);
 }
 
 .footer-seo-links {
