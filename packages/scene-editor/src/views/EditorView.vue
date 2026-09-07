@@ -92,7 +92,7 @@ const rightTabs = [
   {
     id: 'camera-speed',
     title: '鼠标键盘',
-    icon: 'me-jianpan'
+    icon: 'me-shubiaojianpan1'
   },
   {
     id: 'animation',
