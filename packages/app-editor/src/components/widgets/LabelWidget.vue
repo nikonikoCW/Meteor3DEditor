@@ -6,6 +6,7 @@
 <script setup>
 import { inject, watch, onMounted, onBeforeUnmount, ref } from 'vue';
 import { useAppStore } from '../../stores/appStore';
+import { getLabelLocation } from '../../utils/labelCoordinates';
 
 const props = defineProps({
   data: {
@@ -98,15 +99,18 @@ const createLabels = () => {
 
   // 批量创建标签
   for (const labelData of labels) {
+    let location;
+    try {
+      location = getLabelLocation(labelData);
+    } catch (error) {
+      console.warn('[LabelWidget] 跳过坐标无效的标签:', error.message);
+      continue;
+    }
     const content = renderTemplate(template, labelData);
     
     const labelId = instance.createLabel({
       id: labelData.id || undefined,
-      lngLat: {
-        lng: labelData.lng,
-        lat: labelData.lat,
-        height: labelData.height || 0
-      },
+      ...location,
       content: content,
       style: {} // 样式通过 CSS 注入
     });

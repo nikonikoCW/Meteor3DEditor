@@ -64,6 +64,7 @@ const initScene = async (id) => {
         autoResize: true
       }
     });
+    window.meteor3d = coreInstance
 
     // 场景加载完成，更新 Store
     appStore.setSceneReady(true, coreInstance);

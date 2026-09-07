@@ -6,6 +6,7 @@
 <script setup>
 import { inject, watch, onMounted, onBeforeUnmount, ref } from 'vue';
 import { useAppStore } from '../../stores/appStore';
+import { getLabelLocation as getLocation } from '../../utils/labelCoordinates';
 
 const props = defineProps({
   // 基础属性
@@ -68,20 +69,26 @@ const updateEffect = () => {
     return;
   }
   items.forEach(item => {
-    // 坐标转换
-    let position = { x: 0, y: 0, z: 0 };
-    if (item.lng !== undefined && item.lat !== undefined) {
-      const worldPos = instance.lngLatToWorld(item.lng, item.lat, item.height || 0);
-      if (worldPos) {
-        position = worldPos;
+    let position;
+    try {
+      const location = getLocation(item);
+      position = location.position ?? instance.lngLatToWorld(
+        location.lngLat.lng, location.lngLat.lat, location.lngLat.height
+      );
+      if (!position) {
+        console.warn('[ScanWidget] 跳过无法转换经纬度的特效，请先启用地理环境');
+        return;
       }
+    } catch (error) {
+      console.warn('[ScanWidget] 跳过坐标无效的特效:', error.message);
+      return;
     }
 
     const config = {
       position: position,
-      scale: props.scale,
-      color: props.color,
-      repeat: props.repeat,
+      scale: props.data.scale ?? props.scale,
+      color: props.data.color ?? props.color,
+      repeat: props.data.repeat ?? props.repeat,
       // speed 目前 shader 中直接使用 uTime，如果需要控制速度，可能需要修改 shader 或传入 timeScale
     };
     const effect = instance.createEffect('scan', config);
@@ -117,7 +124,6 @@ watch(() => props.enabled, (isEnabled) => {
     clearEffects();
   }
 });
-console.log(sceneContext);
 
 // 监听场景就绪状态
 watch(() => appStore.isSceneReady, (isReady) => {

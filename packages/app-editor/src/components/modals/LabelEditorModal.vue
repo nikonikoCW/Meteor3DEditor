@@ -52,13 +52,14 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 import { Codemirror } from 'vue-codemirror';
 import { html } from '@codemirror/lang-html';
 import { css } from '@codemirror/lang-css';
 import { json } from '@codemirror/lang-json';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { message } from '../../utils/message';
+import { getLabelLocation } from '../../utils/labelCoordinates';
 
 const props = defineProps({
   visible: Boolean,
@@ -190,6 +191,14 @@ const runPreview = () => {
 const apply = () => {
   try {
     const labels = JSON.parse(localCode.value.labels);
+    if (!Array.isArray(labels)) throw new Error('标签数据必须是 JSON 数组');
+    labels.forEach((label, index) => {
+      try {
+        getLabelLocation(label);
+      } catch (error) {
+        throw new Error(`第 ${index + 1} 条标签：${error.message}`);
+      }
+    });
     emit('update:modelValue', {
       template: localCode.value.template,
       style: localCode.value.style,
@@ -198,7 +207,7 @@ const apply = () => {
     close();
     message.success('配置已应用');
   } catch (e) {
-    message.error('无法应用：JSON 格式错误');
+    message.error('无法应用：' + e.message);
   }
 };
 

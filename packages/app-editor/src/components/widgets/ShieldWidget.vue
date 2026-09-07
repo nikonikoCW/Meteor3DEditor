@@ -6,6 +6,7 @@
 <script setup>
 import { inject, watch, onMounted, onBeforeUnmount, ref } from 'vue';
 import { useAppStore } from '../../stores/appStore';
+import { getLabelLocation as getLocation } from '../../utils/labelCoordinates';
 
 const props = defineProps({
   data: {
@@ -76,19 +77,25 @@ const updateEffect = () => {
     return;
   }
   items.forEach(item => {
-    // 坐标转换
-    let position = { x: 0, y: 0, z: 0 };
-    if (item.lng !== undefined && item.lat !== undefined) {
-      const worldPos = instance.lngLatToWorld(item.lng, item.lat, item.height || 0);
-      if (worldPos) {
-        position = worldPos;
+    let position;
+    try {
+      const location = getLocation(item);
+      position = location.position ?? instance.lngLatToWorld(
+        location.lngLat.lng, location.lngLat.lat, location.lngLat.height
+      );
+      if (!position) {
+        console.warn('[ShieldWidget] 跳过无法转换经纬度的特效，请先启用地理环境');
+        return;
       }
+    } catch (error) {
+      console.warn('[ShieldWidget] 跳过坐标无效的特效:', error.message);
+      return;
     }
 
     const config = {
       position: position,
-      scale: props.scale, // 使用全局缩放
-      color: props.color  // 使用全局颜色
+      scale: props.data.scale ?? props.scale, // 属性面板参数存储在 data 中
+      color: props.data.color ?? props.color
     };
 
     const effect = instance.createEffect('shield', config);
