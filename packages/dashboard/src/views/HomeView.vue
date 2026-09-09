@@ -109,9 +109,9 @@
         <a class="product-card" href="https://3dgstrain.meteor3d.cn/app/">
           <div class="card-glow"></div>
           <div class="product-icon">✨</div>
-          <h3 class="product-title">{{ t("高斯泼溅训练") }}</h3>
+          <h3 class="product-title">{{ t("WebGPU 高斯泼溅训练") }}</h3>
           <p class="product-desc">
-            {{ t("在线训练高斯泼溅模型，将图片生成可交互的 3D 场景") }}
+            {{ t("基于 WebGPU 在浏览器中训练高斯泼溅模型，将图片生成可交互的 3D 场景") }}
           </p>
           <div class="product-action">{{ t("开始训练 →") }}</div>
         </a>
@@ -256,8 +256,8 @@ const messages = {
   'API 文档': 'API Documentation',
   'Core SDK 使用文档，一行代码嵌入 3D 场景到任意网页': 'Core SDK documentation for embedding 3D scenes in any web page',
   '查看文档 →': 'Read documentation →',
-  '高斯泼溅训练': 'Gaussian Splatting Training',
-  '在线训练高斯泼溅模型，将图片生成可交互的 3D 场景': 'Train Gaussian splatting models online and turn images into interactive 3D scenes',
+  'WebGPU 高斯泼溅训练': 'WebGPU Gaussian Splatting Training',
+  '基于 WebGPU 在浏览器中训练高斯泼溅模型，将图片生成可交互的 3D 场景': 'Train Gaussian splatting models with WebGPU in your browser and turn images into interactive 3D scenes',
   '开始训练 →': 'Start training →',
   '功能亮点': 'Features',
   '高性能渲染': 'High-performance rendering',
