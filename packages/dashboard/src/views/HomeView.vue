@@ -8,7 +8,7 @@
     <!-- 导航栏 -->
     <nav class="navbar">
       <div class="nav-brand">
-        <span class="brand-icon">🌟</span>
+        <img class="brand-icon" src="/meteor-min.png" alt="Meteor3D Logo">
         <span class="brand-text">Meteor3D</span>
       </div>
       <div class="nav-links">
@@ -202,7 +202,7 @@
     <footer class="footer">
       <div class="footer-content">
         <div class="footer-brand">
-          <span class="brand-icon">🌟</span>
+          <img class="brand-icon" src="/meteor-min.png" alt="Meteor3D Logo">
           <span>Meteor3D</span>
         </div>
         <div class="footer-links">
@@ -411,7 +411,10 @@ const getParticleStyle = (n) => {
 }
 
 .brand-icon {
-  font-size: 28px;
+  display: block;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
 }
 
 .brand-text {
