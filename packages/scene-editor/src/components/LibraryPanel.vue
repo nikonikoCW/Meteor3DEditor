@@ -251,6 +251,7 @@ const isCloudAsset = (asset) => {
   );
 };
 const getRegisteredAssetUrl = (asset, fallbackField) => {
+  if (asset?.type === 'gaussian-splat' && asset.sourceType === 'upload') return _getAssetUrl(asset);
   return getCloudAssetUrl(asset) || asset?.[fallbackField] || '';
 };
 const getAssetUrl = (asset) => {

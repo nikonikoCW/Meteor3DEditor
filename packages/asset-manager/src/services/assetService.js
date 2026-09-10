@@ -373,3 +373,25 @@ export async function updateRegisteredAssetUrl(id, url) {
         throw error;
     }
 }
+
+export function uploadGaussianSplat(file, name, onProgress) {
+    return new Promise((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        request.open('POST', `${API_BASE_URL}/assets/upload-gaussian-splat`);
+        request.upload.onprogress = event => {
+            if (event.lengthComputable) onProgress?.(Math.round(event.loaded / event.total * 100));
+        };
+        request.onload = () => {
+            try {
+                const result = JSON.parse(request.responseText);
+                if (request.status < 200 || request.status >= 300) throw new Error(result.message || '上传失败');
+                resolve(result);
+            } catch (error) { reject(error); }
+        };
+        request.onerror = () => reject(new Error('网络错误，上传失败'));
+        const body = new FormData();
+        body.append('name', name);
+        body.append('file', file);
+        request.send(body);
+    });
+}

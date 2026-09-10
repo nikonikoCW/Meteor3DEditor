@@ -715,7 +715,8 @@ exports.registerTileset = async (req, res) => {
  */
 exports.registerGaussianSplat = async (req, res) => {
     try {
-        const { name, gaussianSplatUrl } = req.body;
+        const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+        const gaussianSplatUrl = typeof req.body.gaussianSplatUrl === 'string' ? req.body.gaussianSplatUrl.trim() : '';
 
         // 参数校验
         if (!name || !gaussianSplatUrl) {
@@ -726,7 +727,9 @@ exports.registerGaussianSplat = async (req, res) => {
         }
 
         // URL 必须是 http/https 开头
-        if (!gaussianSplatUrl.startsWith('http://') && !gaussianSplatUrl.startsWith('https://')) {
+        let validUrl = false;
+        try { validUrl = ['http:', 'https:'].includes(new URL(gaussianSplatUrl).protocol); } catch {}
+        if (!validUrl) {
             return res.status(400).json({
                 success: false,
                 message: 'URL 必须以 http:// 或 https:// 开头'
@@ -738,6 +741,7 @@ exports.registerGaussianSplat = async (req, res) => {
             name: name,
             originalName: name,
             type: 'gaussian-splat',
+            sourceType: 'external',
             format: 'gaussian-splat',
             gaussianSplatUrl: gaussianSplatUrl,
             processingStatus: 'skipped'
@@ -783,6 +787,10 @@ exports.updateRegisteredAssetUrl = async (req, res) => {
             'gaussian-splat': 'gaussianSplatUrl'
         };
         const urlField = urlFieldByType[asset.type];
+
+        if (asset.type === 'gaussian-splat' && asset.sourceType === 'upload') {
+            return res.status(400).json({ success: false, message: '上传的高斯泼溅不支持修改外部 URL' });
+        }
 
         if (!urlField) {
             return res.status(400).json({
@@ -835,3 +843,33 @@ exports.updateRegisteredAssetUrl = async (req, res) => {
     }
 };
 
+
+// Preserve Spark-supported files without model conversion; only raw .splat uses 32-byte records.
+exports.uploadGaussianSplat = async (req, res) => {
+    const file = req.file;
+    if (!file) return res.status(400).json({ success: false, message: '请选择高斯泼溅文件' });
+    try {
+        const format = path.extname(file.originalname).slice(1).toLowerCase();
+        if (!file.size || (format === 'splat' && file.size % 32 !== 0)) {
+            removeFileIfExists(file.path);
+            return res.status(400).json({ success: false, message: !file.size ? '不能上传空文件' : '无效的 .splat 文件：文件大小必须是 32 字节的整数倍' });
+        }
+        const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+        const asset = await Asset.create({
+            name: name || path.parse(file.originalname).name,
+            originalName: file.originalname,
+            type: 'gaussian-splat',
+            sourceType: 'upload',
+            format,
+            filePath: file.path,
+            fileSize: file.size,
+            url: toUploadUrl(file.path),
+            assetVersionId: crypto.randomUUID(),
+            processingStatus: 'skipped'
+        });
+        return res.status(201).json({ success: true, message: '高斯泼溅上传成功', asset });
+    } catch (error) {
+        removeFileIfExists(file.path);
+        return res.status(500).json({ success: false, message: '高斯泼溅上传失败' });
+    }
+};

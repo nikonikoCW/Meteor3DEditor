@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const assetController = require('../controllers/assetController');
 const upload = require('../config/upload');
+const gaussianSplatUpload = require('../config/gaussianSplatUpload');
 
 /**
  * 资产 API 路由
@@ -48,5 +49,6 @@ router.post('/register-tileset', assetController.registerTileset);
 
 // POST /api/assets/register-gaussian-splat - 注册高斯泼溅
 router.post('/register-gaussian-splat', assetController.registerGaussianSplat);
+router.post('/upload-gaussian-splat', gaussianSplatUpload, assetController.uploadGaussianSplat);
 
 module.exports = router;

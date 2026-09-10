@@ -76,6 +76,10 @@ const AssetSchema = new mongoose.Schema({
     gaussianSplatUrl: {
         type: String // 例如: https://example.com/splats/scene.splat
     },
+    sourceType: {
+        type: String,
+        enum: ['upload', 'external']
+    },
 
     // ========== 流水线处理相关字段 ==========
 

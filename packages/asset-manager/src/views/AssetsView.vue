@@ -13,7 +13,7 @@
           <span>🌐</span> 注册 3D Tiles
         </button>
         <button class="register-btn" @click="showGaussianSplatDialog = true">
-          <span>✨</span> 注册高斯泼溅
+          <span>✨</span> 添加高斯泼溅
         </button>
       </div>
     </div>
@@ -382,33 +382,53 @@
       </div>
     </div>
 
-    <!-- 高斯泼溅注册对话框 -->
-    <div v-if="showGaussianSplatDialog" class="dialog-overlay" @click.self="showGaussianSplatDialog = false">
-      <div class="dialog">
-        <h3>✨ 注册高斯泼溅</h3>
-
-        <div class="form-group">
-          <label>资产名称</label>
-          <input
-            type="text"
-            v-model="gaussianSplatForm.name"
-            placeholder="例如：展厅高斯泼溅"
-          />
-        </div>
-
-        <div class="form-group">
-          <label>高斯泼溅 URL</label>
-          <input
-            type="text"
-            v-model="gaussianSplatForm.gaussianSplatUrl"
-            placeholder="https://example.com/splats/scene.splat"
-          />
-        </div>
-
+    <!-- 高斯泼溅添加对话框 -->
+    <div v-if="showGaussianSplatDialog" class="dialog-overlay" @click.self="!gaussianSplatBusy && (showGaussianSplatDialog = false)">
+      <div class="dialog gaussian-dialog" role="dialog" aria-modal="true" aria-labelledby="gaussian-dialog-title">
+        <h3 id="gaussian-dialog-title">添加高斯泼溅</h3>
+        <fieldset :disabled="gaussianSplatBusy" class="gaussian-form">
+          <div class="gaussian-modes" role="group" aria-label="添加方式">
+            <button type="button" :class="{ active: gaussianSplatMode === 'upload' }" :aria-pressed="gaussianSplatMode === 'upload'" @click="gaussianSplatMode = 'upload'">上传文件</button>
+            <button type="button" :class="{ active: gaussianSplatMode === 'external' }" :aria-pressed="gaussianSplatMode === 'external'" @click="gaussianSplatMode = 'external'">注册地址</button>
+          </div>
+          <div class="form-group">
+            <label for="gaussian-name">资产名称</label>
+            <input id="gaussian-name" type="text" v-model="gaussianSplatForm.name" placeholder="例如：展厅高斯泼溅" />
+          </div>
+          <div v-show="gaussianSplatMode === 'upload'">
+            <input ref="gaussianFileInput" type="file" accept=".splat,.ply,.spz,.ksplat,.sog,.zip,.rad" class="asset-upload-file-input" @change="handleGaussianSplatFile" />
+            <div
+              class="asset-upload-drop-zone gaussian-drop-zone"
+              :class="{ dragging: gaussianDragOver, uploading: gaussianSplatBusy }"
+              role="button"
+              :tabindex="gaussianSplatBusy ? -1 : 0"
+              :aria-disabled="gaussianSplatBusy"
+              aria-label="选择或拖拽高斯泼溅文件"
+              @click="triggerGaussianFileInput"
+              @keydown.enter.prevent="triggerGaussianFileInput"
+              @keydown.space.prevent="triggerGaussianFileInput"
+              @dragover.prevent="!gaussianSplatBusy && (gaussianDragOver = true)"
+              @dragleave.prevent="gaussianDragOver = false"
+              @drop.prevent="handleGaussianSplatDrop"
+            >
+              <div class="asset-upload-icon">📤</div>
+              <div class="asset-upload-title">{{ gaussianSplatFile ? '点击或拖拽替换文件' : '拖拽或点击上传高斯泼溅文件' }}</div>
+              <div class="asset-upload-subtitle">支持 .splat、.ply、.spz、.ksplat、.sog、.zip、.rad</div>
+              <div class="asset-upload-subtitle">单个文件最大 30 MB；ZIP 仅支持 SOG 格式包</div>
+              <div v-if="gaussianSplatFile" class="asset-upload-file-name" :title="gaussianSplatFile.name">{{ gaussianSplatFile.name }}</div>
+            </div>
+          </div>
+          <div v-show="gaussianSplatMode === 'external'" class="form-group">
+            <label for="gaussian-url">高斯泼溅 URL</label>
+            <input id="gaussian-url" type="url" v-model="gaussianSplatForm.gaussianSplatUrl" placeholder="https://example.com/splats/scene.splat" />
+            <p class="gaussian-hint">支持 HTTP / HTTPS 资源地址</p>
+          </div>
+        </fieldset>
+        <p v-if="gaussianSplatBusy" class="asset-upload-status" role="status">{{ gaussianSplatMode === 'upload' ? `正在上传 ${gaussianSplatProgress}%（完成后保存资产）` : '正在注册…' }}</p>
         <div class="dialog-actions">
-          <button class="btn-cancel" @click="showGaussianSplatDialog = false">取消</button>
+          <button class="btn-cancel" @click="showGaussianSplatDialog = false" :disabled="gaussianSplatBusy">取消</button>
           <button class="btn-primary" @click="handleRegisterGaussianSplat" :disabled="!canRegisterGaussianSplat">
-            确认注册
+            {{ gaussianSplatBusy ? '提交中…' : gaussianSplatMode === 'upload' ? '确认上传' : '确认注册' }}
           </button>
         </div>
       </div>
@@ -419,7 +439,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
-import { uploadAsset, uploadCadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset, uploadThumbnail, getAssetsWithoutThumbnail, registerTileset, registerGaussianSplat, updateRegisteredAssetUrl, uploadAssetToCloud } from '../services/assetService';
+import { uploadAsset, uploadCadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset, uploadThumbnail, getAssetsWithoutThumbnail, registerTileset, registerGaussianSplat, uploadGaussianSplat, updateRegisteredAssetUrl, uploadAssetToCloud } from '../services/assetService';
 import { ASSET_BASE_URL } from '../config';
 import { ThumbnailGenerator } from '../utils/ThumbnailGenerator';
 import { message } from '../utils/message';
@@ -464,6 +484,38 @@ const tilesetForm = reactive({
 
 // 高斯泼溅注册状态
 const showGaussianSplatDialog = ref(false);
+const gaussianSplatMode = ref('upload');
+const gaussianSplatFile = ref(null);
+const gaussianSplatBusy = ref(false);
+const gaussianSplatProgress = ref(0);
+const gaussianFileInput = ref(null);
+const gaussianDragOver = ref(false);
+const triggerGaussianFileInput = () => {
+  if (!gaussianSplatBusy.value) gaussianFileInput.value?.click();
+};
+const selectGaussianSplatFile = (file) => {
+  if (!file || gaussianSplatBusy.value) return;
+  const extension = file.name.split('.').pop().toLowerCase();
+  if (!['splat', 'ply', 'spz', 'ksplat', 'sog', 'zip', 'rad'].includes(extension) || !file.size || file.size > 30 * 1024 * 1024 || (extension === 'splat' && file.size % 32 !== 0)) {
+    message.error('请选择支持的高斯泼溅文件，最大 30 MB');
+    return;
+  }
+  gaussianSplatFile.value = file;
+  if (!gaussianSplatForm.name.trim()) gaussianSplatForm.name = file.name.replace(/\.[^.]+$/, '');
+};
+const handleGaussianSplatFile = (event) => {
+  selectGaussianSplatFile(event.target.files?.[0]);
+  event.target.value = '';
+};
+const handleGaussianSplatDrop = (event) => {
+  gaussianDragOver.value = false;
+  if (gaussianSplatBusy.value) return;
+  if (event.dataTransfer.files.length > 1) {
+    message.error('每次请选择一个高斯泼溅文件');
+    return;
+  }
+  selectGaussianSplatFile(event.dataTransfer.files?.[0]);
+};
 const gaussianSplatForm = reactive({
   name: '',
   gaussianSplatUrl: ''
@@ -507,7 +559,7 @@ const filteredAssets = computed(() => {
   return assets.value.filter(asset => asset.type === currentFilter.value);
 });
 
-const isRegisteredUrlAsset = (asset) => ['tileset', 'gaussian-splat'].includes(asset?.type);
+const isRegisteredUrlAsset = (asset) => ['tileset', 'gaussian-splat'].includes(asset?.type) && asset?.sourceType !== 'upload';
 const urlEditTypeLabel = computed(() => urlEditTargetAsset.value?.type === 'tileset' ? ' 3D Tiles ' : '高斯泼溅');
 const urlEditInputLabel = computed(() => urlEditTargetAsset.value?.type === 'tileset' ? 'tileset.json URL' : '高斯泼溅 URL');
 const urlEditPlaceholder = computed(() => urlEditTargetAsset.value?.type === 'tileset'
@@ -653,7 +705,10 @@ const canRegisterTileset = computed(() => {
 
 // 高斯泼溅注册表单验证
 const canRegisterGaussianSplat = computed(() => {
-  return gaussianSplatForm.name.trim() && gaussianSplatForm.gaussianSplatUrl.trim();
+  if (gaussianSplatBusy.value || !gaussianSplatForm.name.trim()) return false;
+  if (gaussianSplatMode.value === 'upload') return Boolean(gaussianSplatFile.value);
+  try { return ['http:', 'https:'].includes(new URL(gaussianSplatForm.gaussianSplatUrl.trim()).protocol); }
+  catch { return false; }
 });
 
 // 处理 3D Tiles 注册
@@ -685,26 +740,23 @@ const handleRegisterTileset = async () => {
 // 处理高斯泼溅注册
 const handleRegisterGaussianSplat = async () => {
   if (!canRegisterGaussianSplat.value) return;
-
+  gaussianSplatBusy.value = true;
+  gaussianSplatProgress.value = 0;
   try {
-    const result = await registerGaussianSplat({
-      name: gaussianSplatForm.name.trim(),
-      gaussianSplatUrl: gaussianSplatForm.gaussianSplatUrl.trim()
-    });
-
-    if (result.success) {
-      message.success('高斯泼溅注册成功！');
-      showGaussianSplatDialog.value = false;
-      // 重置表单
-      gaussianSplatForm.name = '';
-      gaussianSplatForm.gaussianSplatUrl = '';
-      // 刷新列表
-      await loadAssets();
-    } else {
-      message.error('注册失败: ' + result.message);
-    }
+    const result = gaussianSplatMode.value === 'upload'
+      ? await uploadGaussianSplat(gaussianSplatFile.value, gaussianSplatForm.name.trim(), progress => { gaussianSplatProgress.value = progress; })
+      : await registerGaussianSplat({ name: gaussianSplatForm.name.trim(), gaussianSplatUrl: gaussianSplatForm.gaussianSplatUrl.trim() });
+    if (!result.success) throw new Error(result.message || '提交失败');
+    message.success(gaussianSplatMode.value === 'upload' ? '高斯泼溅上传成功！' : '高斯泼溅注册成功！');
+    showGaussianSplatDialog.value = false;
+    gaussianSplatForm.name = '';
+    gaussianSplatForm.gaussianSplatUrl = '';
+    gaussianSplatFile.value = null;
+    await loadAssets();
   } catch (error) {
-    message.error('注册失败: ' + error.message);
+    message.error('添加失败: ' + error.message);
+  } finally {
+    gaussianSplatBusy.value = false;
   }
 };
 
@@ -956,7 +1008,7 @@ const canUploadCloud = (asset) => {
 
   const format = asset.format?.toLowerCase();
   const uploadableFormats = ['gltf', 'glb', 'zip', 'hdr', 'jpg', 'jpeg', 'png'];
-  const uploadableTypes = ['model', 'texture', 'hdri'];
+  const uploadableTypes = ['model', 'texture', 'hdri', 'gaussian-splat'];
 
   return uploadableFormats.includes(format) || uploadableTypes.includes(asset.type);
 };
@@ -1939,6 +1991,7 @@ onUnmounted(() => {
   margin-bottom: 6px;
 }
 
+.form-group input[type="url"],
 .form-group input[type="text"],
 .form-group input[type="password"] {
   width: 100%;
@@ -1951,6 +2004,7 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
+.form-group input[type="url"]:focus,
 .form-group input[type="text"]:focus,
 .form-group input[type="password"]:focus {
   outline: none;
@@ -2047,5 +2101,18 @@ onUnmounted(() => {
   opacity: 0.5;
   cursor: not-allowed;
 }
-</style>
 
+.gaussian-dialog { width: 480px; max-height: calc(100vh - 48px); overflow-y: auto; }
+.gaussian-form { border: 0; padding: 0; margin: 0; min-width: 0; }
+.gaussian-modes { display: flex; gap: 4px; padding: 4px; margin-bottom: 24px; border: 1px solid #444; border-radius: 8px; background: #222; }
+.gaussian-modes button { flex: 1; padding: 10px 16px; border: 0; border-radius: 5px; background: transparent; color: #aaa; font: inherit; font-size: 14px; cursor: pointer; transition: background 0.2s, color 0.2s; }
+.gaussian-modes button:hover:not(:disabled) { color: #fff; background: #333; }
+.gaussian-modes button.active { background: #0066cc; color: white; }
+.gaussian-modes button.active:hover:not(:disabled) { background: #0077dd; }
+.gaussian-modes button:disabled { cursor: wait; opacity: 0.65; }
+.gaussian-modes button:focus-visible, .gaussian-drop-zone:focus-visible { outline: 2px solid #5da8ff; outline-offset: 3px; }
+.gaussian-drop-zone { padding: 16px; box-sizing: border-box; text-align: center; }
+.gaussian-drop-zone:hover:not(.uploading) { border-color: #5da8ff; background: #1d344d; }
+.gaussian-drop-zone .asset-upload-file-name { box-sizing: border-box; }
+.gaussian-hint { margin: 8px 0 0; color: #9fb0c4; font-size: 13px; }
+</style>
