@@ -121,9 +121,20 @@ function createMeteor3DInstance({ sceneManager, persistenceManager, resizeObserv
         off: (event, callback) => sceneManager.off(event, callback),
         /** Find a persistent scene node by BID. */
         getObjectByBid: (bid) => sceneManager.findObjectByBid(bid),
-        /** Move an object to a local position and rotation, optionally with animation. */
-        moveTo: (bid, position, rotation, duration = 0) =>
-            sceneManager.moveTo(bid, position, rotation, duration),
+        /**
+         * 移动并旋转场景节点；重复调用会替换该节点正在执行的位移动画。
+         * @param {string} bid - 持久化节点 BID。
+         * @param {{x:number,y:number,z:number}} position - 目标局部位置，世界单位。
+         * @param {{x:number,y:number,z:number}} rotation - 目标局部欧拉角，弧度。
+         * @param {number} [duration=0] - 时长，毫秒；0 为立即应用。
+         * @param {Object} [options={}] - 动画配置。
+         * @param {'quadraticOut'|'linear'} [options.easing='quadraticOut'] - 位置与旋转共用的进度曲线。
+         * @returns {boolean} 同步返回是否找到节点并启动移动，不等待动画完成。
+         * @throws {TypeError|RangeError} 参数格式或数值、缓动枚举非法。
+         * @example instance.moveTo(bid, position, rotation, 1000, { easing: 'linear' });
+         */
+        moveTo: (bid, position, rotation, duration = 0, options = {}) =>
+            sceneManager.moveTo(bid, position, rotation, duration, options),
 
         // ========== 性能监控 ==========
         /** 启用 FPS 性能监视器 */
@@ -158,6 +169,28 @@ function createMeteor3DInstance({ sceneManager, persistenceManager, resizeObserv
          * @returns {Promise<void>}
          */
         focusObject: (bid, options) => sceneManager.focusObject(bid, options),
+        /**
+         * 同步开启实时跟随，替换之前的跟随并切换到 orbit；跟随期间暂停手动相机输入。
+         * 设置视角、聚焦、切换控制模式、开启自动环绕、删除目标或清空场景会退出跟随。
+         * @param {string} bid - 场景节点的持久化 BID。
+         * @param {Object} [options={}] - 跟随配置。
+         * @param {number} [options.distance=5] - 相机到模型原点（球心）的半径，世界单位，必须大于 0。
+         * @param {Object} [options.rotation={}] - 相对模型坐标系的跟随角度，单位度。
+         * @param {number} [options.rotation.pitch=0] - [-90,90]；负值俯视，正值仰视。
+         * @param {number} [options.rotation.yaw=0] - 0 后方、90 模型右侧、180 前方。
+         * @param {number} [options.rotation.roll=0] - 绕相机局部 +Z 轴的画面旋转角，不改变位置。
+         * @param {number} [options.smoothing=6] - 球面转向的非负收敛率（秒的倒数）；0 为直接转向。半径固定，始终看向模型原点。
+         * @returns {boolean} 成功为 true；找不到 BID 为 false，保留原跟随。
+         * @throws {TypeError|RangeError|Error} 参数非法或实例已销毁。
+         * @example instance.followObject('npc-bid', { distance: 8, rotation: { pitch: -30, yaw: 0, roll: 0 } });
+         */
+        followObject: (bid, options) => sceneManager.followObject(bid, options),
+        /**
+         * 同步停止跟随，保留当前视角、恢复 orbit 输入；重复调用安全。
+         * @returns {boolean} 停止了已有跟随时为 true，否则为 false。
+         * @example instance.stopFollowing();
+         */
+        stopFollowing: () => sceneManager.stopFollowing(),
         /** 手动触发尺寸调整 */
         resize: (width, height) => sceneManager.onWindowResize(width, height),
         /** 获取当前相机视角 */

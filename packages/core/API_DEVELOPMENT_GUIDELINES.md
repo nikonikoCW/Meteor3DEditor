@@ -376,6 +376,7 @@ toggleTriangleStats, getTriangleStats, isTriangleStatsEnabled
 
 ```text
 fitCameraToScene, focusObject, resize
+followObject, stopFollowing
 getView, setView, setControlMode, getControlMode
 setAutoRotate, getAutoRotate
 ```

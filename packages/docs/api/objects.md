@@ -29,6 +29,19 @@ BID 不存在时返回 `null`。
 
 ## moveTo()
 
+签名：`moveTo(bid, position, rotation, duration = 0, options = {})`。
+
+第五个参数可选，`options.easing` 支持：
+
+- `'quadraticOut'`（默认）：保留原来的先快后慢效果。
+- `'linear'`：每段内部线性推进位置和旋转，适合连续漫游。
+
+```javascript
+meteor3d.moveTo(bid, position, rotation, 1000, { easing: 'linear' })
+```
+
+旧的四参数调用保持不变。不支持的缓动值抛出 `RangeError`，配置不是对象时抛出 `TypeError`，且不会打断已有动画。线性缓动不消除定时器调度误差；各段距离不同但时长相同时，段与段之间仍会变速。
+
 根据 BID 将节点移动并旋转到目标局部变换：
 
 ```javascript

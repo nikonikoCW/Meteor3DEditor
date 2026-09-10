@@ -82,6 +82,15 @@ export class CameraControlManager {
     }
 
     /**
+     * 检查控制模式是否已注册，不切换模式。
+     * @param {string} name - 控制模式名称。
+     * @returns {boolean}
+     */
+    hasMode(name) {
+        return this.controls.has(name);
+    }
+
+    /**
      * 获取当前激活的控制器
      * @returns {BaseCameraControl|null}
      */

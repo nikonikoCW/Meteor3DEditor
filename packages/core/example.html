@@ -33,6 +33,9 @@
             orbit</span>
         <span style="width: 100%;"></span>
         <button onclick="toggleStats()" id="btn-stats">性能统计 (OFF)</button>
+        <span style="width: 100%;"></span>
+        <button onclick="startRoaming()" id="btn-roam-start" disabled>开始漫游</button>
+        <button onclick="stopRoaming()" id="btn-roam-stop" disabled>停止漫游</button>
     </div>
 
     <script src="./dist/umd/meteor3d-core.js"></script>
@@ -44,7 +47,7 @@
         const startTime = performance.now();
 
         Meteor3D.loadScene({
-            sceneId: '362b7452-9712-4b96-8b99-e061147841fc',
+            sceneId: '874b8abe-0c78-4959-abf6-775c341ef89f',
             serverUrl: 'http://localhost:3001',
             container: container,
             config: {
@@ -55,6 +58,8 @@
             const loadTime = (performance.now() - startTime).toFixed(0);
             console.log(`✅ 场景加载成功 (耗时 ${loadTime}ms)`);
             window.meteor3d = instance;
+            const canRoam = instance.isReady && !!instance.getObjectByBid(ROAM_BID);
+            document.getElementById('btn-roam-start').disabled = !canRoam;
 
             // ========== 测试 isReady 状态 ==========
             console.log('📌 instance.isReady =', instance.isReady);
@@ -73,23 +78,72 @@
             // ========== 监听场景点击事件 ==========
             instance.on('scene-click', (data) => {
                 console.log('🖱️ [事件] scene-click:', data);
-                console.log({
-                    position: data.worldPosition,
-                    scale: 5,
-                    color: '#00ff00'
-                });
 
-                window.meteor3d.createEffect('scan', {
-                    position: data.worldPosition,
-                    scale: 5,
-                    color: '#00ff00'
-                });
+                // window.meteor3d.createEffect('scan', {
+                //     position: data.worldPosition,
+                //     scale: 5,
+                //     color: '#00ff00'
+                // });
             });
 
         }).catch(err => {
             console.error('❌ 加载失败', err);
         });
 
+        // ========== 路线漫游：11 个点 → 流动线 → 跟随 → 每秒移动 ==========
+        const ROAM_BID = 'bid_13296e4e-18a1-4b64-90ec-612b0d179355';
+        const roamStart = { x: 159.7801971817664, y: 0.5010000000000568, z: -271.514658490355 };
+        // 初始点 + 10 个点位，最后一个点回到初始点，形成闭合路线。
+        const roamPoints = [roamStart, ...[
+            [10, 0], [20, 5], [25, 15], [20, 25], [10, 30],
+            [0, 30], [-10, 25], [-15, 15], [-10, 5], [0, 0]
+        ].map(([x, z]) => ({ x: roamStart.x + x, y: roamStart.y + 1, z: roamStart.z + z }))];
+        let roamTimer = null;
+        let roamLineId = null;
+
+        function startRoaming() {
+            const api = window.meteor3d;
+            if (!api || roamTimer !== null || !api.getObjectByBid(ROAM_BID)) return;
+            if (!roamLineId) {
+                roamLineId = api.createLine({
+                    points: roamPoints,
+                    textureUrl: 'http://47.106.36.64:9191/download/chenwei/3.jpeg',
+                    width: 1.2, radius: 0, speed: 1, repeat: 20, breathFrequency: 0
+                });
+            }
+            api.moveTo(ROAM_BID, roamStart, { x: 0, y: Math.PI / 2, z: 0 }, 0);
+            api.followObject(ROAM_BID, {
+                distance: 8,
+                rotation: { pitch: -30, yaw: 0, roll: 0 },
+                smoothing: 6
+            });
+            let index = 0;
+            roamTimer = setInterval(() => {
+                const from = roamPoints[index];
+                const to = roamPoints[index + 1];
+                const rotation = { x: 0, y: Math.atan2(to.x - from.x, to.z - from.z), z: 0 };
+                api.moveTo(ROAM_BID, to, rotation, 1000, { easing: 'linear' });
+                index = (index + 1) % (roamPoints.length - 1);
+            }, 1000);
+            document.getElementById('btn-roam-start').disabled = true;
+            document.getElementById('btn-roam-stop').disabled = false;
+        }
+
+        function stopRoaming() {
+            if (roamTimer === null) return;
+            clearInterval(roamTimer);
+            roamTimer = null;
+            const api = window.meteor3d;
+            const object = api.getObjectByBid(ROAM_BID);
+            // 用即时 moveTo 取消当前位移动画，停在当前位置。
+            if (object) api.moveTo(ROAM_BID, object.position.clone(), {
+                x: object.rotation.x, y: object.rotation.y, z: object.rotation.z
+            }, 0);
+            api.stopFollowing();
+            document.getElementById('btn-roam-start').disabled = false;
+            document.getElementById('btn-roam-stop').disabled = true;
+        }
+        window.addEventListener('pagehide', stopRoaming);
 
         // ========== 性能统计切换 ==========
         let statsEnabled = false;
@@ -128,12 +182,14 @@
 
         function setOrbitMode() {
             if (!window.meteor3d) return;
+            if (roamTimer !== null) stopRoaming();
             window.meteor3d.setControlMode('orbit');
             console.log('🎮 切换到轨道模式');
         }
 
         function setGhostMode() {
             if (!window.meteor3d) return;
+            if (roamTimer !== null) stopRoaming();
             window.meteor3d.setControlMode('ghost');
             console.log('🎮 切换到幽灵模式 (右键控制视角，WASD移动，QE升降)');
             alert('幽灵模式已启用！\n\n操作说明：\n- 右键按住 + 鼠标移动：控制视角\n- WASD：前后左右移动\n- Q/E：下降/上升\n- Shift：加速');
@@ -141,6 +197,7 @@
 
         function setGhostLockMode() {
             if (!window.meteor3d) return;
+            if (roamTimer !== null) stopRoaming();
             window.meteor3d.setControlMode('ghost', { pointerLock: true });
             console.log('🎮 切换到幽灵模式 (鼠标锁定)');
         }
@@ -171,6 +228,7 @@
                 return;
             }
             console.log('✈️ 开始飞行...');
+            if (roamTimer !== null) stopRoaming();
             const a = await window.meteor3d.setView({
                 position: savedView.position,
                 target: savedView.target,

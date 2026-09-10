@@ -227,8 +227,9 @@ export class SceneManager {
         this.statsManager.begin();
 
         // 更新相机控制器
-        this.controlManager.update(delta);
+        if (!this.cameraNavigationManager.isFollowing) this.controlManager.update(delta);
         this.animationManager.update(delta);
+        this.cameraNavigationManager.update(delta);
 
         // 更新 GIS 瓦片地图
         if (this.tileMapManager) {
@@ -314,6 +315,7 @@ export class SceneManager {
      * sceneManager.setControlMode('ghost', { pointerLock: true });
      */
     setControlMode(mode, options = {}) {
+        if (this.controlManager.hasMode(mode)) this.stopFollowing();
         return this.controlManager.setMode(mode, options);
     }
 
@@ -334,6 +336,7 @@ export class SceneManager {
      * @returns {boolean}
      */
     setAutoRotate(enabled, speed) {
+        if (enabled) this.stopFollowing();
         if (enabled && this.getControlMode() !== 'orbit') {
             this.setControlMode('orbit');
         }
@@ -710,6 +713,7 @@ export class SceneManager {
      * @param {THREE.Object3D} object - 要移除的对象
      */
     removeObject(object) {
+        this.cameraNavigationManager.releaseObject(object);
         object.traverse((child) => {
             this.objectTransformManager.stop(child.userData?.bid);
         });
@@ -757,10 +761,14 @@ export class SceneManager {
      * @param {{x: number, y: number, z: number}} position - 目标局部位置
      * @param {{x: number, y: number, z: number}} rotation - 目标局部欧拉角（弧度）
      * @param {number} [duration=0] - 动画时长（毫秒），0 表示立即完成
+     * @param {Object} [options={}] - 动画配置。
+     * @param {'quadraticOut'|'linear'} [options.easing='quadraticOut'] - 位置与旋转共用的进度曲线。
      * @returns {boolean} 是否找到并成功启动移动
+     * @throws {TypeError|RangeError} 参数非法。
+     * @example sceneManager.moveTo(bid, position, rotation, 1000, { easing: 'linear' });
      */
-    moveTo(bid, position, rotation, duration = 0) {
-        return this.objectTransformManager.moveTo(bid, position, rotation, duration);
+    moveTo(bid, position, rotation, duration = 0, options = {}) {
+        return this.objectTransformManager.moveTo(bid, position, rotation, duration, options);
     }
 
     /**
@@ -933,6 +941,7 @@ export class SceneManager {
      * 移除所有可交互对象
      */
     clearScene({ disposeResources = true } = {}) {
+        this.stopFollowing();
         this.objectTransformManager.stopAll();
         // 移除所有跟踪的对象
         this.objects.forEach(object => {
@@ -954,6 +963,7 @@ export class SceneManager {
      */
     disposeObjectResources(root) {
         if (!root) return;
+        this.cameraNavigationManager.releaseObject(root);
 
         const geometries = new Set();
         const materials = new Set();
@@ -1040,6 +1050,42 @@ export class SceneManager {
      */
     getView(callback) {
         return this.cameraNavigationManager.getView(callback);
+    }
+
+    /**
+     * 持续跟随 BID 对应的场景节点；同步启用，替换已有跟随并切换到 orbit。
+     * @param {string} bid - 持久化节点 BID。
+     * @param {Object} [options={}] - 跟随配置（不会修改传入对象）。
+     * @param {number} [options.distance=5] - 相机到模型原点（球心）的半径，世界单位，必须大于 0。
+     * @param {Object} [options.rotation={}] - 相对模型坐标系的跟随角度，单位度。
+     * @param {number} [options.rotation.pitch=0] - [-90,90]；负值俯视，正值仰视。
+     * @param {number} [options.rotation.yaw=0] - 0 后方、90 模型右侧、180 前方。
+     * @param {number} [options.rotation.roll=0] - 绕相机局部 +Z 轴的画面旋转角，不改变位置。
+     * @param {number} [options.smoothing=6] - 球面转向的收敛率（秒的倒数）；0 为直接转向。半径固定，始终看向模型原点。
+     * @returns {boolean} 启用成功为 true，BID 不存在为 false。
+     * @throws {TypeError|RangeError|Error} 参数非法或场景已销毁。
+     * @example sceneManager.followObject('npc-bid', { smoothing: 6 });
+     */
+    followObject(bid, options = {}) {
+        if (this.disposed) throw new Error('followObject: scene has been disposed');
+        if (typeof bid !== 'string' || !bid.trim()) {
+            throw new TypeError('followObject: bid must be a non-empty string');
+        }
+        // 先校验，再协调控制模式，防止失败的请求打断当前镜头行为。
+        this.cameraNavigationManager.validateFollowOptions(options);
+        const object = this.findObjectByBid(bid);
+        if (!object) return false;
+        if (this.getControlMode() !== 'orbit' && !this.setControlMode('orbit')) return false;
+        return this.cameraNavigationManager.followObject(object, options);
+    }
+
+    /**
+     * 同步退出跟随，保留镜头位置并恢复 orbit 输入；允许重复调用。
+     * @returns {boolean} 原来正在跟随时为 true，否则 false。
+     * @example sceneManager.stopFollowing();
+     */
+    stopFollowing() {
+        return this.cameraNavigationManager.stopFollowing();
     }
 
     /**
@@ -1404,6 +1450,7 @@ export class SceneManager {
         this.setAxesHelper(false);
         this.setBaseMap(null, null, null, false);
 
+        this.cameraNavigationManager?.dispose();
         this.controlManager?.dispose();
         this.animationManager?.dispose();
         this.objectTransformManager?.dispose();

@@ -12,7 +12,7 @@ const FOCUS_DIRECTIONS = Object.freeze({
 
 /**
  * 程序化相机导航管理器。
- * 负责视角读写、场景适配和从指定局部面聚焦物体。
+ * 负责视角读写、场景适配、聚焦物体与实时跟随；控制模式由 SceneManager 协调。
  */
 export class CameraNavigationManager {
     constructor(camera, controls, tweenGroup) {
@@ -20,6 +20,133 @@ export class CameraNavigationManager {
         this.controls = controls;
         this.tweenGroup = tweenGroup;
         this._activeNavigation = null;
+        this._follow = null;
+        this._position = new THREE.Vector3();
+        this._quaternion = new THREE.Quaternion();
+        this._cameraGoal = new THREE.Vector3();
+        this.disposed = false;
+    }
+
+    /**
+     * 校验跟随配置，不修改运行时状态，供场景层在切换控制模式前调用。
+     * @param {Object} [options={}] - 跟随配置。
+     * @returns {{cameraOffset:THREE.Vector3,smoothing:number,viewUp:THREE.Vector3,roll:number}}
+     * @throws {TypeError|RangeError|Error} 配置非法或 Manager 已销毁。
+     */
+    validateFollowOptions(options = {}) {
+        if (this.disposed) throw new Error('followObject: manager has been disposed');
+        if (!options || typeof options !== 'object' || Array.isArray(options)) {
+            throw new TypeError('followObject: options must be an object');
+        }
+        if ('offset' in options || 'targetOffset' in options) {
+            throw new TypeError('followObject: offset and targetOffset are not supported; use distance and rotation');
+        }
+        const { distance = 5, rotation = {}, smoothing = 6 } = options;
+        if (!Number.isFinite(smoothing) || smoothing < 0) {
+            throw new RangeError('followObject: smoothing must be finite and non-negative');
+        }
+        if (!Number.isFinite(distance) || distance <= 0) {
+            throw new RangeError('followObject: distance must be finite and positive');
+        }
+        if (!rotation || typeof rotation !== 'object' || Array.isArray(rotation)) {
+            throw new TypeError('followObject: rotation must be an object');
+        }
+        const { pitch = 0, yaw = 0, roll: rollDegrees = 0 } = rotation;
+        if (![pitch, yaw, rollDegrees].every(Number.isFinite)) {
+            throw new TypeError('followObject: pitch, yaw and roll must be finite degrees');
+        }
+        if (pitch < -90 || pitch > 90) {
+            throw new RangeError('followObject: pitch must be between -90 and 90 degrees');
+        }
+        const p = THREE.MathUtils.degToRad(pitch);
+        const y = THREE.MathUtils.degToRad(yaw % 360);
+        const roll = THREE.MathUtils.degToRad(rollDegrees % 360);
+        const cameraOffset = new THREE.Vector3(
+            distance * Math.cos(p) * Math.sin(y),
+            -distance * Math.sin(p),
+            -distance * Math.cos(p) * Math.cos(y)
+        );
+        // 使用俯仰切线作为上方向，支持正上方和正下方视角。
+        const viewUp = new THREE.Vector3(Math.sin(p) * Math.sin(y), Math.cos(p), -Math.sin(p) * Math.cos(y));
+        return { cameraOffset, smoothing, viewUp, roll };
+    }
+
+    /**
+     * 跟随已经由场景层解析的节点；只处理镜头和轨道输入，不切换控制模式。
+     * @param {THREE.Object3D} object - 目标节点。
+     * @param {Object} [options={}] - 配置语义见 SDK followObject。
+     * @returns {boolean} 目标不存在时返回 false。
+     */
+    followObject(object, options = {}) {
+        const { cameraOffset, smoothing, viewUp, roll } = this.validateFollowOptions(options);
+        if (!object) return false;
+        this.stopFollowing();
+        this._stopActiveNavigation();
+        const enabled = this.controls.enabled;
+        // Flush any residual OrbitControls damping without changing the current view.
+        const position = this.camera.position.clone();
+        const target = this.controls.target.clone();
+        const quaternion = this.camera.quaternion.clone();
+        const damping = this.controls.enableDamping;
+        const autoRotate = this.controls.autoRotate;
+        this.controls.enableDamping = false;
+        this.controls.autoRotate = false;
+        this.controls.update();
+        this.controls.enableDamping = damping;
+        this.controls.autoRotate = autoRotate;
+        this.camera.position.copy(position);
+        this.camera.quaternion.copy(quaternion);
+        this.controls.target.copy(target);
+        this.controls.enabled = false;
+        const orbitQuaternion = object.getWorldQuaternion(new THREE.Quaternion());
+        this._follow = { object, cameraOffset, smoothing, enabled, orbitQuaternion,
+            viewUp, roll, originalUp: this.camera.up.clone() };
+        this.update(0);
+        return true;
+    }
+
+    /** Stop following, retaining the view and restoring orbit input. Safe to repeat. */
+    stopFollowing() {
+        if (!this._follow) return false;
+        this.controls.enabled = this._follow.enabled;
+        this.camera.up.copy(this._follow.originalUp);
+        this.camera.lookAt(this.controls.target);
+        this._follow = null;
+        return true;
+    }
+
+    get isFollowing() { return this._follow !== null; }
+
+    /** Release a followed node when it or an ancestor is removed. */
+    releaseObject(root) {
+        for (let node = this._follow?.object; node; node = node.parent) {
+            if (node === root) { this.stopFollowing(); break; }
+        }
+    }
+
+    /** Advance using seconds, after object animation and before rendering. */
+    update(delta) {
+        if (!this._follow || this.disposed) return;
+        const { object, cameraOffset, smoothing, orbitQuaternion, viewUp, roll } = this._follow;
+        object.getWorldPosition(this._position);
+        object.getWorldQuaternion(this._quaternion);
+        const seconds = Number.isFinite(delta) ? Math.max(0, delta) : 0;
+        const alpha = smoothing === 0 ? 1 : -Math.expm1(-smoothing * seconds);
+        // 平滑球面坐标系的旋转，不对世界位置做直线插值，始终保持指定半径。
+        orbitQuaternion.slerp(this._quaternion, alpha);
+        this._cameraGoal.copy(cameraOffset).applyQuaternion(orbitQuaternion);
+        this.camera.position.copy(this._position).add(this._cameraGoal);
+        this.controls.target.copy(this._position);
+        this.camera.up.copy(viewUp).applyQuaternion(orbitQuaternion);
+        this.camera.lookAt(this._position);
+        this.camera.rotateZ(roll);
+    }
+
+    dispose() {
+        if (this.disposed) return;
+        this.stopFollowing();
+        this._stopActiveNavigation();
+        this.disposed = true;
     }
 
     fitObjects(objects) {
@@ -42,6 +169,7 @@ export class CameraNavigationManager {
 
         this._stopActiveNavigation();
         this._updateFocusNearPlane(box, center, direction, distance, corners);
+        this.stopFollowing();
         this.camera.position.copy(center).addScaledVector(direction, distance);
         this.controls.target.copy(center);
         this.controls.update();
@@ -117,6 +245,7 @@ export class CameraNavigationManager {
     }
 
     setView(options) {
+        this.stopFollowing();
         const { position, target, duration = 1500, onComplete } = options;
         const endTarget = target || {
             x: this.controls.target.x,

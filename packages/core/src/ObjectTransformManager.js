@@ -13,15 +13,25 @@ export class ObjectTransformManager {
      * @param {string} bid
      * @param {{x: number, y: number, z: number}} position
      * @param {{x: number, y: number, z: number}} rotation - 欧拉角，单位为弧度
-     * @param {number} duration - 动画时长，单位为毫秒
+     * @param {number} [duration=0] - 动画时长，单位为毫秒
+     * @param {Object} [options={}] - 位移与旋转共用的动画配置。
+     * @param {'quadraticOut'|'linear'} [options.easing='quadraticOut'] - 减速缓动或线性进度。
      * @returns {boolean}
      */
-    moveTo(bid, position, rotation, duration = 0) {
+    moveTo(bid, position, rotation, duration = 0, options = {}) {
         this._validateBid(bid);
         this._validateVector3(position, 'position');
         this._validateVector3(rotation, 'rotation');
         if (!Number.isFinite(duration) || duration < 0) {
             throw new RangeError('moveTo: duration must be a finite number greater than or equal to 0');
+        }
+
+        if (!options || typeof options !== 'object' || Array.isArray(options)) {
+            throw new TypeError('moveTo: options must be an object');
+        }
+        const { easing = 'quadraticOut' } = options;
+        if (easing !== 'quadraticOut' && easing !== 'linear') {
+            throw new RangeError('moveTo: easing must be quadraticOut or linear');
         }
 
         const object = this.sceneManager.findObjectByBid(bid);
@@ -50,7 +60,7 @@ export class ObjectTransformManager {
         const progress = { value: 0 };
         const tween = new Tween(progress, this.tweenGroup)
             .to({ value: 1 }, duration)
-            .easing(Easing.Quadratic.Out)
+            .easing(easing === 'linear' ? Easing.Linear.None : Easing.Quadratic.Out)
             .onUpdate(() => {
                 object.position.lerpVectors(startPosition, targetPosition, progress.value);
                 object.quaternion.slerpQuaternions(
