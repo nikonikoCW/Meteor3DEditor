@@ -59,14 +59,18 @@ export class LineManager {
         texture.wrapS = THREE.RepeatWrapping;
 
         const vertexShader = `
+            #include <common>
+            #include <logdepthbuf_pars_vertex>
             varying vec2 vUv;
             void main() {
                 vUv = uv;
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                #include <logdepthbuf_vertex>
             }
         `;
 
         const fragmentShader = `
+            #include <logdepthbuf_pars_fragment>
             uniform sampler2D uTexture;
             uniform float uTime;
             uniform float uRepeat;
@@ -77,6 +81,7 @@ export class LineManager {
             varying vec2 vUv;
 
             void main() {
+                #include <logdepthbuf_fragment>
                 // 核心：在 Shader 内部处理 UV 滚动
                 // vUv.x 沿着路径方向，vUv.y 跨越宽度方向
                 vec2 scr = vec2(vUv.x*uRepeat - uTime*uSpeed, vUv.y);

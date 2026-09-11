@@ -16,6 +16,11 @@ const upload = multer({
     }),
     limits: { fileSize: 30 * 1024 * 1024, files: 1 },
     fileFilter(req, file, cb) {
+        // Match regular uploads: repair UTF-8 filenames parsed as Latin-1.
+        const decoded = Buffer.from(file.originalname, 'latin1').toString('utf8');
+        if (/[\u00C0-\u00FF]/.test(file.originalname) && /[^\u0000-\u00FF]/.test(decoded) && !decoded.includes('\uFFFD')) {
+            file.originalname = decoded;
+        }
         if (!allowedExtensions.has(path.extname(file.originalname).toLowerCase())) {
             return cb(new Error('支持 .splat、.ply、.spz、.ksplat、.sog、SOG .zip、.rad 文件'));
         }
