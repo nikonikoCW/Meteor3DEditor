@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Meteor3D 场景加载示例</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        #canvas {
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="canvas"></div>
+    <div style="position: fixed; top: 20px; left: 20px; z-index: 100; display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="testGetViewCallback()">获取视角 (Callback)</button>
+        <button onclick="testGetViewAwait()">获取视角 (Await)</button>
+        <button onclick="testSetView()">恢复视角 (Animation)</button>
+        <button onclick="testVFX()">测试特效 (Shield)</button>
+        <button onclick="testLine()">测试流动线 (Line)</button>
+        <span style="width: 100%;"></span>
+        <button onclick="setOrbitMode()" id="btn-orbit" style="background: #4CAF50; color: white;">轨道模式 (Orbit)</button>
+        <button onclick="setGhostMode()" id="btn-ghost">幽灵模式 (Ghost)</button>
+        <button onclick="setGhostLockMode()" id="btn-ghost-lock">幽灵模式 + 锁定</button>
+        <span id="mode-display" style="line-height: 30px; color: white; background: #333; padding: 0 10px;">当前:
+            orbit</span>
+        <span style="width: 100%;"></span>
+        <button onclick="toggleStats()" id="btn-stats">性能统计 (OFF)</button>
+        <span style="width: 100%;"></span>
+        <button onclick="startRoaming()" id="btn-roam-start" disabled>开始漫游</button>
+        <button onclick="stopRoaming()" id="btn-roam-stop" disabled>停止漫游</button>
+    </div>
+
+    <script src="./dist/umd/meteor3d-core.js"></script>
+    <script>
+        // ========== 测试 scene-ready 事件监听 ==========
+        const container = document.getElementById('canvas');
+
+        console.log('⏳ 开始加载场景...');
+        const startTime = performance.now();
+
+        Meteor3D.loadScene({
+            sceneId: '874b8abe-0c78-4959-abf6-775c341ef89f',
+            serverUrl: 'http://localhost:3001',
+            container: container,
+            config: {
+                fitCamera: false,
+                dracoPath: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/'
+            }
+        }).then(instance => {
+            const loadTime = (performance.now() - startTime).toFixed(0);
+            console.log(`✅ 场景加载成功 (耗时 ${loadTime}ms)`);
+            window.meteor3d = instance;
+            const canRoam = instance.isReady && !!instance.getObjectByBid(ROAM_BID);
+            document.getElementById('btn-roam-start').disabled = !canRoam;
+
+            // ========== 测试 isReady 状态 ==========
+            console.log('📌 instance.isReady =', instance.isReady);
+
+            // ========== 测试事件监听 ==========
+            instance.on('scene-ready', (data) => {
+                console.log('🎉 [事件] scene-ready 被触发:', data);
+            });
+
+            // ========== 监听控制模式切换 ==========
+            instance.on('control-mode-changed', (data) => {
+                console.log('🎮 [事件] control-mode-changed:', data);
+                updateModeDisplay(data.mode);
+            });
+
+            // ========== 监听场景点击事件 ==========
+            instance.on('scene-click', (data) => {
+                console.log('🖱️ [事件] scene-click:', data);
+
+                // window.meteor3d.createEffect('scan', {
+                //     position: data.worldPosition,
+                //     scale: 5,
+                //     color: '#00ff00'
+                // });
+            });
+
+        }).catch(err => {
+            console.error('❌ 加载失败', err);
+        });
+
+        // ========== 路线漫游：11 个点 → 流动线 → 跟随 → 每秒移动 ==========
+        const ROAM_BID = 'bid_13296e4e-18a1-4b64-90ec-612b0d179355';
+        const roamStart = { x: 159.7801971817664, y: 0.5010000000000568, z: -271.514658490355 };
+        // 初始点 + 10 个点位，最后一个点回到初始点，形成闭合路线。
+        const roamPoints = [roamStart, ...[
+            [10, 0], [20, 5], [25, 15], [20, 25], [10, 30],
+            [0, 30], [-10, 25], [-15, 15], [-10, 5], [0, 0]
+        ].map(([x, z]) => ({ x: roamStart.x + x, y: roamStart.y + 1, z: roamStart.z + z }))];
+        let roamTimer = null;
+        let roamLineId = null;
+
+        function startRoaming() {
+            const api = window.meteor3d;
+            if (!api || roamTimer !== null || !api.getObjectByBid(ROAM_BID)) return;
+            if (!roamLineId) {
+                roamLineId = api.createLine({
+                    points: roamPoints,
+                    textureUrl: 'http://47.106.36.64:9191/download/chenwei/3.jpeg',
+                    width: 1.2, radius: 0, speed: 1, repeat: 20, breathFrequency: 0
+                });
+            }
+            api.moveTo(ROAM_BID, roamStart, { x: 0, y: Math.PI / 2, z: 0 }, 0);
+            api.followObject(ROAM_BID, {
+                distance: 8,
+                rotation: { pitch: -30, yaw: 0, roll: 0 },
+                smoothing: 6
+            });
+            let index = 0;
+            roamTimer = setInterval(() => {
+                const from = roamPoints[index];
+                const to = roamPoints[index + 1];
+                const rotation = { x: 0, y: Math.atan2(to.x - from.x, to.z - from.z), z: 0 };
+                api.moveTo(ROAM_BID, to, rotation, 1000, { easing: 'linear' });
+                index = (index + 1) % (roamPoints.length - 1);
+            }, 1000);
+            document.getElementById('btn-roam-start').disabled = true;
+            document.getElementById('btn-roam-stop').disabled = false;
+        }
+
+        function stopRoaming() {
+            if (roamTimer === null) return;
+            clearInterval(roamTimer);
+            roamTimer = null;
+            const api = window.meteor3d;
+            const object = api.getObjectByBid(ROAM_BID);
+            // 用即时 moveTo 取消当前位移动画，停在当前位置。
+            if (object) api.moveTo(ROAM_BID, object.position.clone(), {
+                x: object.rotation.x, y: object.rotation.y, z: object.rotation.z
+            }, 0);
+            api.stopFollowing();
+            document.getElementById('btn-roam-start').disabled = false;
+            document.getElementById('btn-roam-stop').disabled = true;
+        }
+        window.addEventListener('pagehide', stopRoaming);
+
+        // ========== 性能统计切换 ==========
+        let statsEnabled = false;
+        function toggleStats() {
+            if (!window.meteor3d) return;
+            statsEnabled = !statsEnabled;
+
+            if (statsEnabled) {
+                window.meteor3d.enableStats();
+                window.meteor3d.toggleTriangleStats(true, (stats) => {
+                    console.log(`📊 GPU渲染: ${stats.rendered.toLocaleString()} | 总计: ${stats.total.toLocaleString()} | DrawCalls: ${stats.drawCalls} | 纹理: ${stats.textureCount}`);
+                });
+                document.getElementById('btn-stats').textContent = '性能统计 (ON)';
+                document.getElementById('btn-stats').style.background = '#4CAF50';
+                document.getElementById('btn-stats').style.color = 'white';
+            } else {
+                window.meteor3d.disableStats();
+                window.meteor3d.toggleTriangleStats(false);
+                document.getElementById('btn-stats').textContent = '性能统计 (OFF)';
+                document.getElementById('btn-stats').style.background = '';
+                document.getElementById('btn-stats').style.color = '';
+            }
+            console.log('📊 性能统计:', statsEnabled ? '开启' : '关闭');
+        }
+
+        // ========== 相机控制模式测试 ==========
+        function updateModeDisplay(mode) {
+            document.getElementById('mode-display').textContent = '当前: ' + mode;
+            document.getElementById('btn-orbit').style.background = mode === 'orbit' ? '#4CAF50' : '';
+            document.getElementById('btn-orbit').style.color = mode === 'orbit' ? 'white' : '';
+            document.getElementById('btn-ghost').style.background = mode === 'ghost' ? '#2196F3' : '';
+            document.getElementById('btn-ghost').style.color = mode === 'ghost' ? 'white' : '';
+            document.getElementById('btn-ghost-lock').style.background = mode === 'ghost' ? '#2196F3' : '';
+            document.getElementById('btn-ghost-lock').style.color = mode === 'ghost' ? 'white' : '';
+        }
+
+        function setOrbitMode() {
+            if (!window.meteor3d) return;
+            if (roamTimer !== null) stopRoaming();
+            window.meteor3d.setControlMode('orbit');
+            console.log('🎮 切换到轨道模式');
+        }
+
+        function setGhostMode() {
+            if (!window.meteor3d) return;
+            if (roamTimer !== null) stopRoaming();
+            window.meteor3d.setControlMode('ghost');
+            console.log('🎮 切换到幽灵模式 (右键控制视角，WASD移动，QE升降)');
+            alert('幽灵模式已启用！\n\n操作说明：\n- 右键按住 + 鼠标移动：控制视角\n- WASD：前后左右移动\n- Q/E：下降/上升\n- Shift：加速');
+        }
+
+        function setGhostLockMode() {
+            if (!window.meteor3d) return;
+            if (roamTimer !== null) stopRoaming();
+            window.meteor3d.setControlMode('ghost', { pointerLock: true });
+            console.log('🎮 切换到幽灵模式 (鼠标锁定)');
+        }
+
+        // ========== 原有测试逻辑 ==========
+        let savedView = null;
+
+        function testGetViewCallback() {
+            if (!window.meteor3d) return;
+            window.meteor3d.getView((view) => {
+                console.log('📍 [Callback] 获取到视角:', view);
+                savedView = view;
+                alert('视角已保存 (Callback)');
+            });
+        }
+
+        async function testGetViewAwait() {
+            if (!window.meteor3d) return;
+            const view = await window.meteor3d.getView();
+            console.log('📍 [Await] 获取到视角:', view);
+            savedView = view;
+            alert('视角已保存 (Await)');
+        }
+
+        async function testSetView() {
+            if (!window.meteor3d || !savedView) {
+                alert('请先保存视角！');
+                return;
+            }
+            console.log('✈️ 开始飞行...');
+            if (roamTimer !== null) stopRoaming();
+            const a = await window.meteor3d.setView({
+                position: savedView.position,
+                target: savedView.target,
+                duration: 2000
+            });
+            console.log('✈️ 飞行完成:', a);
+            alert('飞行完成！');
+        }
+
+        function testVFX() {
+            if (!window.meteor3d) return;
+            window.meteor3d.enableStats();
+            console.log('✨ 创建能量盾特效...');
+            const shield = window.meteor3d.createEffect('shield', {
+                position: { x: 0, y: 5, z: 0 },
+                scale: 5,
+                color: '#00ff00'
+            });
+            console.log('✅ 特效创建成功:', shield);
+            alert('能量盾已创建！请查看场景中心上方。');
+        }
+
+        // ========== 流动线测试 ==========
+        function testLine() {
+            if (!window.meteor3d) return;
+            console.log('〰️ 创建流动线...');
+
+            const points = [
+                { x: -10, y: 1, z: 10 },
+                { x: 10, y: 1, z: 10 },
+                { x: 10, y: 1, z: -10 },
+                { x: 0, y: 15, z: -10 },
+                { x: -10, y: 1, z: -10 },
+                { x: -10, y: 1, z: 10 }
+            ];
+
+            window.meteor3d.createLine({
+                points: points,
+                textureUrl: 'http://47.106.36.64:9191/download/chenwei/3.jpeg',
+                width: 2.0,
+                speed: 2.0,
+                repeat: 25,
+                breathStart: 0.5,
+                breathEnd: 1.0,
+                breathFrequency: 0
+            });
+            console.log('✅ 流动线创建成功');
+        }
+    </script>
+</body>
+
+</html>
