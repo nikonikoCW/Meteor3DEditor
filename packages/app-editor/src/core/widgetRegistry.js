@@ -293,106 +293,213 @@ const labelConfig = {
             label: '标签配置',
             type: 'label-editor',
             defaultValue: {
-                template: `
-                <div class="label-container">
-                <div class="header">
-                    <span class="title">{{name}}</span>
-                    <div class="status-dot status-{{statusClass}}"></div>
-                </div>
-                <div class="content">
-                    <div class="row">
-                    <span class="label">设备状态</span>
-                    <span class="value">{{status}}</span>
-                    </div>
-                    <div class="row">
-                    <span class="label">当前温度</span>
-                    <span class="value highlight">{{temperature}}°C</span>
-                    </div>
-                    <div class="row">
-                    <span class="label">相对湿度</span>
-                    <span class="value">{{humidity}}%</span>
-                    </div>
-                </div>
-                </div>`,
-                style: `.label-container {
-                background: rgba(20, 20, 30, 0.75);
-                backdrop-filter: blur(12px);
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                border-radius: 12px;
-                padding: 16px;
-                min-width: 220px;
-                color: #fff;
-                font-family: 'Inter', system-ui, sans-serif;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-                transition: transform 0.2s, box-shadow 0.2s;
-                pointer-events: auto;
-                user-select: none;
-                }
+                template: `<div class="app-label-anchor">
+<div class="app-label-billboard">
+    <div class="app-label-billboard__card">
+      <div class="app-label-billboard__header">
+        <span class="app-label-billboard__status"></span>
+        {{title}}
+        <span class="app-label-billboard__code">{{code}}</span>
+      </div>
+      <div class="app-label-billboard__rows">
+        <div><span>设备名称</span><strong>{{name}}</strong></div>
+        <div><span>运行状态</span><strong class="is-normal">{{status}}</strong></div>
+        <div><span>实时温度</span><strong>{{temperature}} ℃</strong></div>
+        <div><span>工作电压</span><strong>{{voltage}} V</strong></div>
+        <div><span>当前功率</span><strong>{{power}} kW</strong></div>
+        <div><span>累计时长</span><strong>{{hours}} h</strong></div>
+        <div><span>所属区域</span><strong>{{area}}</strong></div>
+        <div><span>更新时间</span><strong>{{updatedAt}}</strong></div>
+      </div>
+    </div>
+    <div class="app-label-billboard__stem"></div>
+    <div class="app-label-billboard__anchor"></div>
+  </div>
+</div>`,
+                style: `.app-label-anchor {
+  position: relative;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+}
 
-                .label-container:hover {
-                transform: translateY(-5px);
-                border-color: rgba(66, 185, 131, 0.5);
-                box-shadow: 0 12px 40px rgba(66, 185, 131, 0.2);
-                }
+.app-label-anchor, .app-label-anchor * {
+  box-sizing: border-box;
+}
 
-                .header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 12px;
-                padding-bottom: 8px;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                }
+.app-label-billboard {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 270px;
+  color: #d9f7ff;
+  font-size: 12px;
+  line-height: 1.35;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
 
-                .title {
-                font-size: 15px;
-                font-weight: 600;
-                color: #fff;
-                letter-spacing: 0.5px;
-                }
+.app-label-billboard__card {
+  width: 270px;
+  overflow: hidden;
+  border: 1px solid rgba(80, 220, 255, 0.8);
+  border-radius: 5px;
+  background:
+    linear-gradient(135deg, rgba(14, 46, 68, 0.96), rgba(6, 20, 34, 0.92)),
+    rgba(8, 26, 42, 0.94);
+  box-shadow:
+    0 0 18px rgba(0, 184, 255, 0.2),
+    inset 0 0 20px rgba(46, 203, 255, 0.06);
+  backdrop-filter: blur(5px);
+}
 
-                .status-dot {
-                width: 8px;
-                height: 8px;
-                border-radius: 50%;
-                background: #ccc;
-                box-shadow: 0 0 8px currentColor;
-                }
+.app-label-billboard__header {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(80, 220, 255, 0.28);
+  background: rgba(35, 145, 190, 0.16);
+  color: #f1fcff;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
 
-                .status-normal { background: #42b983; color: #42b983; }
-                .status-warning { background: #e6a23c; color: #e6a23c; }
-                .status-error { background: #f56c6c; color: #f56c6c; }
+.app-label-billboard__status {
+  width: 8px;
+  height: 8px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: #48f0a5;
+  box-shadow: 0 0 8px rgba(72, 240, 165, 0.9);
+}
 
-                .content {
-                display: grid;
-                gap: 8px;
-                }
+.app-label-billboard__code {
+  margin-left: auto;
+  color: #6edfff;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
 
-                .row {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                font-size: 13px;
-                }
+.app-label-billboard__rows {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  padding: 6px 10px 9px;
+}
 
-                .label {
-                color: rgba(255, 255, 255, 0.6);
-                }
+.app-label-billboard__rows > div {
+  display: flex;
+  min-width: 0;
+  padding: 5px 4px;
+  border-bottom: 1px dashed rgba(126, 214, 240, 0.12);
+}
 
-                .value {
-                font-weight: 500;
-                color: rgba(255, 255, 255, 0.9);
-                font-feature-settings: "tnum";
-                }
+.app-label-billboard__rows span {
+  flex-shrink: 0;
+  margin-right: 7px;
+  color: #7fa9b8;
+}
 
-                .value.highlight {
-                color: #42b983;
-                font-weight: 600;
-                }`,
+.app-label-billboard__rows strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #e5faff;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-label-billboard__rows strong.is-normal {
+  color: #48f0a5;
+}
+
+.app-label-billboard__stem {
+  width: 1px;
+  height: 58px;
+  background: linear-gradient(to bottom, #55ddff, rgba(85, 221, 255, 0.24));
+  box-shadow: 0 0 5px rgba(85, 221, 255, 0.55);
+}
+
+.app-label-billboard__anchor {
+  width: 8px;
+  height: 8px;
+  border: 2px solid #64e4ff;
+  border-radius: 50%;
+  background: rgba(8, 30, 48, 0.92);
+  box-shadow:
+    0 0 0 4px rgba(80, 220, 255, 0.12),
+    0 0 10px rgba(80, 220, 255, 0.7);
+}
+
+/* 标签编辑器中按正常文档流展示完整示例。 */
+.preview-wrapper > .app-label-anchor {
+  width: 270px;
+  height: auto;
+  margin: 24px auto;
+}
+
+.preview-wrapper > .app-label-anchor > .app-label-billboard {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  transform: none;
+}`,
                 labels: [
-                    { "id": "d1", "name": "大雁塔北广场", "status": "运行中", "statusClass": "normal", "temperature": 24.5, "humidity": 45, "lng": 108.95940826330946, "lat": 34.219739657625965, "height": 10 },
-                    { "id": "d2", "name": "大雁塔南广场", "status": "维护中", "statusClass": "warning", "temperature": 25.0, "humidity": 42, "lng": 108.964, "lat": 34.218, "height": 10 },
-                    { "id": "d3", "name": "步行街西侧", "status": "故障警告", "statusClass": "error", "temperature": 28.2, "humidity": 38, "lng": 108.960, "lat": 34.220, "height": 10 }
+                    {
+                        "id": "d1",
+                        "title": "设备运行信息",
+                        "code": "EQ-001",
+                        "name": "一号监测设备",
+                        "status": "正常",
+                        "temperature": 36.8,
+                        "voltage": 220,
+                        "power": 18.6,
+                        "hours": "1,286",
+                        "area": "A 区",
+                        "updatedAt": "刚刚",
+                        "lng": 108.95940826330946,
+                        "lat": 34.219739657625965,
+                        "height": 10
+                    },
+                    {
+                        "id": "d2",
+                        "title": "设备运行信息",
+                        "code": "EQ-002",
+                        "name": "二号监测设备",
+                        "status": "正常",
+                        "temperature": 35.2,
+                        "voltage": 220,
+                        "power": 16.2,
+                        "hours": "968",
+                        "area": "B 区",
+                        "updatedAt": "刚刚",
+                        "lng": 108.964,
+                        "lat": 34.218,
+                        "height": 10
+                    },
+                    {
+                        "id": "d3",
+                        "title": "设备运行信息",
+                        "code": "EQ-003",
+                        "name": "三号监测设备",
+                        "status": "正常",
+                        "temperature": 37.1,
+                        "voltage": 220,
+                        "power": 19.4,
+                        "hours": "1,052",
+                        "area": "C 区",
+                        "updatedAt": "刚刚",
+                        "lng": 108.96,
+                        "lat": 34.22,
+                        "height": 10
+                    }
                 ]
             }
         }
