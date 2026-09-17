@@ -1,6 +1,6 @@
 <template>
   <aside class="left-panel" :class="{ disabled: disabled }">
-    <ComponentTree />
+    <ComponentTree :disabled="disabled" />
     <ComponentMenu :disabled="disabled" />
   </aside>
 </template>

@@ -1,5 +1,5 @@
 <template>
-  <div class="component-tree">
+  <div class="component-tree" :class="{ disabled }" :aria-disabled="disabled">
     <div class="tree-header">
       <span class="tree-title">组件列表</span>
       <span class="tree-count">{{ widgets.length }}</span>
@@ -14,7 +14,7 @@
       >
         <span class="widget-icon">{{ getWidgetIcon(widget.type) }}</span>
         <span class="widget-name">{{ getWidgetDisplayName(widget) }}</span>
-        <button class="delete-btn" @click.stop="onDeleteWidget(widget)" title="删除">×</button>
+        <button class="delete-btn" :disabled="disabled" @click.stop="onDeleteWidget(widget)" title="删除">×</button>
       </div>
       <div v-if="widgets.length === 0" class="empty-tip">
         暂无组件，请从下方拖拽添加
@@ -28,6 +28,13 @@ import { useAppStore } from '../../stores/appStore';
 import { storeToRefs } from 'pinia';
 import { getWidgetDefinition } from '../../core/widgetRegistry';
 import { computed } from 'vue';
+
+const props = defineProps({
+  disabled: {
+    type: Boolean,
+    default: false
+  }
+});
 
 const appStore = useAppStore();
 const { widgets, selectedWidget } = storeToRefs(appStore);
@@ -48,10 +55,12 @@ const getWidgetDisplayName = (widget) => {
 };
 
 const onSelectWidget = (widget) => {
+  if (props.disabled) return;
   appStore.selectWidget(widget);
 };
 
 const onDeleteWidget = (widget) => {
+  if (props.disabled) return;
   appStore.removeWidget(widget);
 };
 </script>
@@ -104,7 +113,7 @@ const onDeleteWidget = (widget) => {
   transition: background 0.2s;
 }
 
-.tree-item:hover {
+.component-tree:not(.disabled) .tree-item:hover {
   background: #2a2a2a;
 }
 
@@ -133,12 +142,17 @@ const onDeleteWidget = (widget) => {
   transition: all 0.2s;
 }
 
-.tree-item:hover .delete-btn {
+.component-tree:not(.disabled) .tree-item:hover .delete-btn {
   opacity: 1;
 }
 
-.delete-btn:hover {
+.delete-btn:hover:not(:disabled) {
   color: #ff6b6b;
+}
+
+.component-tree.disabled .tree-item,
+.delete-btn:disabled {
+  cursor: default;
 }
 
 .empty-tip {
