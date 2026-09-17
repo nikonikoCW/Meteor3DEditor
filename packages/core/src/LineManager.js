@@ -1,296 +1,214 @@
 import * as THREE from 'three';
 
-/**
- * 流动线管理器
- * 负责创建和管理带有流动纹理效果的 3D 线条
- */
+// Match the reference demo's initial appearance; spacing and speed stay fixed.
+const DEFAULT_LINE_WIDTH = 0.65;
+const ARROW_SPACING = 2.6;
+const FLOW_SPEED = 2.5;
+
 export class LineManager {
     constructor(scene) {
         this.scene = scene;
-        this.lines = new Map(); // 存储所有线条对象: id -> { mesh, material }
+        this.lines = new Map();
         this.textureLoader = new THREE.TextureLoader();
+        this.elapsed = 0;
     }
 
     /**
-     * 创建流动线
-     * @param {Object} options - 配置选项
-     * @param {string} [options.id] - 线条唯一标识，不传则自动生成
-     * @param {Array} options.points - 路径点数组 [{x,y,z}, ...]
-     * @param {string} options.textureUrl - 纹理图片 URL
-     * @param {number} [options.width=2.0] - 线条宽度
-     * @param {number} [options.radius=2.0] - 转角圆角半径
-     * @param {number} [options.speed=1.5] - 流动速度
-     * @param {number} [options.repeat=25.0] - 纹理重复次数
-     * @returns {string} 线条 ID
+     * Create a road ribbon and flowing arrows, matching the drawing demo.
+     * @param {Object} options
+     * @param {Array<{x:number,y:number,z:number}>} options.points - World-space points.
+     * @param {string} options.textureUrl - Arrow image URL.
+     * @param {number} [options.width=0.65] - Road width in scene units, finite and positive.
+     * @returns {string|null} Generated ID; null if fewer than two distinct points.
      */
-    createLine(options) {
-        const {
-            id = THREE.MathUtils.generateUUID(),
-            points,
-            textureUrl,
-            width = 2.0,
-            radius = 2.0,
-            speed = 1.5,
-            repeat = 25.0,
-            breathStart = 0.5, // 呼吸效果起始值
-            breathEnd = 1.0,   // 呼吸效果结束值
-            breathFrequency = 2.0 // 呼吸频率，0 为不呼吸
-        } = options;
-
-        if (!points || points.length < 2) {
-            console.warn('[LineManager] Points array must contain at least 2 points.');
-            return null;
+    createLine({ points, textureUrl, width = DEFAULT_LINE_WIDTH } = {}) {
+        if (!Array.isArray(points)) throw new TypeError('[LineManager] points must be an array.');
+        if (typeof textureUrl !== 'string' || !textureUrl.trim()) throw new TypeError('[LineManager] textureUrl is required.');
+        if (!Number.isFinite(width)) throw new TypeError('[LineManager] width must be a finite number.');
+        if (width <= 0) throw new RangeError('[LineManager] width must be greater than zero.');
+        const path = [];
+        for (const p of points) {
+            if (!p || ![p.x, p.y, p.z].every(Number.isFinite)) throw new TypeError('[LineManager] Invalid point coordinates.');
+            const point = new THREE.Vector3(p.x, p.y, p.z);
+            if (!path.length || path.at(-1).distanceToSquared(point) > 1e-12) path.push(point);
         }
+        if (path.length < 2) return null;
 
-        // 转换点数据为 THREE.Vector3
-        const vectorPoints = points.map(p => {
-            if (p.isVector3) return p;
-            return new THREE.Vector3(p.x, p.y, p.z);
+        // Ground picking uses the demo's exact rectangle+disc / local Bezier
+        // algorithms. Elevated routes retain their input heights and node sections.
+        const planar = path.every(p => Math.abs(p.y - path[0].y) < 1e-4);
+        const roadGeometry = planar ? routeGeometry(path, width) : elevationRibbon(path, width);
+        const arrowGeometry = planar ? arrowRibbon(path, width) : elevationRibbon(path, width * 0.7);
+        // Draw both route layers after opaque scenery, without writing depth.
+        // Elevated ribbons are coplanar; polygonOffset alone is not a reliable
+        // separation with the renderer's logarithmic fragment depth. Keep depth
+        // testing enabled so buildings/terrain can still occlude the route.
+        const roadMaterial = new THREE.MeshBasicMaterial({
+            color: 0x24516d, side: THREE.DoubleSide,
+            transparent: true, opacity: 1, depthWrite: false, forceSinglePass: true
         });
-
-        // 1. 生成圆角路径 (直接使用 demo 的算法)
-        const roundedPath = this._createRoundedPath(vectorPoints, radius);
-
-        // 2. 生成几何体 (直接使用 demo 的算法)
-        const geometry = this._createGeometry(roundedPath, width);
-
-        // 3. 创建材质 (直接使用 demo 的 shader)
         const texture = this.textureLoader.load(textureUrl);
+        texture.colorSpace = THREE.SRGBColorSpace;
         texture.wrapS = THREE.RepeatWrapping;
-
-        const vertexShader = `
-            #include <common>
-            #include <logdepthbuf_pars_vertex>
-            varying vec2 vUv;
-            void main() {
-                vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                #include <logdepthbuf_vertex>
-            }
-        `;
-
-        const fragmentShader = `
-            #include <logdepthbuf_pars_fragment>
-            uniform sampler2D uTexture;
-            uniform float uTime;
-            uniform float uRepeat;
-            uniform float uSpeed;
-            uniform float uBreathStart;
-            uniform float uBreathEnd;
-            uniform float uBreathFrequency;
-            varying vec2 vUv;
-
-            void main() {
-                #include <logdepthbuf_fragment>
-                // 核心：在 Shader 内部处理 UV 滚动
-                // vUv.x 沿着路径方向，vUv.y 跨越宽度方向
-                vec2 scr = vec2(vUv.x*uRepeat - uTime*uSpeed, vUv.y);
-                
-                vec4 color = texture2D(uTexture, scr);
-
-                float breath = 1.0;
-                if (uBreathFrequency > 0.0) {
-                    float factor = abs(sin(uTime * uBreathFrequency));
-                    breath = mix(uBreathStart, uBreathEnd, factor);
-                }
-                
-                // 增强亮度（发光感）
-                gl_FragColor = vec4(color.rgb, color.a * breath);
-            }
-        `;
-
-        const material = new THREE.ShaderMaterial({
-            uniforms: {
-                uTexture: { value: texture },
-                uTime: { value: 0 },
-                uSpeed: { value: speed },
-                uRepeat: { value: repeat },
-                uBreathStart: { value: breathStart },
-                uBreathEnd: { value: breathEnd },
-                uBreathFrequency: { value: breathFrequency }
-            },
-            vertexShader: vertexShader,
-            fragmentShader: fragmentShader,
-            transparent: true,
-            depthWrite: false,
-            side: THREE.DoubleSide
+        // Three.js clamps this to the GPU's supported maximum. Preserve detail
+        // on oblique views instead of shimmering between undersampled texels.
+        texture.anisotropy = 16;
+        texture.offset.x = -(this.elapsed * FLOW_SPEED / ARROW_SPACING) % 1;
+        const material = new THREE.MeshBasicMaterial({
+            map: texture, transparent: true, side: THREE.DoubleSide, depthWrite: false,
+            forceSinglePass: true,
+            polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2
         });
-
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.userData.isFlowLine = true;
-        mesh.userData.lineId = id;
-
+        const mesh = new THREE.Group();
+        const id = THREE.MathUtils.generateUUID();
+        const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
+        const arrowMesh = new THREE.Mesh(arrowGeometry, material);
+        // Stable order within the transparent pass, independent of camera distance.
+        roadMesh.renderOrder = 1;
+        arrowMesh.renderOrder = 2;
+        mesh.add(roadMesh, arrowMesh);
+        mesh.traverse(object => {
+            object.userData.isFlowLine = true;
+            object.userData.lineId = id;
+        });
         this.scene.add(mesh);
-        this.lines.set(id, { mesh, material });
-
+        this.lines.set(id, { mesh, material, texture });
         return id;
     }
 
-    /**
-     * 移除线条
-     * @param {string} id - 线条 ID
-     */
     removeLine(id) {
         const line = this.lines.get(id);
-        if (line) {
-            this.scene.remove(line.mesh);
-            line.mesh.geometry.dispose();
-            line.material.dispose();
-            if (line.material.uniforms.uTexture.value) {
-                line.material.uniforms.uTexture.value.dispose();
-            }
-            this.lines.delete(id);
-        }
-    }
-
-    /**
-     * 清除所有线条
-     */
-    clear() {
-        const ids = Array.from(this.lines.keys());
-        ids.forEach(id => this.removeLine(id));
-    }
-
-    /**
-     * 更新动画 (每帧调用)
-     */
-    update() {
-        this.lines.forEach(({ material }) => {
-            if (material.uniforms.uTime) {
-                // 每一帧更新时间 uniform (与 demo 一致: += 0.02)
-                material.uniforms.uTime.value += 0.02;
-            }
+        if (!line) return;
+        this.scene.remove(line.mesh);
+        line.mesh.traverse(object => {
+            object.geometry?.dispose();
+            object.material?.dispose();
         });
+        line.texture.dispose();
+        this.lines.delete(id);
     }
 
-    /**
-     * 生成圆角路径 (直接从 demo 复制)
-     * @private
-     */
-    _createRoundedPath(points, radius = 1.0) {
-        const path = new THREE.CurvePath();
-        const len = points.length;
+    clear() {
+        for (const id of this.lines.keys()) this.removeLine(id);
+    }
 
-        // 检查是否闭合（首尾点距离极小视为重合）
-        const isClosed = points[0].distanceTo(points[len - 1]) < 0.001;
-
-        // 实际需要处理的点集合
-        // 如果闭合，我们在逻辑上需要参考最后一个点之前的点和第二个点
-        for (let i = 0; i < (isClosed ? len - 1 : len - 1); i++) {
-            const pCurrent = points[i];
-            const pNext = points[i + 1];
-
-            // 获取当前段的方向
-            const dirCurrent = new THREE.Vector3().subVectors(pNext, pCurrent).normalize();
-
-            // 确定这一段直线的起点
-            let startPoint;
-            if (isClosed || i > 0) {
-                // 如果闭合或不是第一段，起点要为上一个圆角留出空间
-                startPoint = pCurrent.clone().addScaledVector(dirCurrent, radius);
-            } else {
-                startPoint = pCurrent;
-            }
-
-            // 确定这一段直线的终点（即圆角的起点）
-            let pAfterNext;
-
-            if (i < len - 2) {
-                pAfterNext = points[i + 2];
-            } else if (isClosed) {
-                pAfterNext = points[1]; // 闭合情况下，最后一段的下一个点是第二个点
-            }
-
-            if (pAfterNext) {
-                const dirNext = new THREE.Vector3().subVectors(pAfterNext, pNext).normalize();
-                const curveStart = pNext.clone().addScaledVector(dirCurrent, -radius);
-                const curveEnd = pNext.clone().addScaledVector(dirNext, radius);
-
-                // 添加直线段
-                path.add(new THREE.LineCurve3(startPoint, curveStart));
-                // 添加圆角弧线段
-                path.add(new THREE.QuadraticBezierCurve3(curveStart, pNext, curveEnd));
-            } else {
-                // 非闭合路径的最后一段
-                path.add(new THREE.LineCurve3(startPoint, pNext));
-            }
+    update(delta = 0) {
+        if (!Number.isFinite(delta) || delta <= 0) return;
+        // Same suspended-frame clamp and texture scrolling as the demo.
+        this.elapsed += Math.min(delta, 0.05);
+        for (const { texture } of this.lines.values()) {
+            texture.offset.x = -(this.elapsed * FLOW_SPEED / ARROW_SPACING) % 1;
         }
-
-        return path;
     }
+}
 
-    /**
-     * 生成带状几何体 (直接从 demo 复制)
-     * @private
-     */
-    _createGeometry(roundedPath, width) {
-        const segments = Math.max(300, Math.ceil(roundedPath.getLength() * 8)); // 细分数（按长度自适应）
-        const points = roundedPath.getSpacedPoints(segments);
+function routeGeometry(points, width) {
+  const positions = [];
+  const halfWidth = width / 2;
+  const vertex = p => positions.push(p.x, p.y + 0.02, p.z);
+  const triangle = (a, b, c) => { vertex(a); vertex(b); vertex(c); };
+  for (let i = 1; i < points.length; i++) {
+    const start = points[i - 1], end = points[i];
+    const direction = end.clone().sub(start).normalize();
+    const side = new THREE.Vector3(-direction.z, 0, direction.x).multiplyScalar(halfWidth);
+    const a = start.clone().sub(side), b = start.clone().add(side);
+    const c = end.clone().sub(side), d = end.clone().add(side);
+    triangle(a, b, c); triangle(b, d, c);
+  }
+  for (const point of points) {
+    for (let j = 0; j < 48; j++) {
+      const a = j * Math.PI * 2 / 48, b = (j + 1) * Math.PI * 2 / 48;
+      triangle(point,
+        point.clone().add(new THREE.Vector3(Math.cos(a) * halfWidth, 0, Math.sin(a) * halfWidth)),
+        point.clone().add(new THREE.Vector3(Math.cos(b) * halfWidth, 0, Math.sin(b) * halfWidth)));
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  return geometry;
+}
 
-        const geometry = new THREE.BufferGeometry();
-        const vertices = [];
-        const uvs = [];
-        const indices = [];
+function arrowRibbon(points, width) {
+  const samples = [];
+  const halfRoad = width / 2;
+  const halfArrow = halfRoad * 0.55;
+  const append = (point, tangent) => {
+    if (samples.length && samples.at(-1).point.distanceToSquared(point) < 1e-12) return;
+    samples.push({ point, tangent });
+  };
+  append(points[0].clone(), points[1].clone().sub(points[0]).normalize());
+  for (let i = 1; i < points.length - 1; i++) {
+    const point = points[i];
+    const incoming = point.clone().sub(points[i - 1]).normalize();
+    const outgoing = points[i + 1].clone().sub(point).normalize();
+    const trim = Math.min(halfRoad * 0.4, point.distanceTo(points[i - 1]) * .25, point.distanceTo(points[i + 1]) * .25);
+    const entry = point.clone().addScaledVector(incoming, -trim);
+    const exit = point.clone().addScaledVector(outgoing, trim);
+    const curve = new THREE.QuadraticBezierCurve3(entry, point.clone(), exit);
+    for (let j = 0; j <= 24; j++) {
+      const t = j / 24;
+      const tangent = incoming.clone().multiplyScalar(1 - t).addScaledVector(outgoing, t);
+      // 完全折返在中心收拢纹理，避免产生无效方向或越界。
+      if (tangent.lengthSq() > 1e-12) tangent.normalize();
+      append(curve.getPoint(t), tangent);
+    }
+  }
+  append(points.at(-1).clone(), points.at(-1).clone().sub(points.at(-2)).normalize());
+  const positions = [], uvs = [], indices = [];
+  let distance = 0;
+  samples.forEach(({ point, tangent }, i) => {
+    if (i) distance += point.distanceTo(samples[i - 1].point);
+    const side = new THREE.Vector3(-tangent.z, 0, tangent.x);
+    for (const sign of [-1, 1]) {
+      const p = point.clone().addScaledVector(side, halfArrow * sign);
+      positions.push(p.x, p.y + 0.045, p.z);
+      uvs.push(distance / ARROW_SPACING, sign === -1 ? 0 : 1);
+    }
+    if (i < samples.length - 1) {
+      const a = i * 2;
+      indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    }
+  });
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  return geometry;
+}
 
-        const up = new THREE.Vector3(0, 1, 0);
-        let prevSide = null;
-
-        for (let i = 0; i < points.length; i++) {
-            const current = points[i];
-            const u = i / (points.length - 1);
-            const tangent = roundedPath.getTangentAt(u).normalize();
-
-            // 约束：带宽方向保持水平，线条只允许"上下坡"或"水平"
-            const horizontal = tangent.clone();
-            horizontal.y = 0;
-            const horizontalLen = horizontal.length();
-
-            let side;
-            if (horizontalLen < 1e-3) {
-                // 纯竖直段，保持上一帧的 side
-                side = prevSide ? prevSide.clone() : new THREE.Vector3(1, 0, 0);
-            } else {
-                const targetSide = new THREE.Vector3().crossVectors(up, horizontal).normalize();
-                if (prevSide) {
-                    // 避免180度翻转
-                    if (prevSide.dot(targetSide) < 0) targetSide.negate();
-                    // 在接近竖直的过渡区做平滑，避免连接点扭曲
-                    const blend = Math.min(1, horizontalLen / 0.3);
-                    const blended = prevSide.clone().lerp(targetSide, blend).normalize();
-
-                    // 限制每一步旋转角度，抑制连续翻转导致的扭曲
-                    const dot = Math.max(-1, Math.min(1, prevSide.dot(blended)));
-                    const angle = Math.acos(dot);
-                    const maxAngle = Math.PI / 12; // 每步最大旋转角度
-                    if (angle > maxAngle) {
-                        side = prevSide.clone().applyAxisAngle(up, maxAngle).normalize();
-                    } else {
-                        side = blended;
-                    }
-                } else {
-                    side = targetSide;
-                }
-            }
-            prevSide = side.clone();
-
-            // 计算左右顶点
-            const left = new THREE.Vector3().copy(current).addScaledVector(side, width / 2);
-            const right = new THREE.Vector3().copy(current).addScaledVector(side, -width / 2);
-
-            vertices.push(left.x, left.y, left.z, right.x, right.y, right.z);
-
-            uvs.push(u, 0, u, 1);
-
-            if (i < points.length - 1) {
-                const base = i * 2;
-                indices.push(base, base + 1, base + 2, base + 1, base + 3, base + 2);
-            }
+// Generalize the demo's elevationRibbon: derive horizontal cross-sections from
+// the route instead of depending on the demo's stairs/helix dropdown state.
+function elevationRibbon(points, width) {
+    const directions = points.slice(1).map((p, i) => p.clone().sub(points[i]).normalize());
+    const sides = directions.map(d => Math.hypot(d.x, d.z) > 1e-8
+        ? new THREE.Vector3(-d.z, 0, d.x).normalize() : null);
+    let previous = sides.find(Boolean) || new THREE.Vector3(1, 0, 0);
+    for (let i = 0; i < sides.length; i++) {
+        if (!sides[i]) sides[i] = previous.clone();
+        previous = sides[i];
+    }
+    const positions = [], uvs = [], indices = [];
+    let distance = 0;
+    points.forEach((point, i) => {
+        if (i) distance += point.distanceTo(points[i - 1]);
+        const before = sides[Math.max(0, i - 1)];
+        const after = sides[Math.min(i, sides.length - 1)];
+        const side = before.clone().add(after);
+        if (side.lengthSq() < 1e-12) side.set(0, 0, 0);
+        else side.normalize();
+        for (const sign of [-1, 1]) {
+            const p = point.clone().addScaledVector(side, sign * width / 2);
+            positions.push(p.x, p.y, p.z);
+            uvs.push(distance / ARROW_SPACING, sign === -1 ? 0 : 1);
         }
-
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-        geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-        geometry.setIndex(indices);
-
-        return geometry;
-    }
+        if (i < points.length - 1) {
+            const a = i * 2;
+            indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+        }
+    });
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.setIndex(indices);
+    return geometry;
 }

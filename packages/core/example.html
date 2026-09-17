@@ -6,41 +6,264 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Meteor3D 场景加载示例</title>
     <style>
-        :root { color-scheme: dark; font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif; color: #e8eef6; background: #101722; }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        #canvas { width: 100vw; height: 100vh; height: 100dvh; }
-        .panel { position: fixed; top: 24px; left: 24px; z-index: 100; width: 316px; max-height: calc(100dvh - 48px); overflow: auto; border: 1px solid #ffffff1c; border-radius: 18px; background: #111c2aed; box-shadow: 0 20px 60px #0005; backdrop-filter: blur(20px); scrollbar-width: thin; }
-        .panel-header { display: flex; align-items: center; gap: 12px; padding: 20px; }
-        .brand { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: #59d6bc; color: #112c2a; font-size: 23px; font-weight: 800; }
-        h1 { font-size: 17px; letter-spacing: .3px; font-weight: 650; }
-        .subtitle { margin-top: 4px; color: #8e9eb2; font-size: 11px; letter-spacing: 1px; }
-        .collapse { margin-left: auto; width: 30px; min-height: 30px; padding: 0; font-size: 18px; }
-        .connection { display: flex; align-items: center; gap: 8px; margin: 0 20px 18px; font-size: 12px; color: #a8b7c9; }
-        .connection::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #e6bb69; box-shadow: 0 0 0 4px #e6bb6912; }
-        .connection[data-state="ready"]::before { background: #59d6bc; box-shadow: 0 0 0 4px #59d6bc12; }
-        .connection[data-state="error"]::before { background: #fb8991; }
-        .section { padding: 17px 20px; border-top: 1px solid #ffffff0c; }
-        .section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-        h2 { font-size: 12px; font-weight: 600; color: #bdcad9; }
-        .badge { color: #74dac5; font-size: 10px; padding: 3px 7px; border-radius: 5px; background: #59d6bc12; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        button { font: inherit; font-size: 12px; line-height: 1.4; min-height: 36px; padding: 9px 10px; border: 1px solid #ffffff14; border-radius: 8px; color: #c8d3e1; background: #ffffff05; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
-        button:hover:not(:disabled) { background: #ffffff0e; border-color: #ffffff30; color: #fff; }
-        button:focus-visible { outline: 2px solid #7ae3d0; outline-offset: 3px; }
-        button:disabled { opacity: .35; cursor: not-allowed; }
-        button[aria-pressed="true"] { background: #59d6bc1c; border-color: #59d6bc66; color: #83e5ce; }
-        .primary { background: #59d6bc; border-color: #59d6bc; color: #102d29; font-weight: 600; }
-        .primary:hover:not(:disabled) { background: #7ae3cd; border-color: #7ae3cd; color: #102d29; }
-        .wide { width: 100%; }
-        .grid .wide { grid-column: 1 / -1; }
-        .hint { font-size: 11px; line-height: 1.8; color: #8495ab; margin-top: 10px; }
-        .drawing-status { margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: #080f194d; color: #9cacbf; font-size: 11px; line-height: 1.7; border-left: 2px solid #344458; }
-        .drawing-status.active { border-color: #59d6bc; color: #83e5ce; }
-        .panel-footer { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-top: 1px solid #ffffff0c; color: #687b94; font-size: 10px; letter-spacing: 1px; }
-        .panel-footer button { min-height: 28px; padding: 5px 8px; font-size: 10px; letter-spacing: 0; }
-        [hidden] { display: none !important; }
-        @media (max-width: 600px) { .panel { top: 12px; left: 12px; width: min(292px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); } .section { padding: 13px 16px; } .panel-header { padding: 16px; } }
-        @media (prefers-reduced-motion: reduce) { button { transition: none; } }
+        :root {
+            color-scheme: dark;
+            font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+            color: #e8eef6;
+            background: #101722;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        #canvas {
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+        }
+
+        .panel {
+            position: fixed;
+            top: 24px;
+            left: 24px;
+            z-index: 100;
+            width: 316px;
+            max-height: calc(100dvh - 48px);
+            overflow: auto;
+            border: 1px solid #ffffff1c;
+            border-radius: 18px;
+            background: #111c2aed;
+            box-shadow: 0 20px 60px #0005;
+            backdrop-filter: blur(20px);
+            scrollbar-width: thin;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px;
+        }
+
+        .brand {
+            display: grid;
+            place-items: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: #59d6bc;
+            color: #112c2a;
+            font-size: 23px;
+            font-weight: 800;
+        }
+
+        h1 {
+            font-size: 17px;
+            letter-spacing: .3px;
+            font-weight: 650;
+        }
+
+        .subtitle {
+            margin-top: 4px;
+            color: #8e9eb2;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+
+        .collapse {
+            margin-left: auto;
+            width: 30px;
+            min-height: 30px;
+            padding: 0;
+            font-size: 18px;
+        }
+
+        .connection {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 20px 18px;
+            font-size: 12px;
+            color: #a8b7c9;
+        }
+
+        .connection::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #e6bb69;
+            box-shadow: 0 0 0 4px #e6bb6912;
+        }
+
+        .connection[data-state="ready"]::before {
+            background: #59d6bc;
+            box-shadow: 0 0 0 4px #59d6bc12;
+        }
+
+        .connection[data-state="error"]::before {
+            background: #fb8991;
+        }
+
+        .section {
+            padding: 17px 20px;
+            border-top: 1px solid #ffffff0c;
+        }
+
+        .section-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        h2 {
+            font-size: 12px;
+            font-weight: 600;
+            color: #bdcad9;
+        }
+
+        .badge {
+            color: #74dac5;
+            font-size: 10px;
+            padding: 3px 7px;
+            border-radius: 5px;
+            background: #59d6bc12;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        button {
+            font: inherit;
+            font-size: 12px;
+            line-height: 1.4;
+            min-height: 36px;
+            padding: 9px 10px;
+            border: 1px solid #ffffff14;
+            border-radius: 8px;
+            color: #c8d3e1;
+            background: #ffffff05;
+            cursor: pointer;
+            transition: background .15s, border-color .15s, color .15s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #ffffff0e;
+            border-color: #ffffff30;
+            color: #fff;
+        }
+
+        button:focus-visible {
+            outline: 2px solid #7ae3d0;
+            outline-offset: 3px;
+        }
+
+        button:disabled {
+            opacity: .35;
+            cursor: not-allowed;
+        }
+
+        button[aria-pressed="true"] {
+            background: #59d6bc1c;
+            border-color: #59d6bc66;
+            color: #83e5ce;
+        }
+
+        .primary {
+            background: #59d6bc;
+            border-color: #59d6bc;
+            color: #102d29;
+            font-weight: 600;
+        }
+
+        .primary:hover:not(:disabled) {
+            background: #7ae3cd;
+            border-color: #7ae3cd;
+            color: #102d29;
+        }
+
+        .wide {
+            width: 100%;
+        }
+
+        .grid .wide {
+            grid-column: 1 / -1;
+        }
+
+        .hint {
+            font-size: 11px;
+            line-height: 1.8;
+            color: #8495ab;
+            margin-top: 10px;
+        }
+
+        .drawing-status {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #080f194d;
+            color: #9cacbf;
+            font-size: 11px;
+            line-height: 1.7;
+            border-left: 2px solid #344458;
+        }
+
+        .drawing-status.active {
+            border-color: #59d6bc;
+            color: #83e5ce;
+        }
+
+        .panel-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            border-top: 1px solid #ffffff0c;
+            color: #687b94;
+            font-size: 10px;
+            letter-spacing: 1px;
+        }
+
+        .panel-footer button {
+            min-height: 28px;
+            padding: 5px 8px;
+            font-size: 10px;
+            letter-spacing: 0;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        @media (max-width: 600px) {
+            .panel {
+                top: 12px;
+                left: 12px;
+                width: min(292px, calc(100vw - 24px));
+                max-height: calc(100dvh - 24px);
+            }
+
+            .section {
+                padding: 13px 16px;
+            }
+
+            .panel-header {
+                padding: 16px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            button {
+                transition: none;
+            }
+        }
     </style>
 </head>
 
@@ -49,22 +272,31 @@
     <aside class="panel" aria-label="场景控制面板">
         <header class="panel-header">
             <div class="brand" aria-hidden="true">M</div>
-            <div><h1>Meteor3D</h1><p class="subtitle">场景交互实验室</p></div>
-            <button class="collapse" onclick="togglePanel()" id="btn-panel" aria-expanded="true" aria-controls="panel-body" aria-label="收起控制面板">−</button>
+            <div>
+                <h1>Meteor3D</h1>
+                <p class="subtitle">场景交互实验室</p>
+            </div>
+            <button class="collapse" onclick="togglePanel()" id="btn-panel" aria-expanded="true"
+                aria-controls="panel-body" aria-label="收起控制面板">−</button>
         </header>
         <div id="panel-body">
             <div class="connection" id="scene-status" role="status">正在加载场景…</div>
             <section class="section">
-                <div class="section-heading"><h2>相机控制</h2><span class="badge" id="mode-display">轨道模式</span></div>
+                <div class="section-heading">
+                    <h2>相机控制</h2><span class="badge" id="mode-display">轨道模式</span>
+                </div>
                 <div class="grid">
                     <button onclick="setOrbitMode()" id="btn-orbit" aria-pressed="true">轨道模式</button>
                     <button onclick="setGhostMode()" id="btn-ghost" aria-pressed="false">幽灵模式</button>
-                    <button class="wide" onclick="setGhostLockMode()" id="btn-ghost-lock" aria-pressed="false">幽灵模式 · 锁定鼠标</button>
+                    <button class="wide" onclick="setGhostLockMode()" id="btn-ghost-lock" aria-pressed="false">幽灵模式 ·
+                        锁定鼠标</button>
                 </div>
                 <p class="hint" id="control-hint">拖动旋转视角 · 滚轮缩放场景</p>
             </section>
             <section class="section">
-                <div class="section-heading"><h2>视角书签</h2><span class="badge">CAMERA</span></div>
+                <div class="section-heading">
+                    <h2>视角书签</h2><span class="badge">CAMERA</span>
+                </div>
                 <div class="grid">
                     <button onclick="testGetViewCallback()">保存 · Callback</button>
                     <button onclick="testGetViewAwait()">保存 · Await</button>
@@ -72,20 +304,30 @@
                 </div>
             </section>
             <section class="section">
-                <div class="section-heading"><h2>交互画线</h2><span class="badge">DRAW</span></div>
-                <button class="primary wide" onclick="toggleLineDrawing()" id="btn-draw-line" aria-pressed="false" disabled>开启点击画线</button>
+                <div class="section-heading">
+                    <h2>交互画线</h2><span class="badge">DRAW</span>
+                </div>
+                <button class="primary wide" onclick="toggleLineDrawing()" id="btn-draw-line" aria-pressed="false"
+                    disabled>开启点击画线</button>
                 <div id="draw-line-status" class="drawing-status" role="status">开启后点击地图选点，关闭时清除线条。</div>
             </section>
             <section class="section">
-                <div class="section-heading"><h2>场景特效</h2><span class="badge">EFFECTS</span></div>
-                <div class="grid"><button onclick="testVFX()">能量盾</button><button onclick="testLine()">流动线</button></div>
+                <div class="section-heading">
+                    <h2>场景特效</h2><span class="badge">EFFECTS</span>
+                </div>
+                <div class="grid"><button onclick="testVFX()">能量盾</button><button onclick="testLine()">流动线</button>
+                </div>
             </section>
             <section class="section">
-                <div class="section-heading"><h2>路线漫游</h2><span class="badge">ROAM</span></div>
-                <div class="grid"><button onclick="startRoaming()" id="btn-roam-start" disabled>开始漫游</button><button onclick="stopRoaming()" id="btn-roam-stop" disabled>停止漫游</button></div>
+                <div class="section-heading">
+                    <h2>路线漫游</h2><span class="badge">ROAM</span>
+                </div>
+                <div class="grid"><button onclick="startRoaming()" id="btn-roam-start" disabled>开始漫游</button><button
+                        onclick="stopRoaming()" id="btn-roam-stop" disabled>停止漫游</button></div>
                 <p class="hint">沿预设路线移动，相机自动跟随。</p>
             </section>
-            <footer class="panel-footer"><span>METEOR / CORE</span><button onclick="toggleStats()" id="btn-stats" aria-pressed="false">性能统计 · 关</button></footer>
+            <footer class="panel-footer"><span>METEOR / CORE</span><button onclick="toggleStats()" id="btn-stats"
+                    aria-pressed="false">性能统计 · 关</button></footer>
         </div>
     </aside>
 
@@ -203,8 +445,7 @@
                 const lineId = api.createLine({
                     // 略微抬高，避免与地图表面重叠闪烁。
                     points: points.map(p => ({ x: p.x, y: p.y + 0.1, z: p.z })),
-                    textureUrl: 'http://47.106.36.64:9191/download/chenwei/3.jpeg',
-                    width: 1.2, radius: 0, speed: 1, repeat: 20, breathFrequency: 0
+                    textureUrl: 'http://47.106.36.64:9191/download/chenwei/jiantou2.png'
                 });
                 if (lineId == null) return;
                 if (drawingLineId !== null) api.removeLine(drawingLineId);
@@ -237,8 +478,7 @@
             if (!roamLineId) {
                 roamLineId = api.createLine({
                     points: roamPoints,
-                    textureUrl: 'http://47.106.36.64:9191/download/chenwei/3.jpeg',
-                    width: 1.2, radius: 0, speed: 1, repeat: 20, breathFrequency: 0
+                    textureUrl: 'http://47.106.36.64:9191/download/chenwei/jiantou2.png'
                 });
             }
             api.moveTo(ROAM_BID, roamStart, { x: 0, y: Math.PI / 2, z: 0 }, 0);
@@ -396,13 +636,7 @@
 
             window.meteor3d.createLine({
                 points: points,
-                textureUrl: 'http://47.106.36.64:9191/download/chenwei/3.jpeg',
-                width: 2.0,
-                speed: 2.0,
-                repeat: 25,
-                breathStart: 0.5,
-                breathEnd: 1.0,
-                breathFrequency: 0
+                textureUrl: 'http://47.106.36.64:9191/download/chenwei/jiantou2.png'
             });
             console.log('✅ 流动线创建成功');
         }
