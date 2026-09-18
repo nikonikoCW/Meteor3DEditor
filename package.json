@@ -1,0 +1,18 @@
+{
+  "name": "meteor3d-monorepo",
+  "private": true,
+  "scripts": {
+    "dev:scene": "pnpm --filter @meteor3d/scene-editor dev",
+    "dev:asset": "pnpm --filter @meteor3d/asset-manager dev",
+    "build:core": "pnpm --filter @meteor3d/core build",
+    "build:scene": "pnpm --filter @meteor3d/scene-editor build",
+    "build:asset": "pnpm --filter @meteor3d/asset-manager build",
+    "build:all": "pnpm -r build"
+  },
+  "devDependencies": {
+    "pnpm": "^10.34.4"
+  },
+  "dependencies": {
+    "proj4": "^2.20.2"
+  }
+}

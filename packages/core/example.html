@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Meteor3D 场景加载示例</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+            color: #e8eef6;
+            background: #101722;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        #canvas {
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+        }
+
+        .panel {
+            position: fixed;
+            top: 24px;
+            left: 24px;
+            z-index: 100;
+            width: 316px;
+            max-height: calc(100dvh - 48px);
+            overflow: auto;
+            border: 1px solid #ffffff1c;
+            border-radius: 18px;
+            background: #111c2aed;
+            box-shadow: 0 20px 60px #0005;
+            backdrop-filter: blur(20px);
+            scrollbar-width: thin;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px;
+        }
+
+        .brand {
+            display: grid;
+            place-items: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: #59d6bc;
+            color: #112c2a;
+            font-size: 23px;
+            font-weight: 800;
+        }
+
+        h1 {
+            font-size: 17px;
+            letter-spacing: .3px;
+            font-weight: 650;
+        }
+
+        .subtitle {
+            margin-top: 4px;
+            color: #8e9eb2;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+
+        .collapse {
+            margin-left: auto;
+            width: 30px;
+            min-height: 30px;
+            padding: 0;
+            font-size: 18px;
+        }
+
+        .connection {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 20px 18px;
+            font-size: 12px;
+            color: #a8b7c9;
+        }
+
+        .connection::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #e6bb69;
+            box-shadow: 0 0 0 4px #e6bb6912;
+        }
+
+        .connection[data-state="ready"]::before {
+            background: #59d6bc;
+            box-shadow: 0 0 0 4px #59d6bc12;
+        }
+
+        .connection[data-state="error"]::before {
+            background: #fb8991;
+        }
+
+        .section {
+            padding: 17px 20px;
+            border-top: 1px solid #ffffff0c;
+        }
+
+        .section-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        h2 {
+            font-size: 12px;
+            font-weight: 600;
+            color: #bdcad9;
+        }
+
+        .badge {
+            color: #74dac5;
+            font-size: 10px;
+            padding: 3px 7px;
+            border-radius: 5px;
+            background: #59d6bc12;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        button {
+            font: inherit;
+            font-size: 12px;
+            line-height: 1.4;
+            min-height: 36px;
+            padding: 9px 10px;
+            border: 1px solid #ffffff14;
+            border-radius: 8px;
+            color: #c8d3e1;
+            background: #ffffff05;
+            cursor: pointer;
+            transition: background .15s, border-color .15s, color .15s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #ffffff0e;
+            border-color: #ffffff30;
+            color: #fff;
+        }
+
+        button:focus-visible {
+            outline: 2px solid #7ae3d0;
+            outline-offset: 3px;
+        }
+
+        button:disabled {
+            opacity: .35;
+            cursor: not-allowed;
+        }
+
+        button[aria-pressed="true"] {
+            background: #59d6bc1c;
+            border-color: #59d6bc66;
+            color: #83e5ce;
+        }
+
+        .primary {
+            background: #59d6bc;
+            border-color: #59d6bc;
+            color: #102d29;
+            font-weight: 600;
+        }
+
+        .primary:hover:not(:disabled) {
+            background: #7ae3cd;
+            border-color: #7ae3cd;
+            color: #102d29;
+        }
+
+        .wide {
+            width: 100%;
+        }
+
+        .grid .wide {
+            grid-column: 1 / -1;
+        }
+
+        .hint {
+            font-size: 11px;
+            line-height: 1.8;
+            color: #8495ab;
+            margin-top: 10px;
+        }
+
+        .drawing-status {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #080f194d;
+            color: #9cacbf;
+            font-size: 11px;
+            line-height: 1.7;
+            border-left: 2px solid #344458;
+        }
+
+        .drawing-status.active {
+            border-color: #59d6bc;
+            color: #83e5ce;
+        }
+
+        .panel-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            border-top: 1px solid #ffffff0c;
+            color: #687b94;
+            font-size: 10px;
+            letter-spacing: 1px;
+        }
+
+        .panel-footer button {
+            min-height: 28px;
+            padding: 5px 8px;
+            font-size: 10px;
+            letter-spacing: 0;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        @media (max-width: 600px) {
+            .panel {
+                top: 12px;
+                left: 12px;
+                width: min(292px, calc(100vw - 24px));
+                max-height: calc(100dvh - 24px);
+            }
+
+            .section {
+                padding: 13px 16px;
+            }
+
+            .panel-header {
+                padding: 16px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            button {
+                transition: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="canvas"></div>
+    <aside class="panel" aria-label="场景控制面板">
+        <header class="panel-header">
+            <div class="brand" aria-hidden="true">M</div>
+            <div>
+                <h1>Meteor3D</h1>
+                <p class="subtitle">场景交互实验室</p>
+            </div>
+            <button class="collapse" onclick="togglePanel()" id="btn-panel" aria-expanded="true"
+                aria-controls="panel-body" aria-label="收起控制面板">−</button>
+        </header>
+        <div id="panel-body">
+            <div class="connection" id="scene-status" role="status">正在加载场景…</div>
+            <section class="section">
+                <div class="section-heading">
+                    <h2>相机控制</h2><span class="badge" id="mode-display">轨道模式</span>
+                </div>
+                <div class="grid">
+                    <button onclick="setOrbitMode()" id="btn-orbit" aria-pressed="true">轨道模式</button>
+                    <button onclick="setGhostMode()" id="btn-ghost" aria-pressed="false">幽灵模式</button>
+                    <button class="wide" onclick="setGhostLockMode()" id="btn-ghost-lock" aria-pressed="false">幽灵模式 ·
+                        锁定鼠标</button>
+                </div>
+                <p class="hint" id="control-hint">拖动旋转视角 · 滚轮缩放场景</p>
+            </section>
+            <section class="section">
+                <div class="section-heading">
+                    <h2>视角书签</h2><span class="badge">CAMERA</span>
+                </div>
+                <div class="grid">
+                    <button onclick="testGetViewCallback()">保存 · Callback</button>
+                    <button onclick="testGetViewAwait()">保存 · Await</button>
+                    <button class="wide" onclick="testSetView()">恢复已保存视角</button>
+                </div>
+            </section>
+            <section class="section">
+                <div class="section-heading">
+                    <h2>交互画线</h2><span class="badge">DRAW</span>
+                </div>
+                <button class="primary wide" onclick="toggleLineDrawing()" id="btn-draw-line" aria-pressed="false"
+                    disabled>开启点击画线</button>
+                <div id="draw-line-status" class="drawing-status" role="status">开启后点击地图选点，关闭时清除线条。</div>
+            </section>
+            <section class="section">
+                <div class="section-heading">
+                    <h2>场景特效</h2><span class="badge">EFFECTS</span>
+                </div>
+                <div class="grid"><button onclick="testVFX()">能量盾</button><button onclick="testLine()">流动线</button>
+                </div>
+            </section>
+            <section class="section">
+                <div class="section-heading">
+                    <h2>路线漫游</h2><span class="badge">ROAM</span>
+                </div>
+                <div class="grid"><button onclick="startRoaming()" id="btn-roam-start" disabled>开始漫游</button><button
+                        onclick="stopRoaming()" id="btn-roam-stop" disabled>停止漫游</button></div>
+                <p class="hint">沿预设路线移动，相机自动跟随。</p>
+            </section>
+            <footer class="panel-footer"><span>METEOR / CORE</span><button onclick="toggleStats()" id="btn-stats"
+                    aria-pressed="false">性能统计 · 关</button></footer>
+        </div>
+    </aside>
+
+    <script src="./dist/umd/meteor3d-core.js"></script>
+    <script>
+        function togglePanel() {
+            const body = document.getElementById('panel-body');
+            const button = document.getElementById('btn-panel');
+            body.hidden = !body.hidden;
+            button.textContent = body.hidden ? '+' : '−';
+            button.setAttribute('aria-expanded', String(!body.hidden));
+            button.setAttribute('aria-label', body.hidden ? '展开控制面板' : '收起控制面板');
+        }
+
+        // ========== 测试 scene-ready 事件监听 ==========
+        const container = document.getElementById('canvas');
+
+        console.log('⏳ 开始加载场景...');
+        const startTime = performance.now();
+
+        Meteor3D.loadScene({
+            sceneId: '874b8abe-0c78-4959-abf6-775c341ef89f',
+            serverUrl: 'http://localhost:3001',
+            container: container,
+            config: {
+                fitCamera: false,
+                dracoPath: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/'
+            }
+        }).then(instance => {
+            const loadTime = (performance.now() - startTime).toFixed(0);
+            console.log(`✅ 场景加载成功 (耗时 ${loadTime}ms)`);
+            window.meteor3d = instance;
+            document.getElementById('scene-status').textContent = `场景已就绪 · ${loadTime} ms`;
+            document.getElementById('scene-status').dataset.state = 'ready';
+            document.getElementById('btn-draw-line').disabled = false;
+            const canRoam = instance.isReady && !!instance.getObjectByBid(ROAM_BID);
+            document.getElementById('btn-roam-start').disabled = !canRoam;
+
+            // ========== 测试 isReady 状态 ==========
+            console.log('📌 instance.isReady =', instance.isReady);
+
+            // ========== 测试事件监听 ==========
+            instance.on('scene-ready', (data) => {
+                console.log('🎉 [事件] scene-ready 被触发:', data);
+            });
+
+            // ========== 监听控制模式切换 ==========
+            instance.on('control-mode-changed', (data) => {
+                console.log('🎮 [事件] control-mode-changed:', data);
+                updateModeDisplay(data.mode);
+            });
+
+            // ========== 监听场景点击事件 ==========
+            instance.on('scene-click', (data) => {
+                console.log('🖱️ [事件] scene-click:', data);
+                addDrawingPoint(data.worldPosition);
+
+                // window.meteor3d.createEffect('scan', {
+                //     position: data.worldPosition,
+                //     scale: 5,
+                //     color: '#00ff00'
+                // });
+            });
+
+        }).catch(err => {
+            console.error('❌ 加载失败', err);
+            document.getElementById('scene-status').textContent = '场景加载失败，请检查服务后刷新';
+            document.getElementById('scene-status').dataset.state = 'error';
+        });
+
+        // ========== 点击拾取点位画线 ==========
+        let lineDrawingEnabled = false;
+        let drawingPoints = [];
+        let drawingLineId = null;
+
+        function updateDrawingDisplay() {
+            const button = document.getElementById('btn-draw-line');
+            button.textContent = lineDrawingEnabled ? '结束画线并清除' : '开启点击画线';
+            button.setAttribute('aria-pressed', String(lineDrawingEnabled));
+            document.getElementById('draw-line-status').classList.toggle('active', lineDrawingEnabled);
+            document.getElementById('draw-line-status').textContent = !lineDrawingEnabled
+                ? '开启后点击地图选点，关闭时清除线条。'
+                : drawingPoints.length === 0
+                    ? '请点击地图选择起点'
+                    : `已拾取 ${drawingPoints.length} 个点，${drawingPoints.length === 1 ? '再点击一点开始画线' : '点击继续延长'}`;
+        }
+
+        function clearDrawingLine() {
+            if (drawingLineId !== null) {
+                window.meteor3d.removeLine(drawingLineId);
+                drawingLineId = null;
+            }
+            drawingPoints = [];
+        }
+
+        function toggleLineDrawing() {
+            if (!window.meteor3d) return;
+            lineDrawingEnabled = !lineDrawingEnabled;
+            if (!lineDrawingEnabled) clearDrawingLine();
+            updateDrawingDisplay();
+        }
+
+        function addDrawingPoint(position) {
+            if (!lineDrawingEnabled || !position ||
+                ![position.x, position.y, position.z].every(Number.isFinite)) return;
+
+            const point = { x: position.x, y: position.y, z: position.z };
+            const previous = drawingPoints[drawingPoints.length - 1];
+            // 忽略连续重复点击，避免生成零长度线段。
+            if (previous && Math.hypot(point.x - previous.x, point.y - previous.y, point.z - previous.z) < 0.001) return;
+
+            const points = [...drawingPoints, point];
+            if (points.length >= 2) {
+                const api = window.meteor3d;
+                const lineId = api.createLine({
+                    // 略微抬高，避免与地图表面重叠闪烁。
+                    points: points.map(p => ({ x: p.x, y: p.y + 0.1, z: p.z })),
+                    textureUrl: 'http://47.106.36.64:9191/download/chenwei/jiantou2.png'
+                });
+                if (lineId == null) return;
+                if (drawingLineId !== null) api.removeLine(drawingLineId);
+                drawingLineId = lineId;
+            }
+            drawingPoints = points;
+            updateDrawingDisplay();
+        }
+
+        window.addEventListener('pagehide', () => {
+            lineDrawingEnabled = false;
+            clearDrawingLine();
+            updateDrawingDisplay();
+        });
+
+        // ========== 路线漫游：11 个点 → 流动线 → 跟随 → 每秒移动 ==========
+        const ROAM_BID = 'bid_13296e4e-18a1-4b64-90ec-612b0d179355';
+        const roamStart = { x: 159.7801971817664, y: 0.5010000000000568, z: -271.514658490355 };
+        // 初始点 + 10 个点位，最后一个点回到初始点，形成闭合路线。
+        const roamPoints = [roamStart, ...[
+            [10, 0], [20, 5], [25, 15], [20, 25], [10, 30],
+            [0, 30], [-10, 25], [-15, 15], [-10, 5], [0, 0]
+        ].map(([x, z]) => ({ x: roamStart.x + x, y: roamStart.y + 1, z: roamStart.z + z }))];
+        let roamTimer = null;
+        let roamLineId = null;
+
+        function startRoaming() {
+            const api = window.meteor3d;
+            if (!api || roamTimer !== null || !api.getObjectByBid(ROAM_BID)) return;
+            if (!roamLineId) {
+                roamLineId = api.createLine({
+                    points: roamPoints,
+                    textureUrl: 'http://47.106.36.64:9191/download/chenwei/jiantou2.png'
+                });
+            }
+            api.moveTo(ROAM_BID, roamStart, { x: 0, y: Math.PI / 2, z: 0 }, 0);
+            api.followObject(ROAM_BID, {
+                distance: 8,
+                rotation: { pitch: -30, yaw: 0, roll: 0 },
+                smoothing: 6
+            });
+            let index = 0;
+            roamTimer = setInterval(() => {
+                const from = roamPoints[index];
+                const to = roamPoints[index + 1];
+                const rotation = { x: 0, y: Math.atan2(to.x - from.x, to.z - from.z), z: 0 };
+                api.moveTo(ROAM_BID, to, rotation, 1000, { easing: 'linear' });
+                index = (index + 1) % (roamPoints.length - 1);
+            }, 1000);
+            document.getElementById('btn-roam-start').disabled = true;
+            document.getElementById('btn-roam-stop').disabled = false;
+        }
+
+        function stopRoaming() {
+            if (roamTimer === null) return;
+            clearInterval(roamTimer);
+            roamTimer = null;
+            const api = window.meteor3d;
+            const object = api.getObjectByBid(ROAM_BID);
+            // 用即时 moveTo 取消当前位移动画，停在当前位置。
+            if (object) api.moveTo(ROAM_BID, object.position.clone(), {
+                x: object.rotation.x, y: object.rotation.y, z: object.rotation.z
+            }, 0);
+            api.stopFollowing();
+            document.getElementById('btn-roam-start').disabled = false;
+            document.getElementById('btn-roam-stop').disabled = true;
+        }
+        window.addEventListener('pagehide', stopRoaming);
+
+        // ========== 性能统计切换 ==========
+        let statsEnabled = false;
+        function toggleStats() {
+            if (!window.meteor3d) return;
+            statsEnabled = !statsEnabled;
+
+            if (statsEnabled) {
+                window.meteor3d.enableStats();
+                window.meteor3d.toggleTriangleStats(true, (stats) => {
+                    console.log(`📊 GPU渲染: ${stats.rendered.toLocaleString()} | 总计: ${stats.total.toLocaleString()} | DrawCalls: ${stats.drawCalls} | 纹理: ${stats.textureCount}`);
+                });
+                document.getElementById('btn-stats').textContent = '性能统计 · 开';
+                document.getElementById('btn-stats').setAttribute('aria-pressed', 'true');
+            } else {
+                window.meteor3d.disableStats();
+                window.meteor3d.toggleTriangleStats(false);
+                document.getElementById('btn-stats').textContent = '性能统计 · 关';
+                document.getElementById('btn-stats').setAttribute('aria-pressed', 'false');
+            }
+            console.log('📊 性能统计:', statsEnabled ? '开启' : '关闭');
+        }
+
+        // ========== 相机控制模式测试 ==========
+        function updateModeDisplay(mode, locked = false) {
+            document.getElementById('mode-display').textContent = mode === 'orbit' ? '轨道模式' : locked ? '幽灵 · 锁定' : '幽灵模式';
+            document.getElementById('btn-orbit').setAttribute('aria-pressed', String(mode === 'orbit'));
+            document.getElementById('btn-ghost').setAttribute('aria-pressed', String(mode === 'ghost' && !locked));
+            document.getElementById('btn-ghost-lock').setAttribute('aria-pressed', String(mode === 'ghost' && locked));
+            document.getElementById('control-hint').textContent = mode === 'orbit'
+                ? '拖动旋转视角 · 滚轮缩放场景'
+                : locked ? 'WASD 移动 · QE 升降 · Esc 释放鼠标' : '右键转向 · WASD 移动 · QE 升降';
+        }
+
+        function setOrbitMode() {
+            if (!window.meteor3d) return;
+            if (roamTimer !== null) stopRoaming();
+            window.meteor3d.setControlMode('orbit');
+            console.log('🎮 切换到轨道模式');
+        }
+
+        function setGhostMode() {
+            if (!window.meteor3d) return;
+            if (roamTimer !== null) stopRoaming();
+            window.meteor3d.setControlMode('ghost');
+            console.log('🎮 切换到幽灵模式 (右键控制视角，WASD移动，QE升降)');
+            alert('幽灵模式已启用！\n\n操作说明：\n- 右键按住 + 鼠标移动：控制视角\n- WASD：前后左右移动\n- Q/E：下降/上升\n- Shift：加速');
+        }
+
+        function setGhostLockMode() {
+            if (!window.meteor3d) return;
+            if (roamTimer !== null) stopRoaming();
+            window.meteor3d.setControlMode('ghost', { pointerLock: true });
+            updateModeDisplay('ghost', true);
+            console.log('🎮 切换到幽灵模式 (鼠标锁定)');
+        }
+
+        // ========== 原有测试逻辑 ==========
+        let savedView = null;
+
+        function testGetViewCallback() {
+            if (!window.meteor3d) return;
+            window.meteor3d.getView((view) => {
+                console.log('📍 [Callback] 获取到视角:', view);
+                savedView = view;
+                alert('视角已保存 (Callback)');
+            });
+        }
+
+        async function testGetViewAwait() {
+            if (!window.meteor3d) return;
+            const view = await window.meteor3d.getView();
+            console.log('📍 [Await] 获取到视角:', view);
+            savedView = view;
+            alert('视角已保存 (Await)');
+        }
+
+        async function testSetView() {
+            if (!window.meteor3d || !savedView) {
+                alert('请先保存视角！');
+                return;
+            }
+            console.log('✈️ 开始飞行...');
+            if (roamTimer !== null) stopRoaming();
+            const a = await window.meteor3d.setView({
+                position: savedView.position,
+                target: savedView.target,
+                duration: 2000
+            });
+            console.log('✈️ 飞行完成:', a);
+            alert('飞行完成！');
+        }
+
+        function testVFX() {
+            if (!window.meteor3d) return;
+            window.meteor3d.enableStats();
+            console.log('✨ 创建能量盾特效...');
+            const shield = window.meteor3d.createEffect('shield', {
+                position: { x: 0, y: 5, z: 0 },
+                scale: 5,
+                color: '#00ff00'
+            });
+            console.log('✅ 特效创建成功:', shield);
+            alert('能量盾已创建！请查看场景中心上方。');
+        }
+
+        // ========== 流动线测试 ==========
+        function testLine() {
+            if (!window.meteor3d) return;
+            console.log('〰️ 创建流动线...');
+
+            const points = [
+                { x: -10, y: 1, z: 10 },
+                { x: 10, y: 1, z: 10 },
+                { x: 10, y: 1, z: -10 },
+                { x: 0, y: 15, z: -10 },
+                { x: -10, y: 1, z: -10 },
+                { x: -10, y: 1, z: 10 }
+            ];
+
+            window.meteor3d.createLine({
+                points: points,
+                textureUrl: 'http://47.106.36.64:9191/download/chenwei/jiantou2.png'
+            });
+            console.log('✅ 流动线创建成功');
+        }
+    </script>
+</body>
+
+</html>
