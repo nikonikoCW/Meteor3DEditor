@@ -287,6 +287,8 @@ const onDrop = async (event) => {
     const url = event.dataTransfer.getData('url');
     try {
       object = await persistenceManager.loadGaussianSplat(url);
+      // 从资源库拖入时，默认绕 X 轴旋转 -180°。
+      object.rotation.x = -Math.PI;
 
       // 使用统一的放置位置计算
       const dropPosition = getDropPosition(event);
