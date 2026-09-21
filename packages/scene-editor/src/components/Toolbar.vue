@@ -18,7 +18,7 @@
     <div class="group">
       <button @click="showBatchLoader = true" title="批量导入">📥 批量导入</button>
       <button v-if="!canSave" class="unlock-btn" @click="openUnlockModal" title="权限解锁">🔒 权限解锁</button>
-      <button v-if="canSave" type="button" @click="save(false)" class="save-btn">💾 保存</button>
+      <button v-if="canSave" type="button" @click="save(false)" class="save-btn" :disabled="sceneDeleted">{{ sceneDeleted ? '场景已删除，保存已停止' : '💾 保存' }}</button>
     </div>
     
     <BatchLoaderDialog v-model:visible="showBatchLoader" />
@@ -149,9 +149,10 @@ const redo = () => {
 };
 
 const isSaving = ref(false);
+const sceneDeleted = ref(false);
 
 const save = async (isAutoSave = false) => {
-  if (!canSave.value || isSaving.value) return;
+  if (!canSave.value || isSaving.value || sceneDeleted.value) return;
 
   const sceneManager = window.editor?.sceneManager;
   const persistenceManager = window.editor?.persistenceManager;
@@ -175,6 +176,13 @@ const save = async (isAutoSave = false) => {
     }
   } catch (error) {
     console.error(isAutoSave ? '自动保存失败:' : '场景保存失败:', error);
+    if (error.code === 'SCENE_NOT_FOUND') {
+      sceneDeleted.value = true;
+      clearInterval(autoSaveTimer);
+      autoSaveTimer = null;
+      message.warning('此场景已删除或不存在，自动保存已停止，请返回场景管理。');
+      return;
+    }
     if (!isAutoSave) {
       message.warning(error.message || '场景保存失败');
     }

@@ -127,7 +127,10 @@ export class DBManager {
                 return data;
             } else {
                 console.error('保存场景失败:', data.message);
-                throw new Error(data.message);
+                const error = new Error(data.message);
+                error.code = data.code;
+                error.status = response.status;
+                throw error;
             }
         } catch (error) {
             console.error('保存场景失败:', error);

@@ -286,6 +286,15 @@ exports.saveScene = async (req, res) => {
             });
         }
 
+        // 保存只更新已有场景，不能将已删除的场景重新创建。
+        if (!await Scene.exists({ sceneId })) {
+            return res.status(404).json({
+                success: false,
+                code: 'SCENE_NOT_FOUND',
+                message: '场景已删除或不存在，无法保存'
+            });
+        }
+
         // 清空该场景下的现有对象
         await SceneObject.deleteMany({ sceneId: sceneId });
 
@@ -315,11 +324,21 @@ exports.saveScene = async (req, res) => {
         if (metadata.nodeGraph !== undefined) sceneData.nodeGraph = metadata.nodeGraph;
         if (metadata.deletedSourceNodes !== undefined) sceneData.deletedSourceNodes = metadata.deletedSourceNodes;
 
-        await Scene.findOneAndUpdate(
+        const savedScene = await Scene.findOneAndUpdate(
             { sceneId: sceneId },
             sceneData,
-            { upsert: true, new: true }
+            { upsert: false, new: true }
         );
+
+        // 检查期间也可能发生删除，更新失败时清理本次写入的孤立对象。
+        if (!savedScene) {
+            await SceneObject.deleteMany({ sceneId });
+            return res.status(404).json({
+                success: false,
+                code: 'SCENE_NOT_FOUND',
+                message: '场景已删除或不存在，无法保存'
+            });
+        }
 
         res.status(200).json({
             success: true,
