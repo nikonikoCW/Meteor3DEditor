@@ -73,14 +73,14 @@
 
       <div class="prop-row" v-if="selectedObject.material.opacity !== undefined">
         <label>不透明度</label>
-        <input type="range" min="0" max="1" step="0.01" :value="opacityVal" @input="onOpacityInput">
-        <span class="range-val">{{ opacityVal.toFixed(2) }}</span>
+        <input type="range" aria-label="不透明度" min="0" max="1" step="0.01" :value="opacityVal" @input="onOpacityInput">
+        <span class="range-val panel-range-value">{{ opacityVal.toFixed(2) }}</span>
       </div>
 
       <div class="prop-row" v-if="selectedObject.material.alphaTest !== undefined">
         <label>Alpha裁切</label>
-        <input type="range" min="0" max="1" step="0.01" :value="alphaTestVal" @input="onAlphaTestInput">
-        <span class="range-val">{{ alphaTestVal.toFixed(2) }}</span>
+        <input type="range" aria-label="Alpha裁切" min="0" max="1" step="0.01" :value="alphaTestVal" @input="onAlphaTestInput">
+        <span class="range-val panel-range-value">{{ alphaTestVal.toFixed(2) }}</span>
       </div>
 
       <div class="prop-row">
@@ -267,29 +267,7 @@ input[type="checkbox"] {
   height: 16px;
 }
 
-input[type="range"] {
-  -webkit-appearance: auto;
-  appearance: auto;
-  background: transparent;
-  border: none;
-  padding: 0;
-  height: 20px;
-  cursor: pointer;
-}
-
-input[type="range"]:focus {
-  border: none;
-  outline: none;
-}
-
-.range-val {
-  min-width: 36px;
-  text-align: right;
-  font-size: 11px;
-  color: #aaa;
-  margin-left: 6px;
-  font-variant-numeric: tabular-nums;
-}
+.range-val { min-width: 36px; margin-left: 6px; }
 
 select {
   flex: 1;

@@ -21,13 +21,25 @@
         <input type="color" v-model="sceneConfig.backgroundColor">
       </div>
       <div class="prop-row">
-        <label>环境光强度</label>
-        <input type="number" v-model.number="sceneConfig.ambientIntensity" step="0.1" min="0" max="5">
-      </div>
-      <div class="prop-row">
         <label>相机可视距离 (Far)</label>
         <input type="number" v-model.number="editorStore.sceneMetadata.cameraFar" @change="onCameraFarChange" step="1000" min="100">
       </div>
+    </div>
+
+    <div class="section">
+      <h4>光照设置</h4>
+      <label v-for="control in LIGHTING_CONTROLS" :key="control.key" class="lighting-control">
+        <span>{{ control.label }}</span>
+        <output class="panel-range-value">{{ lightingConfig[control.key].toFixed(control.step === 1 ? 0 : 1) }}</output>
+        <input type="range" v-model.number="lightingConfig[control.key]"
+          :min="control.min" :max="control.max" :step="control.step"
+          :disabled="!lightingReady" @input="onLightingChange">
+      </label>
+      <div class="lighting-actions">
+        <button :disabled="!lightingReady" @click="applyLighting(REFERENCE_LIGHTING)">应用参考光照</button>
+        <button :disabled="!lightingReady" @click="applyLighting(DEFAULT_LIGHTING)">重置光照</button>
+      </div>
+      <div class="hint">拖动即时生效，点击保存场景后保留。视角补光跟随相机；重置恢复无灯光、曝光 1.0。</div>
     </div>
 
     <div class="section">
@@ -119,9 +131,9 @@
       <div class="bvh-depth-control" v-if="showBVH">
         <div class="depth-row">
           <span class="depth-label">显示深度</span>
-          <span class="depth-value">{{ bvhDepth }}</span>
+          <span class="depth-value panel-range-value">{{ bvhDepth }}</span>
         </div>
-        <input type="range" v-model.number="bvhDepth" @input="onBVHDepthChange" min="1" max="20" step="1">
+        <input type="range" aria-label="BVH 显示深度" v-model.number="bvhDepth" @input="onBVHDepthChange" min="1" max="20" step="1">
         <div class="hint">调整 BVH 包围盒显示的层级深度</div>
       </div>
     </div>
@@ -137,15 +149,30 @@ import { ref, reactive, onBeforeUnmount, onMounted } from 'vue';
 import { useEditorStore } from '../stores/editorStore';
 import { saveInitialView, uploadSceneThumbnail } from '../services/sceneService';
 import { message } from '../utils/message';
+import { LIGHTING_CONTROLS, DEFAULT_LIGHTING, REFERENCE_LIGHTING } from '@meteor3d/core/src/LightingManager.js';
 
 const editorStore = useEditorStore();
 const isSavingInitialView = ref(false);
 
 // 模拟的场景配置数据，未来应该连接到 Store (部分暂未接入后端的数据)
 const sceneConfig = reactive({
-  backgroundColor: '#000000',
-  ambientIntensity: 1.0
+  backgroundColor: '#000000'
 });
+
+const lightingConfig = reactive({ ...DEFAULT_LIGHTING });
+const lightingReady = ref(false);
+const syncLighting = () => {
+  const manager = window.editor?.sceneManager?.lightingManager;
+  lightingReady.value = !!manager;
+  if (manager) Object.assign(lightingConfig, manager.getConfig());
+};
+const onLightingChange = () => {
+  window.editor?.sceneManager?.lightingManager?.setConfig(lightingConfig);
+};
+const applyLighting = (config) => {
+  Object.assign(lightingConfig, config);
+  onLightingChange();
+};
 
 // 性能监视器开关状态
 const showStats = ref(false);
@@ -249,6 +276,8 @@ const onSaveInitialView = async () => {
 };
 
 onMounted(() => {
+  window.addEventListener('editor-ready', syncLighting);
+  syncLighting();
   if (window.editor && window.editor.sceneManager) {
     // 首次如果不存在值，则初始化一次
     if (!editorStore.sceneMetadata.cameraFar) {
@@ -296,6 +325,7 @@ const onBVHDepthChange = () => {
 
 // 组件卸载时关闭统计和 BVH Helper
 onBeforeUnmount(() => {
+  window.removeEventListener('editor-ready', syncLighting);
   if (window.editor && window.editor.sceneManager) {
     window.editor.sceneManager.toggleTriangleStats(false);
     window.editor.sceneManager.setBVHHelper(false);
@@ -305,6 +335,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .scene-settings-panel {
+  box-sizing: border-box;
   width: 100%;
   height: 100%;
   background: #222;
@@ -319,6 +350,40 @@ h3 {
   color: #fff;
   border-bottom: 1px solid #444;
   padding-bottom: 10px;
+}
+
+.lighting-control {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin: 14px 0;
+  font-size: 12px;
+  color: #aaa;
+}
+
+
+
+.lighting-control input { grid-column: 1 / -1; }
+
+.lighting-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lighting-actions button {
+  padding: 6px 8px;
+  background: #29476b;
+  border: 1px solid #59799f;
+  border-radius: 3px;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.lighting-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .section {
@@ -546,39 +611,5 @@ input:checked + .slider:before {
   color: #888;
 }
 
-.depth-value {
-  font-size: 12px;
-  color: #4CAF50;
-  font-weight: 500;
-  font-family: 'Consolas', 'Monaco', monospace;
-}
 
-.bvh-depth-control input[type="range"] {
-  width: 100%;
-  height: 4px;
-  background: #444;
-  border-radius: 2px;
-  -webkit-appearance: none;
-  appearance: none;
-  cursor: pointer;
-}
-
-.bvh-depth-control input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  background: #4CAF50;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.bvh-depth-control input[type="range"]::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  background: #4CAF50;
-  border-radius: 50%;
-  cursor: pointer;
-  border: none;
-}
 </style>

@@ -21,6 +21,16 @@ const SceneSchema = new mongoose.Schema({
         default: false
     },
     environmentUrl: String, // 环境贴图 URL (本地相对路径)
+    lightingConfig: {
+        ambient: Number,
+        hemisphere: Number,
+        key: Number,
+        fill: Number,
+        head: Number,
+        azimuth: Number,
+        elevation: Number,
+        exposure: Number
+    },
     cameraFar: {
         type: Number,
         default: 1000000
@@ -92,4 +102,3 @@ const SceneSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model('Scene', SceneSchema);
-

@@ -40,7 +40,7 @@
       <div class="prop-row">
         <div class="label-row">
           <label for="animation-speed">播放速度</label>
-          <span>{{ playbackSpeed.toFixed(1) }}×</span>
+          <span class="panel-range-value">{{ playbackSpeed.toFixed(1) }}×</span>
         </div>
         <input id="animation-speed" v-model.number="playbackSpeed" type="range" min="0.1" max="3" step="0.1" :disabled="!hasAnimations" @input="onSpeedInput">
         <div class="range-marks" aria-hidden="true">
@@ -160,11 +160,10 @@ h4 { margin: 0; color: #ddd; font-size: 13px; font-weight: 500; }
 .prop-row { display: flex; flex-direction: column; gap: 7px; margin-bottom: 18px; }
 .prop-row:last-of-type { margin-bottom: 0; }
 .prop-row > label, .label-row label { color: #aaa; font-size: 12px; }
-.label-row span { color: #66aaff; font-size: 12px; font-variant-numeric: tabular-nums; }
+
 select { width: 100%; min-width: 0; padding: 7px 9px; border: 1px solid #444; border-radius: 3px; outline: none; color: #eee; background: #1d1d1d; font-size: 12px; }
 select:focus { border-color: #0066cc; }
-select:disabled, input[type="range"]:disabled { cursor: not-allowed; opacity: 0.45; }
-input[type="range"] { width: 100%; accent-color: #0066cc; cursor: pointer; }
+select:disabled { cursor: not-allowed; opacity: 0.45; }
 .range-marks { display: flex; justify-content: space-between; color: #666; font-size: 10px; font-variant-numeric: tabular-nums; }
 .switch { position: relative; display: inline-flex; flex-shrink: 0; cursor: pointer; }
 .switch.disabled { cursor: not-allowed; opacity: 0.45; }

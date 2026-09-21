@@ -1201,6 +1201,7 @@ export class PersistenceManager {
         if (metadata.cameraFar) {
             this.sceneManager.setCameraFar(metadata.cameraFar);
         }
+        this.sceneManager.lightingManager?.setConfig(metadata.lightingConfig, { reset: true });
 
         const resolveResourceUrl = (url) => {
             if (!url || /^(https?:|data:|blob:)/i.test(url) || !serverUrl) return url;
@@ -1376,6 +1377,7 @@ export class PersistenceManager {
             lastModified: Date.now(),
             objectCount: this.sceneManager.objects.length,
             environmentUrl: environmentUrl, // 保存环境贴图 URL
+            lightingConfig: this.sceneManager.lightingManager?.getConfig(),
             gisConfig,
             nodeGraph,
             deletedSourceNodes: this.serializeDeletedSourceNodes(nodeGraph)

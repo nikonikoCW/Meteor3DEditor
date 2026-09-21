@@ -20,6 +20,7 @@ import { RaycastManager } from './RaycastManager.js';
 import { AnimationManager } from './AnimationManager.js';
 import { BidRegistry, generateBid } from './BidRegistry.js';
 import { ObjectTransformManager } from './ObjectTransformManager.js';
+import { LightingManager } from './LightingManager.js';
 
 /**
  * 场景管理器
@@ -62,6 +63,7 @@ export class SceneManager {
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.0;
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+        this.lightingManager = new LightingManager(this.scene, this.camera, this.renderer);
 
         // 相机控制管理器
         this.controlManager = new CameraControlManager(this.camera, this.renderer.domElement);
@@ -230,6 +232,7 @@ export class SceneManager {
         if (!this.cameraNavigationManager.isFollowing) this.controlManager.update(delta);
         this.animationManager.update(delta);
         this.cameraNavigationManager.update(delta);
+        this.lightingManager.update();
 
         // 更新 GIS 瓦片地图
         if (this.tileMapManager) {
@@ -1451,6 +1454,7 @@ export class SceneManager {
         this.setBaseMap(null, null, null, false);
 
         this.cameraNavigationManager?.dispose();
+        this.lightingManager?.dispose();
         this.controlManager?.dispose();
         this.animationManager?.dispose();
         this.objectTransformManager?.dispose();

@@ -20,28 +20,28 @@
           <label>雨量</label>
           <div class="slider-row">
             <input 
-              type="range" 
+              type="range" aria-label="雨量"
               v-model.number="rainConfig.intensity" 
               min="100" 
               max="5000" 
               step="100"
               @input="onRainConfigChange"
             >
-            <span class="value">{{ rainConfig.intensity }}</span>
+            <span class="value panel-range-value">{{ rainConfig.intensity }}</span>
           </div>
         </div>
         <div class="prop-row">
           <label>雨速</label>
           <div class="slider-row">
             <input 
-              type="range" 
+              type="range" aria-label="雨速"
               v-model.number="rainConfig.speed" 
               min="0.5" 
               max="5" 
               step="0.1"
               @input="onRainConfigChange"
             >
-            <span class="value">{{ rainConfig.speed.toFixed(1) }}</span>
+            <span class="value panel-range-value">{{ rainConfig.speed.toFixed(1) }}</span>
           </div>
         </div>
       </div>
@@ -65,56 +65,56 @@
           <label>雪量</label>
           <div class="slider-row">
             <input 
-              type="range" 
+              type="range" aria-label="雪量"
               v-model.number="snowConfig.intensity" 
               min="100" 
               max="5000" 
               step="100"
               @input="onSnowConfigChange"
             >
-            <span class="value">{{ snowConfig.intensity }}</span>
+            <span class="value panel-range-value">{{ snowConfig.intensity }}</span>
           </div>
         </div>
         <div class="prop-row">
           <label>大小</label>
           <div class="slider-row">
             <input 
-              type="range" 
+              type="range" aria-label="大小"
               v-model.number="snowConfig.size" 
               min="0.1" 
               max="2" 
               step="0.1"
               @input="onSnowConfigChange"
             >
-            <span class="value">{{ snowConfig.size.toFixed(1) }}</span>
+            <span class="value panel-range-value">{{ snowConfig.size.toFixed(1) }}</span>
           </div>
         </div>
         <div class="prop-row">
           <label>速度</label>
           <div class="slider-row">
             <input 
-              type="range" 
+              type="range" aria-label="速度"
               v-model.number="snowConfig.speed" 
               min="0.1" 
               max="3" 
               step="0.1"
               @input="onSnowConfigChange"
             >
-            <span class="value">{{ snowConfig.speed.toFixed(1) }}</span>
+            <span class="value panel-range-value">{{ snowConfig.speed.toFixed(1) }}</span>
           </div>
         </div>
         <div class="prop-row">
           <label>透明度</label>
           <div class="slider-row">
             <input 
-              type="range" 
+              type="range" aria-label="透明度"
               v-model.number="snowConfig.opacity" 
               min="0.1" 
               max="1" 
               step="0.05"
               @input="onSnowConfigChange"
             >
-            <span class="value">{{ snowConfig.opacity.toFixed(2) }}</span>
+            <span class="value panel-range-value">{{ snowConfig.opacity.toFixed(2) }}</span>
           </div>
         </div>
         <div class="prop-row">
@@ -268,41 +268,7 @@ h4 {
   gap: 10px;
 }
 
-.slider-row input[type="range"] {
-  flex: 1;
-  height: 4px;
-  background: #444;
-  border-radius: 2px;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.slider-row input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  background: #0066cc;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.slider-row input[type="range"]::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  background: #0066cc;
-  border-radius: 50%;
-  cursor: pointer;
-  border: none;
-}
-
-.slider-row .value {
-  font-size: 12px;
-  color: #4CAF50;
-  min-width: 45px;
-  text-align: right;
-  font-family: 'Consolas', 'Monaco', monospace;
-}
+.slider-row .value { min-width: 45px; }
 
 input[type="color"] {
   width: 100%;

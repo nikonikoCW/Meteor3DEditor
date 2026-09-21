@@ -8,7 +8,7 @@
       <div class="prop-row">
         <div class="label-row">
           <label for="ghost-move-speed">移动速度</label>
-          <span>{{ moveSpeed.toFixed(1) }}</span>
+          <span class="panel-range-value">{{ moveSpeed.toFixed(1) }}</span>
         </div>
         <input
           id="ghost-move-speed"
@@ -33,7 +33,7 @@
       <div class="prop-row">
         <div class="label-row">
           <label for="ghost-boost-multiplier">加速倍数</label>
-          <span>{{ boostMultiplier.toFixed(1) }}×</span>
+          <span class="panel-range-value">{{ boostMultiplier.toFixed(1) }}×</span>
         </div>
         <input
           id="ghost-boost-multiplier"
@@ -58,7 +58,7 @@
       <div class="prop-row">
         <div class="label-row">
           <label for="ghost-look-speed">鼠标灵敏度</label>
-          <span>{{ lookSpeed.toFixed(4) }}</span>
+          <span class="panel-range-value">{{ lookSpeed.toFixed(4) }}</span>
         </div>
         <input
           id="ghost-look-speed"
@@ -192,14 +192,7 @@ h4 {
   font-size: 13px;
 }
 
-.label-row span {
-  color: #66aaff;
-  font-variant-numeric: tabular-nums;
-}
 
-input[type="range"] {
-  width: 100%;
-}
 
 .switch-row {
   display: flex;

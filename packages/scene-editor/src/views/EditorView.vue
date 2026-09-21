@@ -45,6 +45,7 @@
 </template>
 
 <script setup>
+import '../assets/sidebar-controls.css';
 import { onMounted, watch, ref, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import Toolbar from '../components/Toolbar.vue';

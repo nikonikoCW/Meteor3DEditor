@@ -392,6 +392,7 @@ onMounted(async () => {
     dbManager,
     loadResult
   };
+  window.dispatchEvent(new Event('editor-ready'));
 
   unsubscribeEditorStore = editorStore.$subscribe((mutation, state) => {
     sceneManager.disableOutline();
