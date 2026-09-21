@@ -32,6 +32,7 @@ const isLoading = ref(false);
 const loadError = ref('');
 
 let coreInstance = null;
+let loadVersion = 0;
 
 // 提供 Core 实例给子组件（3D 逻辑组件）
 provide('sceneContext', {
@@ -40,21 +41,27 @@ provide('sceneContext', {
 });
 
 const initScene = async (id) => {
-  if (!container.value || !id) return;
+  if (!container.value) return;
+  const version = ++loadVersion;
+  // loadScene 在 await 前创建画布，切换时也要移除尚未加载完成的旧画布。
+  container.value.querySelectorAll('canvas').forEach(canvas => canvas.remove());
+  if (window.meteor3d === coreInstance) window.meteor3d = null;
+  appStore.setSceneReady(false);
+  appStore.setSceneId(null);
   
   // 清理旧实例
   if (coreInstance) {
     coreInstance.dispose();
     coreInstance = null;
-    appStore.setSceneReady(false);
   }
 
-  isLoading.value = true;
+  isLoading.value = !!id;
   loadError.value = '';
+  if (!id) return;
 
   try {
     console.log('[SceneWidget] Loading scene:', id);
-    coreInstance = await loadScene({
+    const instance = await loadScene({
       sceneId: id,
       serverUrl: ASSET_BASE_URL,
       container: container.value,
@@ -64,6 +71,12 @@ const initScene = async (id) => {
         autoResize: true
       }
     });
+    // 旧请求晚返回时只释放它，不能覆盖最后一次选择。
+    if (version !== loadVersion) {
+      instance.dispose();
+      return;
+    }
+    coreInstance = instance;
     window.meteor3d = coreInstance
 
     // 场景加载完成，更新 Store
@@ -73,11 +86,13 @@ const initScene = async (id) => {
     console.log('[SceneWidget] Scene ready, isReady =', coreInstance.isReady);
     
   } catch (e) {
+    if (version !== loadVersion) return;
+    container.value.querySelectorAll('canvas').forEach(canvas => canvas.remove());
     console.error('[SceneWidget] Failed to load scene:', e);
     loadError.value = e.message || '加载失败';
     appStore.setSceneReady(false);
   } finally {
-    isLoading.value = false;
+    if (version === loadVersion) isLoading.value = false;
   }
 };
 
@@ -90,14 +105,17 @@ onMounted(async () => {
 
 // 监听 props 变化 (当属性面板修改 sceneId 时)
 watch(() => props.data.sceneId, async (newId, oldId) => {
-  if (newId && newId !== oldId) {
+  if (newId !== oldId) {
     console.log('[SceneWidget] Scene ID changed:', oldId, '->', newId);
-    sceneId.value = newId;
+    sceneId.value = newId || '';
     await initScene(newId);
   }
 });
 
 onBeforeUnmount(() => {
+  ++loadVersion; // 使卸载前发出的请求失效。
+  if (window.meteor3d === coreInstance) window.meteor3d = null;
+  appStore.setSceneId(null);
   if (coreInstance) {
     coreInstance.dispose();
     coreInstance = null;
