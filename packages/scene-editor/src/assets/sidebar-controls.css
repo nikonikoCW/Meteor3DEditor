@@ -1,0 +1,95 @@
+/* Shared by every right sidebar category, including nested property editors.
+   Keep native range semantics so keyboard, min/max and input events stay intact. */
+.right-panel {
+  --control-accent: #0066cc;
+  --control-accent-hover: #2687e8;
+  --control-track: #444;
+  --control-value: #8bbcf0;
+  --control-focus: #8bbcf0;
+}
+
+.right-panel .panel-content input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  accent-color: var(--control-accent);
+  cursor: pointer;
+  outline: none;
+}
+
+.right-panel .panel-content input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border: 0;
+  border-radius: 2px;
+  background: var(--control-track);
+}
+
+.right-panel .panel-content input[type="range"]::-moz-range-track {
+  height: 4px;
+  border: 0;
+  border-radius: 2px;
+  background: var(--control-track);
+}
+
+.right-panel .panel-content input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border: 2px solid var(--control-accent);
+  border-radius: 50%;
+  background: var(--control-accent);
+}
+
+.right-panel .panel-content input[type="range"]::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--control-accent);
+  border-radius: 50%;
+  background: var(--control-accent);
+}
+
+.right-panel .panel-content input[type="range"]:hover:not(:disabled) {
+  --control-accent: var(--control-accent-hover);
+}
+
+.right-panel .panel-content input[type="range"]:active:not(:disabled) {
+  --control-accent: #8bbcf0;
+}
+
+.right-panel .panel-content input[type="range"]:focus-visible {
+  outline: 2px solid var(--control-focus);
+  outline-offset: 2px;
+}
+
+.right-panel .panel-content input[type="range"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.right-panel .panel-content .panel-range-value {
+  color: var(--control-value);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  text-align: right;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.right-panel .panel-content .slider-row {
+  min-width: 0;
+  gap: 8px;
+}
