@@ -51,7 +51,7 @@
         <button :disabled="!lightingReady" @click="applyLighting(REFERENCE_LIGHTING)">应用参考光照</button>
         <button :disabled="!lightingReady" @click="applyLighting(DEFAULT_LIGHTING)">重置光照</button>
       </div>
-      <div class="hint">拖动即时生效，点击保存场景后保留。视角补光跟随相机；重置恢复无灯光、曝光 1.0。</div>
+      <div class="hint">拖动即时生效，点击保存场景后保留。重置将灯光强度归零、曝光恢复 1.0，保持总开关开启。</div>
       </div>
       <div v-else class="hint">手动光照已关闭，曝光恢复 1.0，环境贴图不受影响。开启后可调整参数。</div>
     </div>
@@ -184,7 +184,10 @@ const onLightingChange = () => {
   window.editor?.sceneManager?.lightingManager?.setConfig(lightingConfig);
 };
 const applyLighting = (config) => {
-  Object.assign(lightingConfig, config);
+  // 参数预设只更新滑块值，总开关由用户独立控制。
+  for (const { key } of LIGHTING_CONTROLS) {
+    lightingConfig[key] = config[key];
+  }
   onLightingChange();
 };
 
