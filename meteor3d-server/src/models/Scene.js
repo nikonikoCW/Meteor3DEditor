@@ -22,6 +22,7 @@ const SceneSchema = new mongoose.Schema({
     },
     environmentUrl: String, // 环境贴图 URL (本地相对路径)
     lightingConfig: {
+        enabled: Boolean,
         ambient: Number,
         hemisphere: Number,
         key: Number,

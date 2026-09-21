@@ -12,11 +12,13 @@ export const LIGHTING_CONTROLS = [
 ];
 
 export const DEFAULT_LIGHTING = Object.freeze({
+    enabled: false,
     ambient: 0, hemisphere: 0, key: 0, fill: 0, head: 0,
     azimuth: 45, elevation: 50, exposure: 1
 });
 
 export const REFERENCE_LIGHTING = Object.freeze({
+    enabled: true,
     ambient: 0.8, hemisphere: 1.8, key: 3, fill: 2, head: 1.5,
     azimuth: 45, elevation: 50, exposure: 1.2
 });
@@ -42,9 +44,16 @@ export class LightingManager {
                 next[key] = THREE.MathUtils.clamp(value, min, max);
             }
         }
+        if (typeof config?.enabled === 'boolean') {
+            next.enabled = config.enabled;
+        } else if (reset) {
+            // 兼容增加总开关前保存的光照，维持原有画面。
+            next.enabled = ['ambient', 'hemisphere', 'key', 'fill', 'head'].some(key => next[key] > 0)
+                || next.exposure !== DEFAULT_LIGHTING.exposure;
+        }
         this.config = next;
-        this.renderer.toneMappingExposure = next.exposure;
-        if (!this.group && ['ambient', 'hemisphere', 'key', 'fill', 'head'].some(key => next[key] > 0)) {
+        this.renderer.toneMappingExposure = next.enabled ? next.exposure : DEFAULT_LIGHTING.exposure;
+        if (!this.group && next.enabled && ['ambient', 'hemisphere', 'key', 'fill', 'head'].some(key => next[key] > 0)) {
             this.group = new THREE.Group();
             this.group.name = '场景全局光照';
             this.lights = {
@@ -61,7 +70,7 @@ export class LightingManager {
         if (!this.group) return;
         for (const [key, light] of Object.entries(this.lights)) {
             light.intensity = next[key];
-            light.visible = next[key] > 0;
+            light.visible = next.enabled && next[key] > 0;
         }
         // 平行光只取方向，不依赖模型的位置或大小。
         const azimuth = THREE.MathUtils.degToRad(next.azimuth);

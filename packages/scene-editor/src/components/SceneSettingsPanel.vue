@@ -28,6 +28,18 @@
 
     <div class="section">
       <h4>光照设置</h4>
+      <div class="prop-row switch-row">
+        <label for="manual-lighting-enabled">手动光照</label>
+        <div class="switch-container">
+          <label class="switch">
+            <input id="manual-lighting-enabled" type="checkbox" v-model="lightingConfig.enabled"
+              :disabled="!lightingReady" @change="onLightingChange">
+            <span class="slider lighting-switch"></span>
+          </label>
+          <span class="switch-label">{{ lightingConfig.enabled ? '开启' : '关闭' }}</span>
+        </div>
+      </div>
+      <div v-if="lightingConfig.enabled">
       <label v-for="control in LIGHTING_CONTROLS" :key="control.key" class="lighting-control">
         <span>{{ control.label }}</span>
         <output class="panel-range-value">{{ lightingConfig[control.key].toFixed(control.step === 1 ? 0 : 1) }}</output>
@@ -40,6 +52,8 @@
         <button :disabled="!lightingReady" @click="applyLighting(DEFAULT_LIGHTING)">重置光照</button>
       </div>
       <div class="hint">拖动即时生效，点击保存场景后保留。视角补光跟随相机；重置恢复无灯光、曝光 1.0。</div>
+      </div>
+      <div v-else class="hint">手动光照已关闭，曝光恢复 1.0，环境贴图不受影响。开启后可调整参数。</div>
     </div>
 
     <div class="section">
@@ -369,6 +383,20 @@ h3 {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.switch input:checked + .lighting-switch {
+  background-color: #0066cc;
+}
+
+input:focus-visible + .lighting-switch {
+  outline: 2px solid #8bbcf0;
+  outline-offset: 2px;
+}
+
+input:disabled + .lighting-switch {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .lighting-actions button {
