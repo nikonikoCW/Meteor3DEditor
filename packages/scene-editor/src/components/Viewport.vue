@@ -240,6 +240,7 @@ const onDrop = async (event) => {
   const type = event.dataTransfer.getData('type');
   if (!type) return;
 
+
   if (type === 'PreviewShield' || type === 'PreviewScan' || type === 'PreviewLabel' || type === 'PreviewFire') {
     createVisualPreview(type, event);
     return;
@@ -313,6 +314,9 @@ const onDrop = async (event) => {
     } else if (type === 'Cylinder') {
       geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
       material = new THREE.MeshStandardMaterial({ color: 0x0088ff });
+    } else if (type === 'Plane') {
+      geometry = new THREE.PlaneGeometry(1, 1);
+      material = new THREE.MeshStandardMaterial({ color: 0xcccccc, side: THREE.DoubleSide });
     }
 
     if (geometry && material) {
@@ -321,7 +325,13 @@ const onDrop = async (event) => {
       // 使用统一的放置位置计算
       const dropPosition = getDropPosition(event);
       object.position.copy(dropPosition);
-      object.position.y += 0.5; // 基础几何体偏移半个高度
+      if (type === 'Plane') {
+        object.name = '平面';
+        object.rotation.x = -Math.PI / 2; // 默认水平放置，正面朝上
+        object.position.y += 0.002; // 避免与放置表面重叠闪烁
+      } else {
+        object.position.y += 0.5; // 基础几何体偏移半个高度
+      }
     }
   }
 

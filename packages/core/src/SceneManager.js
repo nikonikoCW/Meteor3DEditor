@@ -21,6 +21,7 @@ import { AnimationManager } from './AnimationManager.js';
 import { BidRegistry, generateBid } from './BidRegistry.js';
 import { ObjectTransformManager } from './ObjectTransformManager.js';
 import { LightingManager } from './LightingManager.js';
+import { BillboardManager } from './BillboardManager.js';
 
 /**
  * 场景管理器
@@ -144,6 +145,7 @@ export class SceneManager {
 
         // 特效管理器
         this.vfxManager = new VFXManager(this.scene, this.camera);
+        this.billboardManager = new BillboardManager(this.scene);
 
         // 流动线管理器
         this.lineManager = new LineManager(this.scene);
@@ -168,6 +170,15 @@ export class SceneManager {
         this.animate = this.animate.bind(this);
         this.animationFrameId = requestAnimationFrame(this.animate);
     }
+
+    /** Create a runtime image/MP4 plane. See BillboardManager.create for configuration and errors. */
+    createBillboard(options) { return this.billboardManager.create(options); }
+
+    /** Remove a billboard by runtime ID; returns false when absent. */
+    removeBillboard(id) { return this.billboardManager.remove(id); }
+
+    /** Clear all runtime billboards, including pending media loads. */
+    clearBillboards() { this.billboardManager.clear(); }
 
     /**
      * 订阅事件
@@ -1466,6 +1477,7 @@ export class SceneManager {
         this.snowManager?.dispose();
         this.rainManager?.dispose();
         this.vfxManager?.clear();
+        this.billboardManager?.dispose();
         this.lineManager?.clear();
 
         const environment = this.scene.environment;

@@ -709,6 +709,9 @@ export class PersistenceManager {
             } else if (data.geometry.type === 'SphereGeometry') {
                 const p = data.geometry.parameters;
                 geometry = new THREE.SphereGeometry(p.radius, p.widthSegments, p.heightSegments);
+            } else if (data.geometry.type === 'PlaneGeometry') {
+                const p = data.geometry.parameters;
+                geometry = new THREE.PlaneGeometry(p.width, p.height, p.widthSegments, p.heightSegments);
             } else if (data.geometry.type === 'ConeGeometry') {
                 const p = data.geometry.parameters;
                 geometry = new THREE.ConeGeometry(

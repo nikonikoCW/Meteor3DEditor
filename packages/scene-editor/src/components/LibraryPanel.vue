@@ -33,6 +33,13 @@
       >
         🛢️ 圆柱
       </div>
+      <div
+        class="item"
+        draggable="true"
+        @dragstart="onDragStart($event, 'Plane')"
+      >
+        ▱ 平面
+      </div>
     </div>
 
     <!-- 仅用于当前编辑器会话的可视化预览，不参与场景保存 -->
@@ -303,6 +310,7 @@ onBeforeUnmount(() => {
   padding: 10px;
   overflow-y: auto;
 }
+
 
 h3 {
   margin: 0 0 15px 0;

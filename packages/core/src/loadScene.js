@@ -408,6 +408,26 @@ function createMeteor3DInstance({ sceneManager, persistenceManager, resizeObserv
         /** 特效管理器 */
         vfxManager: sceneManager.vfxManager,
 
+        /**
+         * Create an image/MP4 billboard; resolves to a runtime ID when loaded.
+         * @param {Object} options - {url, type?: 'image'|'video', width?: 4, height?: 2,
+         * position?: {x,y,z}, rotation?: {x,y,z}, rotationUnit?: 'degrees'|'radians'}.
+         * Size in world units. XYZ rotation defaults to degrees, matching editor properties.
+         * options.mediaRotation is 0 (default), 90, 180 or 270 clockwise degrees viewed from the front;
+         * rotates only the media, stretched to fill unchanged plane bounds.
+         * For a default 1x1 editor plane, use scale.x as width and scale.y as height.
+         * Fixed orientation, center anchor, +Z front, double-sided, stretched media.
+         * Videos play muted and loop. HTTP(S)/blob/relative URLs; cross-origin media needs CORS.
+         * Not persisted. Rejects invalid inputs, loading/playback failures or disposal.
+         * @returns {Promise<string>} Runtime billboard ID.
+         * @example const id = await instance.createBillboard({url: '/ad.mp4', width: 6, height: 3});
+         */
+        createBillboard: (options) => sceneManager.createBillboard(options),
+        /** @param {string} id - Runtime ID. @returns {boolean} False if absent. */
+        removeBillboard: (id) => sceneManager.removeBillboard(id),
+        /** Clear all billboards and cancel pending loads; safe to call repeatedly. */
+        clearBillboards: () => sceneManager.clearBillboards(),
+
         // ========== 流动线 API ==========
         /**
          * 创建流动线
