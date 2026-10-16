@@ -822,6 +822,26 @@ const centerRotateConfig = {
     ]
 };
 
+// 广告牌：配置直接对应 Core API，空间旋转统一使用角度。
+const billboardConfig = {
+    label: '广告牌',
+    icon: '🖼️',
+    category: '3d',
+    defaultSize: { width: 150, height: 80 },
+    minSize: { width: 80, height: 40 },
+    props: [],
+    dataConfig: [{
+        name: 'config', label: '广告牌配置', type: 'json-editor',
+        defaultValue: [{
+            url: '', type: 'video', width: 4, height: 2,
+            position: { x: 0, y: 2, z: 0 },
+            rotation: { x: 0, y: 0, z: 0 },
+            mediaRotation: 0
+        }],
+        description: '每项为一块广告牌的完整 API 参数；rotation 为 XYZ 角度，mediaRotation 为 0/90/180/270。空数组清除全部广告牌。'
+    }],
+    actions: [{ name: 'enable', label: '启用' }, { name: 'disable', label: '禁用' }]
+};
 // 统一注册
 export function initRegistry() {
     // 场景组件
@@ -847,6 +867,7 @@ export function initRegistry() {
     registerWidget('Snow', snowConfig, () => import('../components/widgets/SnowWidget.vue'));
     registerWidget('Shield', shieldConfig, () => import('../components/widgets/ShieldWidget.vue'));
     registerWidget('Scan', scanConfig, () => import('../components/widgets/ScanWidget.vue'));
+    registerWidget('Billboard', billboardConfig, () => import('../components/widgets/BillboardWidget.vue'));
     registerWidget('CameraControl', cameraControlConfig, () => import('../components/widgets/CameraControlWidget.vue'));
     registerWidget('CenterRotate', centerRotateConfig, () => import('../components/widgets/CenterRotateWidget.vue'));
 }
