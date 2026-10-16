@@ -842,6 +842,24 @@ const billboardConfig = {
     }],
     actions: [{ name: 'enable', label: '启用' }, { name: 'disable', label: '禁用' }]
 };
+const videoMonitorConfig = {
+    label: '视频监控',
+    icon: '📹',
+    category: '3d',
+    defaultSize: { width: 150, height: 80 },
+    minSize: { width: 80, height: 40 },
+    props: [],
+    dataConfig: [{
+        name: 'config', label: '视频监控配置', type: 'json-editor',
+        defaultValue: [{
+            position: { x: 0, y: 2, z: 0 },
+            width: 320, height: 180, url: ''
+        }],
+        description: '每项为一个监控：position 为 XYZ 点位，width/height 为像素，url 为浏览器可播放的视频地址。也支持 x/y/z 或 lng/lat/height（经纬度模式请用 videoHeight 指定播放器像素高度）。暂不支持 RTSP。'
+    }],
+    actions: [{ name: 'enable', label: '启用' }, { name: 'disable', label: '禁用' }]
+};
+
 // 统一注册
 export function initRegistry() {
     // 场景组件
@@ -858,6 +876,7 @@ export function initRegistry() {
 
     // 3D 组件
     registerWidget('Label3D', labelConfig, () => import('../components/widgets/LabelWidget.vue'));
+    registerWidget('VideoMonitor', videoMonitorConfig, () => import('../components/widgets/VideoMonitorWidget.vue'));
     registerWidget('Tour', tourConfig, () => import('../components/widgets/TourWidget.vue'));
     registerWidget('Stats', statsConfig, () => import('../components/widgets/StatsWidget.vue'));
     registerWidget('Outline', outlineConfig, () => import('../components/widgets/OutlineWidget.vue'));
