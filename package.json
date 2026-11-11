@@ -3,17 +3,13 @@
     "private": true,
     "scripts": {
         "dev:scene": "pnpm --filter @meteor3d/scene-editor dev",
-        "dev:app": "pnpm --filter @meteor3d/app-editor dev",
         "dev:asset": "pnpm --filter @meteor3d/asset-manager dev",
-        "dev:dashboard": "pnpm --filter @meteor3d/dashboard dev",
         "dev:ai-scene": "pnpm --filter @meteor3d/ai-scene dev",
         "dev:docs": "pnpm --filter @meteor3d/docs dev",
         "dev:scene-webgpu": "pnpm --filter @meteor3d/scene-editor-webgpu dev",
         "build:core": "pnpm --filter @meteor3d/core build",
         "build:scene": "pnpm --filter @meteor3d/scene-editor build",
-        "build:app": "pnpm --filter @meteor3d/app-editor build",
         "build:asset": "pnpm --filter @meteor3d/asset-manager build",
-        "build:dashboard": "pnpm --filter @meteor3d/dashboard build",
         "build:ai-scene": "pnpm --filter @meteor3d/ai-scene build",
         "build:docs": "pnpm --filter @meteor3d/docs build",
         "build:all": "pnpm -r build"
