@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const { uploadAssetFiles, deleteAssetCloudFiles } = require('../services/upyunService');
+const { validateSimplificationOptions, getSourceLocation } = require('../services/assetSimplification');
 
 const execFileAsync = promisify(execFile);
 const CAD_EXTENSIONS = ['.step', '.stp', '.igs', '.iges'];
@@ -513,7 +514,7 @@ exports.downloadAsset = async (req, res) => {
 exports.getProcessingStatus = async (req, res) => {
     try {
         const asset = await Asset.findById(req.params.id)
-            .select('processingStatus processingError processedFiles bounds stats');
+            .select('processingStatus processingError processedFiles bounds stats metadata.derivation');
 
         if (!asset) {
             return res.status(404).json({
@@ -528,7 +529,8 @@ exports.getProcessingStatus = async (req, res) => {
             processingError: asset.processingError,
             processedFiles: asset.processedFiles,
             bounds: asset.bounds,
-            stats: asset.stats
+            stats: asset.stats,
+            derivation: asset.metadata?.derivation || null
         });
     } catch (error) {
         console.error('获取处理状态失败:', error);
@@ -570,7 +572,8 @@ exports.reprocessAsset = async (req, res) => {
 
         // 加入队列
         const { assetQueue } = require('../pipeline');
-        await assetQueue.add('process', { assetId: asset._id.toString() });
+        const jobType = asset.metadata?.derivation?.type === 'simplify' ? 'simplify' : 'process';
+        await assetQueue.add(jobType, { assetId: asset._id.toString() }, jobType === 'simplify' ? { attempts: 1 } : {});
 
         res.status(200).json({
             success: true,
@@ -583,6 +586,45 @@ exports.reprocessAsset = async (req, res) => {
             message: '重新处理失败',
             error: error.message
         });
+    }
+};
+
+/** Create a derivative asset and queue the dedicated simplification workflow. */
+exports.simplifyAsset = async (req, res) => {
+    let derivative;
+    try {
+        if (!/^[a-f\d]{24}$/i.test(req.params.id)) {
+            return res.status(400).json({ success: false, message: '资产 ID 无效' });
+        }
+        let options;
+        try { options = validateSimplificationOptions(req.body || {}); }
+        catch (error) { return res.status(400).json({ success: false, message: error.message }); }
+        const source = await Asset.findById(req.params.id);
+        if (!source) return res.status(404).json({ success: false, message: '原资产不存在' });
+        if (source.type !== 'model' || source.processingStatus !== 'ready') {
+            return res.status(400).json({ success: false, message: '只有处理完成的模型资产可以减面' });
+        }
+        try { getSourceLocation(source); }
+        catch (error) { return res.status(400).json({ success: false, message: error.message }); }
+        const name = `${source.name}-减面`;
+        derivative = await Asset.create({
+            name, originalName: `${name}.glb`, type: 'model', format: 'glb',
+            assetVersionId: crypto.randomUUID(), processingStatus: 'pending',
+            metadata: {
+                sourceAssetId: source._id.toString(),
+                sourceAssetVersionId: source.assetVersionId,
+                derivation: { type: 'simplify', ...options }
+            }
+        });
+        const { assetQueue } = require('../pipeline');
+        await assetQueue.add('simplify', { assetId: derivative._id.toString() }, { attempts: 1 });
+        res.status(202).json({ success: true, message: '减面任务已提交', asset: derivative });
+    } catch (error) {
+        if (derivative) await Asset.findByIdAndUpdate(derivative._id, {
+            processingStatus: 'failed', processingError: error.message
+        });
+        console.error('提交减面任务失败:', error);
+        res.status(500).json({ success: false, message: '提交减面任务失败', error: error.message });
     }
 };
 

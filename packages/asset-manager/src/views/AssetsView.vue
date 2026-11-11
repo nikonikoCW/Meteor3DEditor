@@ -89,6 +89,15 @@
         </div>
         <div class="asset-actions">
           <button
+            v-if="asset.type === 'model'"
+            class="action-btn simplify-btn"
+            :disabled="asset.processingStatus !== 'ready' || simplifySubmitting"
+            @click.stop="openSimplifyDialog(asset)"
+            :title="asset.processingStatus === 'ready' ? '减面' : '模型处理完成后可减面'"
+          >
+            减面
+          </button>
+          <button
             v-if="asset.filePath"
             class="action-btn download-btn"
             @click.stop="handleDownload(asset)"
@@ -182,6 +191,60 @@
         <div class="spinner"></div>
         <p>{{ uploadStatus }}</p>
       </div>
+    </div>
+
+    <div v-if="showSimplifyDialog" class="dialog-overlay simplify-overlay" @click.self="closeSimplifyDialog">
+      <section class="simplify-dialog" role="dialog" aria-modal="true" aria-labelledby="simplify-dialog-title">
+        <header class="simplify-dialog-header">
+          <div class="simplify-heading"><span class="simplify-brand-icon">◈</span><div><span class="simplify-eyebrow">LESS GEOMETRY. SAME CHARACTER.</span><h3 id="simplify-dialog-title">模型减面<span>优化几何，探索更轻的模型</span></h3></div></div>
+          <div class="simplify-header-actions"><span class="simplify-engine"><i></i> 减面工作台</span><button type="button" class="simplify-dialog-close" aria-label="关闭减面弹窗" @click="closeSimplifyDialog">×</button></div>
+        </header>
+        <form class="simplify-dialog-body" @submit.prevent="confirmSimplify">
+          <div class="simplify-workspace">
+            <aside class="simplify-settings">
+              <div class="simplify-section-label"><span>01 / 当前模型</span><small>GLB</small></div>
+              <div class="simplify-source"><span>◈</span><div><strong :title="simplifyTarget?.name">{{ simplifyTarget?.name }}</strong><small>{{ simplifyTarget?.stats?.triangleCount?.toLocaleString() || '—' }} 三角形 · {{ simplifyTarget?.fileSize ? formatFileSize(simplifyTarget.fileSize) : '大小待统计' }}</small></div></div>
+              <div class="simplify-divider"></div>
+              <fieldset class="simplify-fields" :disabled="simplifySubmitting">
+                <div class="simplify-section-label"><span>02 / 减面设置</span></div>
+                <div class="simplify-ratio-heading"><label for="simplify-ratio">目标保留比例</label><div><input aria-label="保留面数百分比" type="number" v-model.number="simplifyForm.keepPercent" min="1" max="99" step="1" required /><span>%</span></div></div>
+                <input id="simplify-ratio" class="simplify-range" type="range" v-model.number="simplifyForm.keepPercent" min="1" max="99" step="1" />
+                <div class="simplify-range-labels"><span>更轻量</span><span>更多细节</span></div>
+                <p class="simplify-target-count">目标约 <strong>{{ simplifyTarget?.stats?.triangleCount ? Math.max(1, Math.round(simplifyTarget.stats.triangleCount * simplifyForm.keepPercent / 100)).toLocaleString() : '—' }}</strong> 三角形</p>
+                <label class="simplify-field" for="simplify-error">允许简化误差<select id="simplify-error" v-model.number="simplifyForm.errorPercent"><option :value="0.1">0.1% · 保守</option><option :value="1">1% · 均衡</option><option :value="5">5% · 更强减面</option><option :value="10">10% · 大幅减面</option></select></label>
+                <p class="simplify-hint">较小误差保留更多形状，较大误差允许更强减面。</p>
+                <label class="simplify-check"><input type="checkbox" v-model="simplifyForm.updatePositions" /><span>优化顶点位置<small>改善低面数形状；骨骼和形变网格保留原始位置</small></span></label>
+                <details class="simplify-advanced"><summary>高级选项</summary>
+                  <label class="simplify-check"><input type="checkbox" v-model="simplifyForm.lockBorder" /><span>锁定开放边界<small>保持模型拼接处，降低接缝风险</small></span></label>
+                  <label class="simplify-check"><input type="checkbox" v-model="simplifyForm.permissive" /><span>允许跨属性接缝简化<small>提升减面幅度，可能改变 UV 或硬边表现</small></span></label>
+                  <label class="simplify-check"><input type="checkbox" v-model="simplifyForm.quantize" /><span>量化法线与 UV<small>缩小文件，保留节点位置和变换</small></span></label>
+                </details>
+                <div class="simplify-divider"></div>
+                <div class="simplify-section-label"><span>03 / 结果保存</span><small>新资产</small></div>
+                <div class="simplify-output"><span>↳</span><strong>{{ simplifyTarget?.name }}-减面</strong></div>
+                <div class="simplify-output-badges"><span>原贴图保留</span><span>Meshopt 压缩</span></div>
+                <p class="simplify-hint">原资产保留。实际面数受误差、边界与属性保护约束。</p>
+              </fieldset>
+            </aside>
+            <div class="simplify-preview-column">
+              <SimplifyPreview :original-url="simplifyOriginalUrl" :result-url="simplifyResult?.url" :visible="showSimplifyDialog">
+                <div class="simplify-stats">
+                  <div><span>原始面数</span><strong>{{ (simplifyResult?.before ?? simplifyTarget?.stats?.triangleCount)?.toLocaleString() || '—' }}</strong></div>
+                  <div><span>结果面数</span><strong>{{ simplifyResult?.after?.toLocaleString() || '—' }}</strong></div>
+                  <div class="accent"><span>面数减少</span><strong>{{ simplifyResult ? simplifyResult.reduction + '%' : '—' }}</strong></div>
+                  <div><span>结果大小</span><strong>{{ simplifyResult?.fileSize ? formatFileSize(simplifyResult.fileSize) : '—' }}</strong><small v-if="simplifyResult?.sizeReduction">{{ simplifyResult.sizeReduction }}</small></div>
+                  <div><span>处理耗时</span><strong>{{ simplifyResult?.durationMs != null ? (simplifyResult.durationMs / 1000).toFixed(2) + ' s' : '—' }}</strong></div>
+                </div>
+              </SimplifyPreview>
+              <div v-if="simplifyResult" class="simplify-result" role="status"><span>✓</span><div><strong>已创建 {{ simplifyResult.name }}</strong><p>{{ simplifyResult.positionUpdateSkipped ? '骨骼或形变网格已保留原始顶点位置。' : '可切换至减面结果，开启预览检查模型细节。' }}</p></div></div>
+            </div>
+          </div>
+          <footer class="simplify-footer">
+            <div class="simplify-progress"><p :class="{ error: simplifyError }" role="status"><i :class="{ busy: simplifySubmitting, done: simplifyResult }"></i>{{ simplifyError || (simplifySubmitting ? simplifyStatus : simplifyResult ? '处理完成，已保存为新资产' : '模型已就绪，设置参数后开始减面') }}</p><div class="simplify-stages"><span :class="{ done: simplifySubmitting || simplifyResult }">参数设置</span><span :class="{ active: simplifySubmitting, done: simplifyResult }">减面与压缩</span><span :class="{ done: simplifyResult }">保存新资产</span></div></div>
+            <div class="simplify-footer-actions"><button type="button" class="simplify-secondary" @click="closeSimplifyDialog">{{ simplifySubmitting ? '转入后台' : '关闭' }}</button><button type="submit" class="simplify-primary" :disabled="simplifySubmitting">{{ simplifySubmitting ? '处理中…' : simplifyResult ? '再次减面' : '开始减面' }}<span>{{ simplifySubmitting ? '◌' : '→' }}</span></button></div>
+          </footer>
+        </form>
+      </section>
     </div>
 
     <!-- 上传资产弹窗 -->
@@ -439,12 +502,90 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
-import { uploadAsset, uploadCadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset, uploadThumbnail, getAssetsWithoutThumbnail, registerTileset, registerGaussianSplat, uploadGaussianSplat, updateRegisteredAssetUrl, uploadAssetToCloud } from '../services/assetService';
+import { uploadAsset, uploadCadAsset, getAssets, deleteAsset, downloadAsset, waitForProcessing, reprocessAsset, uploadThumbnail, getAssetsWithoutThumbnail, registerTileset, registerGaussianSplat, uploadGaussianSplat, updateRegisteredAssetUrl, uploadAssetToCloud, simplifyAsset } from '../services/assetService';
 import { ASSET_BASE_URL } from '../config';
 import { ThumbnailGenerator } from '../utils/ThumbnailGenerator';
 import { message } from '../utils/message';
+import SimplifyPreview from '../components/SimplifyPreview.vue';
 
 const assets = ref([]);
+const showSimplifyDialog = ref(false);
+const simplifyTarget = ref(null);
+const defaultSimplifyForm = { keepPercent: 50, errorPercent: 1, lockBorder: false,
+  updatePositions: true, permissive: false, quantize: false };
+const simplifyForm = reactive({ ...defaultSimplifyForm });
+const simplifyOriginalUrl = computed(() => {
+  const asset = simplifyTarget.value;
+  const url = asset?.cloudUrls?.compressed || asset?.processedFiles?.compressed || asset?.cloudUrls?.file || asset?.url;
+  if (!url) return '';
+  return /^https?:\/\//i.test(url) ? url : ASSET_BASE_URL + '/' + url.replace(/\\/g, '/').replace(/^\/+/, '');
+});
+const simplifySubmitting = ref(false);
+const simplifyStatus = ref('');
+const simplifyError = ref('');
+const simplifyResult = ref(null);
+let viewUnmounted = false;
+
+const openSimplifyDialog = asset => {
+  if (simplifySubmitting.value || asset.processingStatus !== 'ready') return;
+  simplifyTarget.value = asset;
+  Object.assign(simplifyForm, defaultSimplifyForm);
+  simplifyError.value = '';
+  simplifyResult.value = null;
+  showSimplifyDialog.value = true;
+};
+
+const closeSimplifyDialog = () => { showSimplifyDialog.value = false; };
+
+const confirmSimplify = async () => {
+  if (simplifySubmitting.value || !simplifyTarget.value) return;
+  const { keepPercent, errorPercent, lockBorder } = simplifyForm;
+  if (!Number.isFinite(keepPercent) || keepPercent < 1 || keepPercent > 99 ||
+      !Number.isFinite(errorPercent) || errorPercent < 0 || errorPercent > 100) {
+    simplifyError.value = '请检查保留比例和误差的取值范围';
+    return;
+  }
+  simplifySubmitting.value = true;
+  simplifyError.value = '';
+  simplifyStatus.value = '正在提交减面任务…';
+  let derived;
+  try {
+    derived = await simplifyAsset(simplifyTarget.value._id, {
+      ratio: keepPercent / 100, error: errorPercent / 100, lockBorder,
+      updatePositions: simplifyForm.updatePositions, permissive: simplifyForm.permissive,
+      quantize: simplifyForm.quantize
+    });
+    if (viewUnmounted) return;
+    simplifyStatus.value = '后台正在减面与压缩，可关闭弹窗';
+    await loadAssets(1);
+    const status = await waitForProcessing(derived._id, 1500, 15 * 60 * 1000);
+    if (viewUnmounted) return;
+    const before = status.derivation?.originalTriangles ?? simplifyTarget.value.stats?.triangleCount ?? 0;
+    const after = status.derivation?.simplifiedTriangles ?? status.stats?.triangleCount ?? 0;
+    simplifyResult.value = { name: derived.name, before, after,
+      reduction: before > 0 ? ((1 - after / before) * 100).toFixed(1) : '—',
+      fileSize: status.derivation?.resultFileSize, durationMs: status.derivation?.durationMs,
+      positionUpdateSkipped: status.derivation?.positionUpdateSkipped,
+      url: status.processedFiles?.compressed ? ASSET_BASE_URL + '/' + status.processedFiles.compressed.replace(/\\/g, '/').replace(/^\/+/, '') : '',
+      sizeReduction: status.derivation?.sourceFileSize && status.derivation?.resultFileSize
+        ? (status.derivation.resultFileSize < status.derivation.sourceFileSize ? '体积减少 ' : '体积增加 ') + Math.abs((1 - status.derivation.resultFileSize / status.derivation.sourceFileSize) * 100).toFixed(1) + '%' : '' };
+    message.success(`已创建资产「${derived.name}」`);
+    await loadAssets(1);
+    if (status.processedFiles?.compressed && !viewUnmounted) {
+      await generateAndUploadThumbnail(derived._id, status.processedFiles.compressed);
+      if (!viewUnmounted) await loadAssets(1);
+    }
+  } catch (error) {
+    if (viewUnmounted) return;
+    simplifyError.value = derived && error.message === '处理超时'
+      ? '等待超时，任务仍可能在后台运行，请查看资产卡片的处理状态。'
+      : error.message;
+    message.error(simplifyError.value);
+    await loadAssets();
+  } finally {
+    simplifySubmitting.value = false;
+  }
+};
 const currentFilter = ref(null);
 const uploading = ref(false);
 const fileInput = ref(null);
@@ -1167,6 +1308,7 @@ onMounted(() => {
 
 // 🧹 组件卸载时清理资源，防止内存泄漏
 onUnmounted(() => {
+  viewUnmounted = true;
   if (thumbnailGenerator) {
     thumbnailGenerator.dispose();
     thumbnailGenerator = null;
@@ -1377,6 +1519,26 @@ onUnmounted(() => {
 .download-btn {
   background: #264f78;
 }
+
+.simplify-btn {
+  background: #57417c;
+}
+
+.simplify-btn:hover {
+  background: #70549e;
+}
+
+.simplify-overlay{backdrop-filter:blur(8px);background:rgba(5,10,12,.76)}
+.simplify-dialog{--simplify-accent:#b8f275;--simplify-muted:#7f939d;--simplify-line:#2b363b;width:70vw;height:70vh;max-width:1440px;max-height:94vh;min-width:min(850px,94vw);display:flex;flex-direction:column;color:#dce5e9;background:#10181c;border:1px solid #34434a;border-radius:14px;overflow:hidden;box-shadow:0 28px 100px #0009;box-sizing:border-box;font-family:Inter,"Segoe UI","Microsoft YaHei",sans-serif;color-scheme:dark}
+.simplify-dialog button,.simplify-dialog input,.simplify-dialog select{font:inherit}.simplify-dialog button:disabled{opacity:.4;cursor:not-allowed}.simplify-dialog button:focus-visible,.simplify-dialog input:focus-visible,.simplify-dialog summary:focus-visible{outline:2px solid var(--simplify-accent);outline-offset:3px}
+.simplify-dialog-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--simplify-line);gap:16px}.simplify-heading{display:flex;align-items:center;gap:13px;min-width:0}.simplify-brand-icon{font-size:39px;line-height:1;color:var(--simplify-accent)}.simplify-eyebrow{font-size:8px;letter-spacing:1.8px;color:var(--simplify-accent)}.simplify-heading h3{font-size:19px;font-weight:600;margin:5px 0 0}.simplify-heading h3 span{font-size:11px;font-weight:400;color:var(--simplify-muted);margin-left:16px}.simplify-header-actions{display:flex;align-items:center;gap:20px}.simplify-engine{display:flex;align-items:center;gap:7px;font-size:10px;color:#8fa2ac;white-space:nowrap}.simplify-engine i{width:5px;height:5px;border-radius:50%;background:var(--simplify-accent)}.simplify-dialog-close{padding:0 5px;border:0;background:none;color:#8fa2ac;font-size:27px!important;cursor:pointer}.simplify-dialog-close:hover{color:white}
+.simplify-dialog-body{display:flex;flex-direction:column;flex:1;min-height:0}.simplify-workspace{display:grid;grid-template-columns:268px minmax(0,1fr);gap:16px;padding:16px;flex:1;min-height:0}.simplify-settings{padding:20px;background:#161e22;border:1px solid var(--simplify-line);border-radius:10px;overflow:auto;scrollbar-width:thin;scrollbar-color:#40535d transparent}.simplify-section-label{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:600;letter-spacing:.4px}.simplify-section-label small{color:var(--simplify-muted);font-size:9px;font-weight:400}.simplify-source{display:flex;align-items:center;gap:12px;padding:15px 11px;background:#1b272c;border:1px solid #35474f;border-radius:7px;margin-top:14px}.simplify-source>span{font-size:31px;color:#89a7b4}.simplify-source>div{min-width:0}.simplify-source strong{display:block;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.simplify-source small{display:block;margin-top:7px;color:var(--simplify-muted);font-size:10px;line-height:1.6}.simplify-divider{height:1px;background:var(--simplify-line);margin:20px 0}.simplify-fields{padding:0;margin:0;border:0;min-width:0}
+.simplify-ratio-heading{display:flex;align-items:center;justify-content:space-between;margin:15px 0 10px;font-size:12px}.simplify-ratio-heading>div{display:flex;align-items:center;color:var(--simplify-accent)}.simplify-ratio-heading input{width:58px;border:0;background:none;color:var(--simplify-accent);font-size:29px;font-weight:500;text-align:right;appearance:textfield;padding:0}.simplify-ratio-heading input::-webkit-inner-spin-button{appearance:none}.simplify-ratio-heading span{font-size:12px;margin-left:5px}.simplify-range{width:100%;height:4px;margin:10px 0;accent-color:var(--simplify-accent);cursor:pointer}.simplify-range-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--simplify-muted);margin-top:5px}.simplify-target-count{font-size:10px;color:var(--simplify-muted);margin:14px 0 19px}.simplify-target-count strong{color:#c4d3d9;font-weight:500}
+.simplify-field{display:flex;flex-direction:column;gap:9px;margin-top:14px;font-size:11px;color:#bbccd3}.simplify-field input,.simplify-field select{width:100%;box-sizing:border-box;border:1px solid #3b4c55;background:#1c282e;border-radius:5px;padding:9px 10px;color:#dce5e9;font-size:12px}.simplify-input-unit{position:relative}.simplify-input-unit input{padding-right:30px}.simplify-input-unit>span{position:absolute;right:11px;top:10px;color:#8299a4;font-size:10px}.simplify-hint{font-size:10px;color:var(--simplify-muted);line-height:1.8;margin:10px 0 0}.simplify-check{display:flex;align-items:flex-start;gap:8px;font-size:11px;margin-top:16px;line-height:1.5;cursor:pointer}.simplify-check input{accent-color:var(--simplify-accent);margin:2px 0 0}.simplify-check small{display:block;font-size:9px;color:var(--simplify-muted);line-height:1.8;margin-top:3px}.simplify-advanced{border-top:1px solid var(--simplify-line);margin-top:18px;padding-top:14px}.simplify-advanced summary{font-size:11px;color:#a3b8c2;cursor:pointer}.simplify-advanced summary>span{float:right;color:#69838f;font-size:9px}.simplify-output{display:flex;gap:9px;margin-top:14px;padding:11px;background:#1b272c;border-radius:6px;font-size:11px}.simplify-output span{color:var(--simplify-accent)}.simplify-output strong{overflow-wrap:anywhere;font-weight:500}.simplify-output-badges{display:flex;gap:6px;margin-top:11px}.simplify-output-badges span{font-size:9px;padding:4px 6px;background:#1e2b25;border:1px solid #344c36;border-radius:4px;color:#a3bb8d}
+.simplify-preview-column{display:flex;flex-direction:column;gap:12px;min-width:0;min-height:0}.simplify-preview-column>:first-child{flex:1;min-height:0}.simplify-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:18px 14px;gap:10px;border-top:1px solid var(--simplify-line)}.simplify-stats>div{border-right:1px solid var(--simplify-line);padding-right:8px;min-width:0}.simplify-stats>div:last-child{border:0}.simplify-stats span{display:block;font-size:9px;color:var(--simplify-muted);margin-bottom:9px}.simplify-stats strong{display:block;font-size:16px;font-weight:500;white-space:nowrap}.simplify-stats .accent strong{color:var(--simplify-accent)}.simplify-stats small{display:block;color:#8ca674;font-size:9px;margin-top:6px}.simplify-result{display:flex;gap:10px;align-items:flex-start;padding:12px 15px;border:1px solid #395337;border-radius:7px;background:#1b2c21}.simplify-result>span{color:var(--simplify-accent)}.simplify-result strong{font-size:11px;font-weight:500;overflow-wrap:anywhere}.simplify-result p{font-size:10px;color:#92ac93;line-height:1.6;margin:5px 0 0}
+.simplify-footer{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:15px 20px;border-top:1px solid var(--simplify-line);background:#131c20}.simplify-progress{min-width:0;flex:1}.simplify-progress p{display:flex;align-items:center;gap:8px;font-size:11px;color:#9cafb8;margin:0;line-height:1.6}.simplify-progress p.error{color:#f0a59d}.simplify-progress i{width:6px;height:6px;border-radius:50%;background:#6a808b;flex-shrink:0}.simplify-progress i.done,.simplify-progress i.busy{background:var(--simplify-accent)}.simplify-progress i.busy{animation:simplify-pulse 1.3s ease-in-out infinite}.simplify-stages{display:flex;gap:7px;margin-top:10px;max-width:360px}.simplify-stages span{flex:1;padding-top:6px;border-top:2px solid #34434b;color:#657d88;font-size:8px}.simplify-stages span.done{border-color:#78925d;color:#a3ba8c}.simplify-stages span.active{border-color:var(--simplify-accent);color:var(--simplify-accent)}.simplify-footer-actions{display:flex;gap:10px;align-items:center}.simplify-secondary{padding:11px 14px;border:1px solid #3b4b53;border-radius:6px;background:none;color:#9eb1bb;font-size:11px;cursor:pointer}.simplify-primary{display:flex;justify-content:space-between;align-items:center;gap:30px;min-width:154px;padding:12px 17px;background:var(--simplify-accent);color:#203219;border:0;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}.simplify-primary:hover:enabled{background:#caff8f}.simplify-btn:disabled{opacity:.45;cursor:not-allowed}@keyframes simplify-pulse{50%{opacity:.35}}
+@media(max-width:900px){.simplify-dialog{width:94vw;height:88vh;min-width:0}.simplify-heading h3 span,.simplify-engine{display:none}.simplify-workspace{grid-template-columns:230px minmax(0,1fr);gap:10px;padding:10px}.simplify-settings{padding:14px}.simplify-stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.simplify-stats strong{font-size:14px}.simplify-stats>div{border:0}}
+@media(max-width:640px){.simplify-dialog{height:92vh}.simplify-workspace{display:flex;flex-direction:column;overflow:auto}.simplify-settings{overflow:visible;flex-shrink:0}.simplify-preview-column{min-height:420px;flex-shrink:0}.simplify-footer{align-items:stretch;flex-direction:column;gap:12px}.simplify-footer-actions{justify-content:flex-end}.simplify-heading h3{font-size:17px}.simplify-dialog-header{padding:14px}.simplify-eyebrow{font-size:7px}}
 
 .download-btn:hover {
   background: #31699d;

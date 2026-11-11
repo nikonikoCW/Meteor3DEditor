@@ -15,6 +15,7 @@ const { ensureNodeIdentities } = require('./processors/nodeIdentityProcessor');
 const { compressMeshopt } = require('./processors/meshoptCompressor');
 const { optimizeTextures } = require('./processors/textureOptimizer');
 const { calculateBounds } = require('./processors/boundsCalculator');
+const { simplifyAssetModel } = require('../services/assetSimplification');
 
 /**
  * 处理单个资产
@@ -126,6 +127,41 @@ assetQueue.process('process', async (job) => {
                 console.warn('[Pipeline] 清理临时目录失败:', cleanupError.message);
             }
         }
+    }
+});
+
+// A derivative task does not run conversion, identity injection or texture encoding again.
+assetQueue.process('simplify', async job => {
+    const { assetId } = job.data;
+    let result;
+    try {
+        const target = await Asset.findById(assetId);
+        if (!target) throw new Error('减面资产已删除或不存在');
+        if (target.metadata?.derivation?.type !== 'simplify') throw new Error('减面任务数据无效');
+        const source = await Asset.findById(target.metadata.sourceAssetId);
+        if (!source || source.processingStatus !== 'ready') throw new Error('原资产不存在或尚未处理完成');
+        await Asset.findByIdAndUpdate(assetId, { processingStatus: 'processing', processingError: null });
+        result = await simplifyAssetModel(source, assetId, target.metadata.derivation);
+        const updated = await Asset.findByIdAndUpdate(assetId, {
+            filePath: path.resolve(__dirname, '../..', result.outputPath), url: '/' + result.outputPath,
+            fileSize: result.fileSize, processedFiles: { compressed: result.outputPath },
+            bounds: result.bounds, stats: result.stats, nodeManifest: result.nodeManifest,
+            'metadata.derivation.originalTriangles': result.originalTriangles,
+            'metadata.derivation.simplifiedTriangles': result.simplifiedTriangles,
+            'metadata.derivation.sourceFileSize': result.sourceFileSize,
+            'metadata.derivation.resultFileSize': result.fileSize,
+            'metadata.derivation.durationMs': result.durationMs,
+            'metadata.derivation.positionUpdateSkipped': result.positionUpdateSkipped,
+            processingStatus: 'ready', processingError: null
+        });
+        if (!updated) {
+            throw new Error('减面资产已删除');
+        }
+        return { success: true, assetId };
+    } catch (error) {
+        if (result) await fs.promises.rm(path.resolve(__dirname, '../..', result.outputPath), { force: true });
+        await Asset.findByIdAndUpdate(assetId, { processingStatus: 'failed', processingError: error.message });
+        throw error;
     }
 });
 

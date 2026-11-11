@@ -40,6 +40,7 @@ router.get('/:id/status', assetController.getProcessingStatus);
 router.post('/:id/upload-cloud', assetController.uploadAssetToCloud);
 
 router.post('/:id/reprocess', assetController.reprocessAsset);
+router.post('/:id/simplify', assetController.simplifyAsset);
 
 // POST /api/assets/:id/thumbnail - 上传缩略图 (延迟生成)
 router.post('/:id/thumbnail', upload.single('thumbnail'), assetController.uploadThumbnail);

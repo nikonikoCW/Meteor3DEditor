@@ -4,6 +4,17 @@
 
 import { API_BASE_URL, ASSET_BASE_URL } from '../config';
 
+export async function simplifyAsset(assetId, options) {
+    const response = await fetch(`${API_BASE_URL}/assets/${assetId}/simplify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(options)
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.error || data.message || '提交减面任务失败');
+    return data.asset;
+}
+
 
 /**
  * 上传资产
