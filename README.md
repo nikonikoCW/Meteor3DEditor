@@ -33,7 +33,7 @@
 ### 📦 资产管理器 (Asset Manager)
 - **3D 模型上传** - 支持 GLTF/GLB 格式
 - **自动缩略图生成** - 基于 Three.js 的智能预览
-- **模型优化处理** - 自动生成 LOD 和 Draco 压缩版本
+- **模型优化处理** - KTX2 纹理与 Meshopt 几何压缩
 - **分类筛选** - 快速定位所需资产
 
 <p align="center">

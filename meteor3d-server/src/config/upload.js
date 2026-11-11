@@ -8,8 +8,6 @@ const uploadDirs = [
     'uploads/thumbnails',       // 缩略图
     'uploads/raw',              // 原始上传文件
     'uploads/processed/models', // 压缩后模型
-    'uploads/processed/lods',   // LOD 版本
-    'uploads/processed/textures', // 优化后纹理
     'uploads/temp'              // 临时处理目录
 ];
 

@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { createModelLoader } from './ModelLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 export class ThumbnailGenerator {
@@ -35,13 +34,8 @@ export class ThumbnailGenerator {
         // 灯光组
         this.setupLights();
 
-        // 加载器初始化
-        const dracoLoader = new DRACOLoader();
-        // 建议：改为本地路径，例如 '/draco/'
-        dracoLoader.setDecoderPath('/draco/');
-
-        this.gltfLoader = new GLTFLoader();
-        this.gltfLoader.setDRACOLoader(dracoLoader);
+        this.modelLoader = createModelLoader(this.renderer);
+        this.gltfLoader = this.modelLoader.gltfLoader;
     }
 
     setupLights() {
@@ -151,7 +145,8 @@ export class ThumbnailGenerator {
         }
     }
 
-    loadModel(url) {
+    async loadModel(url) {
+        await this.modelLoader.ready;
         return new Promise((resolve, reject) => {
             this.gltfLoader.load(url, (gltf) => resolve(gltf.scene), undefined, reject);
         });
@@ -160,7 +155,7 @@ export class ThumbnailGenerator {
     dispose() {
         this.renderer.dispose();
         if (this.scene.environment) this.scene.environment.dispose();
-        // 如果不再需要 GLTFLoader 也可以把 Draco 实例 dispose 掉
-        this.gltfLoader.dracoLoader.dispose();
+        // 释放 Core 持有的 Draco/KTX2 解码器与 Worker。
+        this.modelLoader.dispose();
     }
 }

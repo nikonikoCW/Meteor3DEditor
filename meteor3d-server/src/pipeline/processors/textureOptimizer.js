@@ -1,111 +1,72 @@
-/**
- * 纹理优化处理器
- * 生成多分辨率纹理版本
- * 
- * 注意：sharp 是可选依赖，在不支持的 Node.js 版本上会优雅降级
- * - sharp 0.32.x 支持 Node.js 14-20
- * - sharp 0.33+ 支持 Node.js 18.17+/20+/22+
- */
-const path = require('path');
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
+const { KHRTextureBasisu } = require('@gltf-transform/extensions');
+const { listTextureSlots } = require('@gltf-transform/functions');
 const { createNodeIO } = require('../utils/ioUtils');
 
-// 延迟加载 sharp，允许在不支持的环境中优雅降级
-let sharp = null;
-let sharpLoadError = null;
+const execFileAsync = promisify(execFile);
+const COLOR_SLOTS = new Set(['baseColorTexture', 'emissiveTexture', 'specularColorTexture', 'sheenColorTexture']);
 
-function getSharp() {
-    if (sharp) return sharp;
-    if (sharpLoadError) return null;
-
-    try {
-        sharp = require('sharp');
-        console.log('[TextureOptimizer] sharp 模块加载成功');
-        return sharp;
-    } catch (error) {
-        sharpLoadError = error;
-        console.warn('[TextureOptimizer] sharp 模块加载失败，纹理优化功能将被禁用');
-        console.warn(`[TextureOptimizer] 错误详情: ${error.message}`);
-        console.warn('[TextureOptimizer] 提示: 这通常是 Node.js 版本兼容性问题，可尝试运行 pnpm rebuild sharp');
-        return null;
-    }
-}
-
-const TEXTURE_SIZES = [2048, 1024, 512];
-
-/**
- * 优化 glTF 中的纹理
- * @param {Object} context - 处理上下文
- * @returns {Object} 各分辨率纹理文件路径
- */
+/** Encode textures into the GLB itself, preserving material bindings. */
 async function optimizeTextures(context) {
-    const sharpInstance = getSharp();
-    const results = {};
-
-    // 如果 sharp 不可用，跳过纹理优化
-    if (!sharpInstance) {
-        console.warn('[TextureOptimizer] 跳过纹理优化（sharp 不可用）');
-        return results;
-    }
-
     const io = await createNodeIO();
+    const document = await io.read(context.gltfPath);
+    // A single source image may be used in both sRGB and linear slots. KTX2 stores
+    // its transfer function, so those uses need separate encoded textures.
+    for (const texture of document.getRoot().listTextures()) {
+        if (texture.getMimeType() === 'image/ktx2') continue;
+        const edges = texture.getGraph().listParentEdges(texture)
+            .filter(edge => edge.getParent() !== document.getRoot());
+        if (edges.some(edge => COLOR_SLOTS.has(edge.getName())) &&
+            edges.some(edge => !COLOR_SLOTS.has(edge.getName()))) {
+            const linearTexture = texture.clone();
+            for (const edge of edges.filter(edge => !COLOR_SLOTS.has(edge.getName()))) {
+                edge.getParent().setRef(edge.getName(), linearTexture, edge.getAttributes());
+            }
+        }
+    }
+    const pending = document.getRoot().listTextures()
+        .filter(texture => texture.getMimeType() !== 'image/ktx2' && texture.getImage());
+    if (pending.length === 0) return context.gltfPath;
 
+    const localTool = path.resolve(__dirname, '../../../bin/ktx', process.platform === 'win32' ? 'toktx.exe' : 'toktx');
+    const command = process.env.TOKTX_PATH || (fs.existsSync(localTool) ? localTool : 'toktx');
+    const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'meteor-ktx2-'));
     try {
-        const document = await io.read(context.gltfPath);
-        const textures = document.getRoot().listTextures();
-
-        if (textures.length === 0) {
-            console.log('[TextureOptimizer] 无纹理需要处理');
-            return results;
-        }
-
-        console.log(`[TextureOptimizer] 发现 ${textures.length} 个纹理`);
-
-        for (let i = 0; i < textures.length; i++) {
-            const texture = textures[i];
-            const image = texture.getImage();
-
-            if (!image) {
-                continue;
+        const sharp = require('sharp');
+        for (const [index, texture] of pending.entries()) {
+            const slots = listTextureSlots(texture);
+            const hasColor = slots.some(slot => COLOR_SLOTS.has(slot));
+            const input = path.join(tempDir, `${index}.png`);
+            const output = path.join(tempDir, `${index}.ktx2`);
+            const image = sharp(Buffer.from(texture.getImage()));
+            const { width, height } = await image.metadata();
+            // KHR_texture_basisu requires base dimensions to be multiples of four.
+            if (width % 4 || height % 4) {
+                image.resize(Math.ceil(width / 4) * 4, Math.ceil(height / 4) * 4, { fit: 'fill' });
             }
-
-            const texName = texture.getName() || `texture_${i}`;
-            const texDir = 'uploads/processed/textures';
-            results[texName] = {};
-
-            // 保存原始纹理
-            const originalPath = path.join(texDir, `${context.assetId}_${texName}_original.png`);
-            fs.writeFileSync(originalPath, Buffer.from(image));
-            results[texName].original = originalPath;
-
-            // 生成多分辨率版本
-            for (const size of TEXTURE_SIZES) {
-                try {
-                    const resizedPath = path.join(texDir, `${context.assetId}_${texName}_${size}.png`);
-
-                    await sharpInstance(Buffer.from(image))
-                        .resize(size, size, {
-                            fit: 'inside',
-                            withoutEnlargement: true
-                        })
-                        .png({ quality: 90 })
-                        .toFile(resizedPath);
-
-                    results[texName][size] = resizedPath;
-
-                } catch (resizeError) {
-                    console.warn(`[TextureOptimizer] 缩放 ${texName} 到 ${size}px 失败:`, resizeError.message);
-                }
-            }
-
-            console.log(`[TextureOptimizer] 处理纹理: ${texName}`);
+            await image.png().toFile(input);
+            await execFileAsync(command, [
+                '--t2', '--encode', 'uastc', '--uastc_quality', '2', '--zcmp', '18',
+                '--genmipmap', '--assign_oetf', hasColor ? 'srgb' : 'linear',
+                '--assign_primaries', 'bt709', output, input
+            ], { windowsHide: true, timeout: 5 * 60 * 1000, maxBuffer: 1024 * 1024 });
+            texture.setImage(await fs.promises.readFile(output)).setMimeType('image/ktx2').setURI('');
         }
-
-        return results;
-
+        document.createExtension(KHRTextureBasisu).setRequired(true);
+        const outputPath = path.join(tempDir, 'textures.glb');
+        await io.write(outputPath, document);
+        context.textureTempDir = tempDir;
+        return outputPath;
     } catch (error) {
-        console.error('[TextureOptimizer] 纹理优化失败:', error.message);
-        return results;
+        await fs.promises.rm(tempDir, { recursive: true, force: true });
+        if (error.code === 'ENOENT') {
+            throw new Error('KTX2 编码工具不可用：请安装 KTX-Software，并通过 TOKTX_PATH 指定 toktx 可执行文件', { cause: error });
+        }
+        throw error;
     }
 }
 

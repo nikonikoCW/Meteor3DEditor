@@ -236,24 +236,3 @@ export function getModelUrl(asset) {
     }
     return getAssetUrl(asset);
 }
-
-/**
- * 获取指定 LOD 级别的模型 URL
- * @param {Object} asset - 资产对象
- * @param {number} level - LOD 级别 (0, 1, 2)
- * @returns {string|null}
- */
-export function getLodUrl(asset, level = 0) {
-    if (asset.processingStatus !== 'ready' || !asset.processedFiles) {
-        return null;
-    }
-
-    const lodKey = `lod${level}`;
-    const lodPath = asset.processedFiles[lodKey];
-
-    if (lodPath) {
-        return toBackendUrl(lodPath);
-    }
-
-    return null;
-}

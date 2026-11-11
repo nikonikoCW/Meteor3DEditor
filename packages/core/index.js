@@ -13,3 +13,5 @@ export { RainManager } from './src/RainManager.js';
 
 // SDK 入口
 export { loadScene } from './src/loadScene.js';
+
+export { createModelLoader } from './src/utils/ModelLoader.js';

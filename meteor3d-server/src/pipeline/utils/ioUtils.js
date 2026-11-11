@@ -9,12 +9,16 @@ const draco3d = require('draco3dgltf');
 // 缓存 Draco 模块实例
 let dracoDecoderModule = null;
 let dracoEncoderModule = null;
+let meshoptModules = null;
 
 /**
  * 创建配置好的 NodeIO 实例
  * @returns {Promise<NodeIO>}
  */
 async function createNodeIO() {
+    if (!meshoptModules) meshoptModules = import('meshoptimizer');
+    const { MeshoptDecoder, MeshoptEncoder } = await meshoptModules;
+    await Promise.all([MeshoptDecoder.ready, MeshoptEncoder.ready]);
     // 懒加载 Draco 模块
     if (!dracoDecoderModule) {
         dracoDecoderModule = await draco3d.createDecoderModule();
@@ -27,7 +31,9 @@ async function createNodeIO() {
         .registerExtensions(ALL_EXTENSIONS)
         .registerDependencies({
             'draco3d.decoder': dracoDecoderModule,
-            'draco3d.encoder': dracoEncoderModule
+            'draco3d.encoder': dracoEncoderModule,
+            'meshopt.decoder': MeshoptDecoder,
+            'meshopt.encoder': MeshoptEncoder
         });
 }
 

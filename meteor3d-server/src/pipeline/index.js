@@ -12,9 +12,8 @@ const { convertFormat } = require('./processors/formatConverter');
 const { extractZip } = require('./processors/zipExtractor');
 const { sanitize } = require('./processors/sanitizer');
 const { ensureNodeIdentities } = require('./processors/nodeIdentityProcessor');
-const { compressDraco } = require('./processors/dracoCompressor');
+const { compressMeshopt } = require('./processors/meshoptCompressor');
 const { optimizeTextures } = require('./processors/textureOptimizer');
-const { generateLODs } = require('./processors/lodGenerator');
 const { calculateBounds } = require('./processors/boundsCalculator');
 
 /**
@@ -50,20 +49,21 @@ async function processAsset(asset) {
     // Stable node identities must be injected after sanitizing and before derived files.
     context.nodeManifest = await ensureNodeIdentities(context);
 
-    // Step 3: Draco 压缩
-    console.log('[Pipeline] Step 3: Draco 压缩');
-    context.compressedPath = await compressDraco(context);
+    // Step 3: 将 KTX2 纹理嵌入最终模型。
+    console.log('[Pipeline] Step 3: KTX2 纹理压缩');
+    try {
+        context.texturePath = await optimizeTextures(context);
+        // Step 4: Meshopt 缓冲压缩，保留节点层级和变换。
+        console.log('[Pipeline] Step 4: Meshopt 压缩');
+        context.compressedPath = await compressMeshopt(context);
+    } finally {
+        if (context.textureTempDir) {
+            await fs.promises.rm(context.textureTempDir, { recursive: true, force: true });
+        }
+    }
 
-    // Step 4: 纹理优化 (KTX2 + 多分辨率)
-    console.log('[Pipeline] Step 4: 纹理优化');
-    context.textures = await optimizeTextures(context);
-
-    // Step 5: LOD 生成
-    console.log('[Pipeline] Step 5: LOD 生成');
-    context.lods = await generateLODs(context);
-
-    // Step 6: 边界盒计算
-    console.log('[Pipeline] Step 6: 边界盒计算');
+    // Step 5: 边界盒计算
+    console.log('[Pipeline] Step 5: 边界盒计算');
     const boundsResult = await calculateBounds(context);
     context.bounds = boundsResult.bounds;
     context.stats = boundsResult.stats;
@@ -97,11 +97,7 @@ assetQueue.process('process', async (job) => {
         await Asset.findByIdAndUpdate(assetId, {
             processingStatus: 'ready',
             processedFiles: {
-                compressed: context.compressedPath,
-                lod0: context.lods ? context.lods[0] : null,
-                lod1: context.lods ? context.lods[1] : null,
-                lod2: context.lods ? context.lods[2] : null,
-                textures: context.textures || {}
+                compressed: context.compressedPath
             },
             bounds: context.bounds,
             stats: context.stats,

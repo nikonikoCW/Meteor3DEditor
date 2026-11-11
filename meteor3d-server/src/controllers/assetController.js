@@ -450,29 +450,12 @@ exports.deleteAsset = async (req, res) => {
 
         // 3. 删除处理后的文件
         if (asset.processedFiles) {
-            safeUnlink(dbPathToFsPath(asset.processedFiles.compressed));
-            safeUnlink(dbPathToFsPath(asset.processedFiles.lod0));
-            safeUnlink(dbPathToFsPath(asset.processedFiles.lod1));
-            safeUnlink(dbPathToFsPath(asset.processedFiles.lod2));
-
-            // 删除纹理文件
-            if (asset.processedFiles.textures) {
-                const textures = asset.processedFiles.textures;
-                // 纹理可能是对象格式（按纹理名称分组）
-                if (typeof textures === 'object') {
-                    Object.values(textures).forEach(texGroup => {
-                        if (typeof texGroup === 'string') {
-                            safeUnlink(dbPathToFsPath(texGroup));
-                        } else if (typeof texGroup === 'object' && texGroup !== null) {
-                            Object.values(texGroup).forEach(texPath => {
-                                if (typeof texPath === 'string') {
-                                    safeUnlink(dbPathToFsPath(texPath));
-                                }
-                            });
-                        }
-                    });
-                }
-            }
+            // Also clean registered files from historical asset records.
+            const removeProcessedFiles = value => {
+                if (typeof value === 'string') safeUnlink(dbPathToFsPath(value));
+                else if (value && typeof value === 'object') Object.values(value).forEach(removeProcessedFiles);
+            };
+            removeProcessedFiles(asset.processedFiles.toObject?.() || asset.processedFiles);
         }
 
         // 4. 删除数据库记录

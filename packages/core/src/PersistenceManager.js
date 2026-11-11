@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { createModelLoader } from './utils/ModelLoader.js';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { TilesRenderer } from '3d-tiles-renderer';
 import { message } from './utils/message.js';
@@ -40,14 +39,12 @@ export class PersistenceManager {
         this.disposed = false;
         this.pendingSplatMeshes = new Set();
 
-        // 设置 DRACO 解码器（优先使用实例配置，其次全局配置）
-        this.dracoLoader = new DRACOLoader();
-        const dracoPath = options.dracoPath || PersistenceManager.dracoPath;
-        this.dracoLoader.setDecoderPath(dracoPath);
-
-        // 设置 GLTF 加载器并启用 DRACO 支持
-        this.gltfLoader = new GLTFLoader();
-        this.gltfLoader.setDRACOLoader(this.dracoLoader);
+        this.modelLoader = createModelLoader(sceneManager.renderer, {
+            dracoPath: options.dracoPath || PersistenceManager.dracoPath,
+            ktx2Path: options.ktx2Path
+        });
+        this.dracoLoader = this.modelLoader.dracoLoader;
+        this.gltfLoader = this.modelLoader.gltfLoader;
 
         this.modelCache = new Map();
         this.currentSceneId = 'default';
@@ -778,6 +775,7 @@ export class PersistenceManager {
      * @returns {Promise<THREE.Group>} 加载后的模型
      */
     async loadGLTFModel(url, options = {}) {
+        await this.modelLoader.ready;
         if (this.modelCache.has(url)) {
             const template = this.modelCache.get(url);
             const instance = SkeletonUtils.clone(template);
@@ -1424,6 +1422,6 @@ export class PersistenceManager {
         this.pendingNodeGraph = [];
         this.pendingDeletedSourceNodes = [];
 
-        this.dracoLoader?.dispose();
+        this.modelLoader?.dispose();
     }
 }

@@ -289,7 +289,7 @@ export async function getAssetsWithoutThumbnail() {
         return assets.filter(asset =>
             asset.processingStatus === 'ready' &&
             !asset.thumbnail &&
-            asset.processedFiles?.lod2 // 确保有 LOD2 可用
+            asset.processedFiles?.compressed // 使用最终模型生成缩略图
         );
     } catch (error) {
         console.error('获取待生成缩略图资产失败:', error);

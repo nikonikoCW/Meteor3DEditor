@@ -95,16 +95,7 @@ const AssetSchema = new mongoose.Schema({
 
     // 处理后的输出文件 (本地相对路径)
     processedFiles: {
-        compressed: String,      // 压缩后的 GLB 文件路径
-        lod0: String,            // LOD0 高精度
-        lod1: String,            // LOD1 中精度
-        lod2: String,            // LOD2 低精度
-        textures: {
-            original: String,
-            '2k': String,
-            '1k': String,
-            '512': String
-        }
+        compressed: String // KTX2 纹理 + Meshopt 压缩后的 GLB
     },
 
     // 预计算边界数据

@@ -24,3 +24,5 @@ gitRule.txt
 **/.vitepress/dist/
 
 test/
+# Locally installed KTX encoding tools (see server documentation)
+meteor3d-server/bin/ktx/

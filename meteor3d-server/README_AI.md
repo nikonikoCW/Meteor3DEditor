@@ -7,7 +7,7 @@
 `meteor3d-server` 是 Meteor3D 低代码 3D 编辑平台的后端服务。它主要负责：
 - 3D 场景数据的存储与管理 (CRUD)。
 - 3D 资产（模型、纹理、HDRI）的上传、存储与管理。
-- **自动化资产处理流水线**：对上传的模型进行格式转换、压缩、优化和多级细节 (LOD) 生成。
+- **自动化资产处理流水线**：对上传的模型进行格式转换、KTX2 纹理压缩和 Meshopt 几何压缩。
 - **缩略图延迟上传**：前端处理完成后上传缩略图。
 
 ## 2. 技术栈
@@ -18,13 +18,13 @@
 - **Queue System**: Bull (基于 Redis)
 - **3D Processing**: 
   - `@gltf-transform/*`: glTF 模型处理核心库
-  - `draco3dgltf`: Draco 几何压缩
+  - `draco3dgltf`: 历史 Draco 资源解码
   - `meshoptimizer`: 网格优化
   - `sharp`: 图像/纹理处理
   - `adm-zip`: ZIP 解压
 - **External Tools** (需预装):
   - `FBX2glTF`: FBX 转 glTF
-  - `toktx` (KTX-Software): 纹理转 KTX2 (可选)
+  - `toktx` (KTX-Software): 有普通图片纹理时必需，安装见 ASSET_PIPELINE.md
 
 > **重要**: 需要支持 Node.js 版本 16.20.2 & 22.13.0
 
@@ -59,14 +59,13 @@ meteor3d-server/
 │       ├── index.js        # 流水线入口，编排处理步骤，队列任务处理器
 │       ├── queue.js        # Bull 队列初始化
 │       ├── utils/
-│       │   └── ioUtils.js  # 共享的 NodeIO 配置 (注册 Draco/Extensions)
+│       │   └── ioUtils.js  # 共享的 NodeIO 配置 (注册 Draco/Meshopt/Extensions)
 │       └── processors/     # 独立的处理步骤
 │           ├── zipExtractor.js     # ZIP 解压与主模型查找
 │           ├── formatConverter.js  # 格式转换 (FBX/OBJ -> GLB)
 │           ├── sanitizer.js        # 模型清洗 (移除相机/空节点)
-│           ├── dracoCompressor.js  # Draco 几何压缩
-│           ├── textureOptimizer.js # 纹理转 KTX2 及多分辨率生成
-│           ├── lodGenerator.js     # LOD (Level of Detail) 生成
+│           ├── meshoptCompressor.js  # Meshopt 缓冲压缩
+│           ├── textureOptimizer.js # 纹理编码 KTX2 并嵌入 GLB
 │           └── boundsCalculator.js # 边界盒与统计信息计算
 └── uploads/                # 静态资源存储 (自动生成)
     ├── models/             # 原始上传文件
@@ -74,8 +73,6 @@ meteor3d-server/
     ├── temp/               # 临时解压目录
     └── processed/          # 处理后的产物
         ├── models/         # 压缩后的 GLB
-        ├── lods/           # LOD 版本
-        └── textures/       # 优化后的纹理
 ```
 
 ## 4. API 接口
@@ -111,8 +108,6 @@ meteor3d-server/
 - 原始上传文件 (`filePath`)
 - 缩略图 (`thumbnail`)
 - 压缩模型 (`processedFiles.compressed`)
-- LOD 版本 (`processedFiles.lod0/lod1/lod2`)
-- 优化纹理 (`processedFiles.textures.*`)
 
 ## 5. 资产处理流水线
 
@@ -120,18 +115,15 @@ meteor3d-server/
 
 **流程步骤：**
 
-1. **Upload**: 文件上传至 `uploads/models`，状态标记为 `pending`，加入 Bull 队列。
-2. **Queue Process**: `src/pipeline/index.js` 接收任务。
-3. **Step 0: ZIP Extract**: 如果是 ZIP，解压并自动寻找主模型文件。
-   - **查找优先级**: `.gltf` > `.glb` > `.fbx` > `.obj` > `.stl`
-4. **Step 1: Convert**: 将非 glTF 格式 (FBX, OBJ) 转换为 GLB。
-5. **Step 2: Sanitize**: 移除场景中的相机、灯光和无用节点。
-6. **Step 3: Draco**: 应用 Draco 压缩，大幅减小体积。
-7. **Step 4: Texture**: 提取纹理，生成多分辨率 (2k/1k/512)。
-8. **Step 5: LOD**: 生成 3 个级别的细节模型 (LOD0, LOD1, LOD2)。
-9. **Step 6: Bounds**: 计算模型的 AABB 边界盒、包围球及面数统计。
-10. **Finish**: 更新数据库状态为 `ready`，保存所有生成文件的路径。
-11. **Cleanup**: 清理临时解压目录。
+1. 上传并加入 Bull 队列。
+2. ZIP 解压（按需），并转换为 GLB。
+3. 清洗并注入稳定节点身份。
+4. 将纹理编码为 KTX2 并嵌入 GLB。
+5. 使用 Meshopt 压缩几何与动画等缓冲数据。
+6. 计算边界和模型统计，更新状态为 ready。
+7. 清理任务临时文件。
+
+KTX2 工具安装、前端解码与回归命令见 [ASSET_PIPELINE.md](ASSET_PIPELINE.md)。
 
 ## 6. 数据模型 (Asset Schema)
 
@@ -143,8 +135,6 @@ meteor3d-server/
 | `thumbnail` | String | 缩略图 URL (可为 null) |
 | `processingStatus` | String | pending/processing/ready/failed/skipped |
 | `processedFiles.compressed` | String | 压缩后 GLB 路径 |
-| `processedFiles.lod0/1/2` | String | LOD 版本路径 |
-| `processedFiles.textures` | Object | 优化后纹理路径 |
 | `bounds` | Object | box (min/max) 和 sphere (center/radius) |
 | `stats` | Object | triangleCount, vertexCount 等 |
 

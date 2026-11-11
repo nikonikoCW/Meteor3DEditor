@@ -664,8 +664,8 @@ const uploadSelectedCadFile = async (file) => {
       .then(async (statusResult) => {
         message.success(`资产 "${result.asset.name}" 处理完成`);
 
-        if (!result.asset.thumbnail && statusResult.processedFiles?.lod2) {
-          await generateAndUploadThumbnail(result.asset._id, statusResult.processedFiles.lod2);
+        if (!result.asset.thumbnail && statusResult.processedFiles?.compressed) {
+          await generateAndUploadThumbnail(result.asset._id, statusResult.processedFiles.compressed);
         }
 
         loadAssets();
@@ -844,8 +844,8 @@ const uploadSelectedAssetFile = async (file) => {
             message.success(`资产 "${result.asset.name}" 处理完成`);
 
             // 处理完成后，检查是否需要生成缩略图
-            if (!result.asset.thumbnail && statusResult.processedFiles?.lod2) {
-              await generateAndUploadThumbnail(result.asset._id, statusResult.processedFiles.lod2);
+            if (!result.asset.thumbnail && statusResult.processedFiles?.compressed) {
+              await generateAndUploadThumbnail(result.asset._id, statusResult.processedFiles.compressed);
             }
 
             loadAssets(); // 刷新列表显示最新状态
@@ -1100,9 +1100,9 @@ const handleReprocess = async (asset) => {
 /**
  * 为指定资产生成并上传缩略图
  * @param {string} assetId - 资产 ID
- * @param {string} lod2Path - LOD2 模型路径
+ * @param {string} modelPath - 最终压缩模型路径
  */
-const generateAndUploadThumbnail = async (assetId, lod2Path) => {
+const generateAndUploadThumbnail = async (assetId, modelPath) => {
   try {
     // 初始化缩略图生成器
     if (!thumbnailGenerator) {
@@ -1110,7 +1110,7 @@ const generateAndUploadThumbnail = async (assetId, lod2Path) => {
     }
 
     // 规范化路径：替换反斜杠为正斜杠，确保以 / 开头
-    let normalizedPath = lod2Path.replace(/\\/g, '/');
+    let normalizedPath = modelPath.replace(/\\/g, '/');
     if (!normalizedPath.startsWith('/')) {
       normalizedPath = '/' + normalizedPath;
     }
@@ -1150,7 +1150,7 @@ const checkMissingThumbnails = async () => {
 
     // 逐个处理，避免并发过多
     for (const asset of assetsWithoutThumbnail) {
-      await generateAndUploadThumbnail(asset._id, asset.processedFiles.lod2);
+      await generateAndUploadThumbnail(asset._id, asset.processedFiles.compressed);
       // 每完成一个就刷新列表
       await loadAssets();
     }

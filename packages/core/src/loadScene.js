@@ -62,7 +62,7 @@ export async function loadScene({ sceneId, serverUrl, container, config = {} }) 
     }
 
     const dracoPath = config.dracoPath || `${serverUrl}/draco/`;
-    const persistenceManager = new PersistenceManager(sceneManager, null, null, { dracoPath });
+    const persistenceManager = new PersistenceManager(sceneManager, null, null, { dracoPath, ktx2Path: config.ktx2Path });
     const loadResult = await persistenceManager.restoreScene({
         objects: responseData.objects || [],
         metadata: responseData.metadata || {}

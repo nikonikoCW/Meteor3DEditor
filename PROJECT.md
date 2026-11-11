@@ -44,7 +44,7 @@ Meteor3D 是一个基于 Three.js、Vue 3 和 Node.js 的低代码 3D 场景可�
          ▼                               ▼
 ┌──────────────────┐          ┌──────────────────────────────────────────┐
 │ MongoDB          │          │ 本地上传目录 / 处理产物 / 又拍云          │
-│ Scene / Object   │          │ GLB / LOD / 纹理 / 缩略图 / GIS 底图     │
+│ Scene / Object   │          │ GLB / 缩略图 / GIS 底图     │
 │ Asset / App      │          └──────────────────────────────────────────┘
 └──────────────────┘
 ```
@@ -111,7 +111,7 @@ Meteor3D 是一个基于 Three.js、Vue 3 和 Node.js 的低代码 3D 场景可�
 | Multer | 上传文件和缩略图 |
 | Redis + Bull | 资产异步处理队列、重试和状态管理 |
 | glTF Transform | GLB 清洗、压缩、简化和结构处理 |
-| Draco / Meshoptimizer | 几何压缩和网格优化 |
+| Meshoptimizer / Draco | Meshopt 编码和历史 Draco 解码 |
 | Sharp | 缩略图、纹理和 GIS 底图处理 |
 | FBX2glTF | FBX 到 GLB 的格式转换 |
 | Python CAD 脚本 | STEP/STP/IGS/IGES 转换 |
@@ -232,7 +232,7 @@ BID 是 Meteor3D 的持久化业务节点 ID，用来解决 Three.js UUID 和模
 - 记录 GLB 内部节点的增量修改及被删除的资产源节点。
 - 序列化并恢复节点绑定和全局节点图。
 - 恢复资产 ID、资产版本 ID 和 BID。
-- 配置 Draco 解码器。
+- 通过 Core 统一配置 KTX2、Meshopt 和历史 Draco 解码器。
 - 保存和加载环境、相机、GIS 等场景元数据。
 
 ### 6.4 DBManager
@@ -325,17 +325,16 @@ Step 0  ZIP 解压（按需）
 Step 1  OBJ/FBX/STL 等格式转换为 GLB
 Step 2  清洗和验证，移除不需要的相机与灯光
 Step 2.5 注入稳定节点身份并生成 nodeManifest
-Step 3  Draco 压缩
-Step 4  纹理优化和多分辨率产物
-Step 5  LOD 生成
-Step 6  边界盒、包围球和模型统计
+Step 3  KTX2 纹理编码并嵌入 GLB
+Step 4  Meshopt 缓冲压缩，保留节点变换
+Step 5  边界盒、包围球和模型统计
 ```
 
 资产状态包括 `pending`、`processing`、`ready`、`failed` 和 `skipped`。Bull 配置包含失败重试、指数退避和 stalled job 检测。
 
 ### 8.3 资产输出
 
-`Asset` 文档可以保存原始文件、压缩 GLB、LOD0/1/2、多尺寸纹理、缩略图、边界和统计、`assetVersionId`、`nodeManifest`，以及又拍云 URL。
+`Asset` 文档可以保存原始文件、KTX2 + Meshopt 压缩 GLB、缩略图、边界和统计、`assetVersionId`、`nodeManifest`，以及又拍云 URL。
 
 ## 9. 应用编辑器
 

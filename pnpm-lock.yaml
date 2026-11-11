@@ -83,6 +83,9 @@ importers:
 
   packages/asset-manager:
     dependencies:
+      '@meteor3d/core':
+        specifier: workspace:*
+        version: link:../core
       pinia:
         specifier: ^3.0.4
         version: 3.0.4(vue@3.5.39)
